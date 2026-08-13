@@ -26,35 +26,49 @@ export function probabilidadGanar(ratingA, ratingB, escala = ESCALA) {
   return 1 / (1 + 10 ** ((ratingB - ratingA) / escala));
 }
 
+// Aplica UNA partida a los mapas de rating/partidas jugadas (los muta). Se
+// salta partidas sin los dos team_id identificados. Expuesta por separado
+// de ratings() para que el backtest pueda ir actualizando en una sola
+// pasada cronológica en vez de recalcular todo el histórico por cada punto
+// de predicción (mismo resultado matemático, mucho más rápido con miles de
+// series).
+export function aplicarPartida(
+  porEquipo,
+  partidasJugadas,
+  partida,
+  { ratingInicial = RATING_INICIAL, kFactor = K_FACTOR, escala = ESCALA } = {},
+) {
+  if (!partida.radiant_team_id || !partida.dire_team_id) return;
+
+  const a = partida.radiant_team_id;
+  const b = partida.dire_team_id;
+  const ra = porEquipo.get(a) ?? ratingInicial;
+  const rb = porEquipo.get(b) ?? ratingInicial;
+  const probA = probabilidadGanar(ra, rb, escala);
+  const resultadoA = partida.radiant_win ? 1 : 0;
+
+  porEquipo.set(a, ra + kFactor * (resultadoA - probA));
+  porEquipo.set(b, rb + kFactor * ((1 - resultadoA) - (1 - probA)));
+
+  partidasJugadas.set(a, (partidasJugadas.get(a) ?? 0) + 1);
+  partidasJugadas.set(b, (partidasJugadas.get(b) ?? 0) + 1);
+}
+
 // Recorre el historial en orden cronológico y devuelve el rating de cada
 // equipo justo antes de fechaCorte (es decir, después de aplicar todas sus
 // partidas anteriores a esa fecha, y ninguna posterior).
 export function ratings(
   partidas,
   fechaCorte,
-  { ratingInicial = RATING_INICIAL, kFactor = K_FACTOR, escala = ESCALA } = {},
+  opciones = {},
 ) {
+  const { ratingInicial = RATING_INICIAL } = opciones;
   const anteriores = partidasAnteriores(partidas, fechaCorte);
   const porEquipo = new Map();
   const partidasJugadas = new Map();
 
-  const ratingDe = (equipo) => porEquipo.get(equipo) ?? ratingInicial;
-
   for (const p of anteriores) {
-    if (!p.radiant_team_id || !p.dire_team_id) continue; // sin equipo identificado, no se puede ratear
-
-    const a = p.radiant_team_id;
-    const b = p.dire_team_id;
-    const ra = ratingDe(a);
-    const rb = ratingDe(b);
-    const probA = probabilidadGanar(ra, rb, escala);
-    const resultadoA = p.radiant_win ? 1 : 0;
-
-    porEquipo.set(a, ra + kFactor * (resultadoA - probA));
-    porEquipo.set(b, rb + kFactor * ((1 - resultadoA) - (1 - probA)));
-
-    partidasJugadas.set(a, (partidasJugadas.get(a) ?? 0) + 1);
-    partidasJugadas.set(b, (partidasJugadas.get(b) ?? 0) + 1);
+    aplicarPartida(porEquipo, partidasJugadas, p, opciones);
   }
 
   return { porEquipo, partidasJugadas, ratingInicial };

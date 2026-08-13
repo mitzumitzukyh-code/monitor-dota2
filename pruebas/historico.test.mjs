@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { paginarProMatches, limpiar, validar, segundosDesdeHace } from '../datos/historico.mjs';
+import {
+  paginarProMatches,
+  limpiar,
+  validar,
+  segundosDesdeHace,
+  descargarLeagues,
+  filtrarPorTier,
+} from '../datos/historico.mjs';
 
 function partida(match_id, start_time, extra = {}) {
   return {
@@ -179,4 +186,49 @@ test('segundosDesdeHace: 1 mes atrás cae ~30 días antes en segundos', () => {
   const esperado = Math.floor(new Date('2026-07-14T00:00:00Z').getTime() / 1000);
 
   assert.equal(cutoff, esperado);
+});
+
+test('descargarLeagues: reintenta con backoff en 429 igual que paginarProMatches', async () => {
+  let llamadas = 0;
+  const fetchImpl = async () => {
+    llamadas++;
+    if (llamadas === 1) return { ok: false, status: 429 };
+    return { ok: true, status: 200, json: async () => [{ leagueid: 1, tier: 'professional' }] };
+  };
+
+  const resultado = await descargarLeagues({ fetchImpl, esperaReintentoMs: 0 });
+
+  assert.equal(llamadas, 2);
+  assert.deepEqual(resultado, [{ leagueid: 1, tier: 'professional' }]);
+});
+
+test('descargarLeagues: propaga error si no es 429 ni 200', async () => {
+  const fetchImpl = async () => ({ ok: false, status: 500 });
+  await assert.rejects(() => descargarLeagues({ fetchImpl }), /500/);
+});
+
+test('filtrarPorTier: se queda solo con las partidas de torneos professional/premium', () => {
+  const leagues = [
+    { leagueid: 1, tier: 'professional' },
+    { leagueid: 2, tier: 'excluded' },
+    { leagueid: 3, tier: 'premium' },
+  ];
+  const partidas = [
+    partida(1, 1000, { leagueid: 1 }),
+    partida(2, 1000, { leagueid: 2 }),
+    partida(3, 1000, { leagueid: 3 }),
+  ];
+
+  const filtradas = filtrarPorTier(partidas, leagues);
+
+  assert.deepEqual(filtradas.map((p) => p.match_id), [1, 3]);
+});
+
+test('filtrarPorTier: una partida de un leagueid que no aparece en /leagues se descarta (no se puede confirmar su tier)', () => {
+  const leagues = [{ leagueid: 1, tier: 'professional' }];
+  const partidas = [partida(1, 1000, { leagueid: 1 }), partida(2, 1000, { leagueid: 999 })];
+
+  const filtradas = filtrarPorTier(partidas, leagues);
+
+  assert.deepEqual(filtradas.map((p) => p.match_id), [1]);
 });

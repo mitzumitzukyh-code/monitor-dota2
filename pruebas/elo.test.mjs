@@ -35,7 +35,7 @@ test('ratings: cero fuga temporal -- una partida en fechaCorte o después no se 
     partida(2, 2000, 'A', 'B', true), // justo en el corte: NO debe contar
     partida(3, 3000, 'A', 'B', true), // después del corte: NO debe contar
   ];
-  const r = ratings(partidas, 2000);
+  const r = ratings(partidas, 2000, { ratingInicial: 1500, kFactor: 32, escala: 400 });
 
   // Si solo contó la partida 1, A quedó en 1516 (mismo cálculo que el test anterior)
   assert.equal(ratingDeEquipo(r, 'A'), 1516);
@@ -61,7 +61,7 @@ test('ratings: partidas sin team_id en algún lado se saltan sin reventar ni afe
     partida(1, 1000, null, 'B', true),
     partida(2, 1500, 'A', 'B', true),
   ];
-  const r = ratings(partidas, 2000);
+  const r = ratings(partidas, 2000, { ratingInicial: 1500, kFactor: 32, escala: 400 });
 
   // Solo la partida 2 debió contar: A gana como nuevo (1500) contra B ya afectado por nada más
   assert.equal(ratingDeEquipo(r, 'A'), 1516);

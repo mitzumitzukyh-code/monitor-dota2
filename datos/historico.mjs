@@ -1,6 +1,33 @@
 import { fileURLToPath } from 'node:url';
 
 const BASE = 'https://api.opendota.com/api/proMatches';
+const BASE_LEAGUES = 'https://api.opendota.com/api/leagues';
+
+// La mitad de /proMatches es de torneos tier "excluded" (amateur, mucho
+// ruido). Verificado con el backtest real: filtrar a professional+premium
+// mejora el Brier de bo1/bo3/bo5 sin empeorar nada -- se gana el puesto
+// (regla 4). Ver CLAUDE.md.
+export const TIERS_PERMITIDOS = ['professional', 'premium'];
+
+export async function descargarLeagues({ fetchImpl = fetch, esperaReintentoMs = 5000, maxReintentos = 5 } = {}) {
+  for (let intento = 0; ; intento++) {
+    const res = await fetchImpl(BASE_LEAGUES);
+    if (res.status === 429) {
+      if (intento >= maxReintentos) {
+        throw new Error(`OpenDota respondió 429 repetidamente (${maxReintentos} reintentos) en ${BASE_LEAGUES}`);
+      }
+      await new Promise((r) => setTimeout(r, esperaReintentoMs * (intento + 1)));
+      continue;
+    }
+    if (!res.ok) throw new Error(`OpenDota respondió ${res.status} en ${BASE_LEAGUES}`);
+    return res.json();
+  }
+}
+
+export function filtrarPorTier(partidas, leagues, tiersPermitidos = TIERS_PERMITIDOS) {
+  const tierPorLeague = new Map(leagues.map((l) => [l.leagueid, l.tier]));
+  return partidas.filter((p) => tiersPermitidos.includes(tierPorLeague.get(p.leagueid)));
+}
 
 export function segundosDesdeHace(meses, ahora = Date.now()) {
   const ms = ahora - meses * 30 * 24 * 60 * 60 * 1000;
@@ -129,8 +156,15 @@ async function main() {
   });
   console.log(`Bajadas ${crudas.length} partidas en total.`);
 
+  console.log('Bajando /leagues para filtrar por tier...');
+  const leagues = await descargarLeagues();
+  await writeFile(new URL('./cache/leagues.json', import.meta.url), JSON.stringify(leagues));
+
   const limpias = limpiar(crudas);
-  const reporte = validar(limpias);
+  const filtradas = filtrarPorTier(limpias, leagues);
+  console.log(`${filtradas.length} de ${limpias.length} partidas quedan tras filtrar a tier ${TIERS_PERMITIDOS.join('/')}.`);
+
+  const reporte = validar(filtradas);
   console.log(JSON.stringify({ ...reporte, problemas: reporte.problemas.slice(0, 10) }, null, 2));
 
   await writeFile(
@@ -139,9 +173,9 @@ async function main() {
   );
   await writeFile(
     new URL('./historico.json', import.meta.url),
-    JSON.stringify(limpias),
+    JSON.stringify(filtradas),
   );
-  console.log('Guardado datos/cache/promatches-raw.json y datos/historico.json');
+  console.log('Guardado datos/cache/promatches-raw.json, datos/cache/leagues.json y datos/historico.json');
 }
 
 const esEjecutadoDirectamente = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];

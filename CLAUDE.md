@@ -106,10 +106,41 @@ datos/cache/   archivos descargados (en .gitignore)
 - OpenDota trae su propio campo `rating` por equipo (Glicko/Elo de ellos).
   **Nunca usarlo como nuestra probabilidad** — es de referencia externa,
   no el cálculo propio (regla 1).
-- Una serie (`series_id`) agrupa varias partidas (`series_type`: 0=Bo1,
-  1=Bo3, 2=Bo5, inferido de datos reales — confirmar si hace falta más
-  precisión). La unidad de predicción es la **serie**, no la partida
-  individual, pero el Elo se actualiza partida por partida.
+- Una serie (`series_id`) agrupa varias partidas. `series_type` confirmado
+  con datos reales (cruzado contra cantidad real de partidas jugadas por
+  serie): 0=Bo1, 3=Bo2, 1=Bo3, 2=Bo5. **Bo2 admite empate real (1-1)** —
+  verificado: ~20-30% de las series Bo2 terminan así. Es el formato de la
+  fase de grupos (formato suizo) de The International. La unidad de
+  predicción es la **serie**, no la partida individual, pero el Elo se
+  actualiza partida por partida (`motor/elo.mjs`) y la probabilidad de serie
+  se deriva de la probabilidad de partida (`motor/series.mjs`).
+- `/proMatches` mezcla TODOS los tiers de torneo, incluido `excluded`
+  (amateur). Es la mitad del dataset. Filtrar a `professional`/`premium`
+  (cruzando con `/leagues`) mejora el Brier de bo1/bo3/bo5 de forma real —
+  se ganó el puesto (regla 4), ver `juez/calibrar.mjs`. `datos/historico.mjs`
+  ya lo hace automático.
+
+### Backtest real (2026-08-13) — motor Elo + conversión a serie
+
+Corrido contra `datos/historico.json` (16.450 partidas, solo
+professional/premium), sweep de K_FACTOR/ESCALA en `juez/calibrar.mjs`
+(35 combinaciones). Ganador: K=24, escala=400 (config.mjs).
+
+| Formato | Brier del motor | Brier base ingenua | ¿Se gana el puesto? |
+|---|---|---|---|
+| bo1 | 0.4875 | 0.5 | sí, modesto |
+| bo3 (78% de las series) | 0.4735 | 0.5 | sí, modesto |
+| bo5 | 0.4587 | 0.5 | sí |
+| bo2 (fase de grupos de TI) | 0.7083 | 0.6667 | **NO** |
+
+**Hallazgo clave sobre bo2:** el modelo predice ~47% de probabilidad de
+empate en promedio, pero la tasa real de empate en Bo2 es ~20%. La fórmula
+`2p(1-p)` asume que las dos partidas de una serie son independientes — en
+la realidad no lo son (ganar la partida 1 aumenta la chance de ganar la 2
+más allá de lo que el rating por sí solo explica). Ningún ajuste de
+K_FACTOR/ESCALA lo arregla porque es un problema de forma del modelo, no de
+escala. **No usar predicciones de bo2 en producción hasta resolver esto**
+(ni en Discord ni en la web — regla 3).
 
 ## Orden de fases
 
