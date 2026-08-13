@@ -3,7 +3,12 @@
 //
 // OpenDota trae series_type: 0=Bo1, 1=Bo3, 2=Bo5, 3=Bo2 -- verificado con
 // datos reales (ver CLAUDE.md). Bo2 es el único formato donde hay empate
-// real (1-1): lo usa la fase de grupos de The International.
+// real (1-1). OJO: la fase de grupos de TI2026 es Bo3 (verificado con las
+// 29 partidas reales ya jugadas y el calendario de próximas rondas -- ver
+// CLAUDE.md), NO Bo2 como se asumió al principio por investigación
+// genérica sobre formato suizo. Bo2 sigue siendo real y presente en otros
+// torneos del histórico, por eso el ajuste de correlación (deltaBo2) se
+// mantiene, pero no es el formato crítico para TI2026 esta edición.
 
 function combinaciones(n, k) {
   if (k < 0 || k > n) return 0;

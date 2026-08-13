@@ -82,6 +82,23 @@ datos/cache/   archivos descargados (en .gitignore)
 | Partidas profesionales (histórico e individuales) | OpenDota API, `/proMatches` (paginado con `less_than_match_id`) | gratis, sin llave, 60/min, 50.000/mes |
 | Torneos / leagueid | OpenDota API, `/leagues` | gratis, sin llave |
 | Partidas de un torneo específico | OpenDota API, `/leagues/{id}/matches` | gratis, sin llave (no trae nombre de equipo, hay que resolverlo con `/teams/{id}`) |
+| Calendario de próximos partidos (fixtures) | `https://dota.haglund.dev/v1/matches` (comunidad, cachea Liquipedia) | gratis, sin llave, sin límite documentado -- proyecto no oficial |
+
+### Calendario de próximos partidos — sin fuente oficial gratis
+
+OpenDota **no tiene fixtures**: `/leagues/{id}/matches` y `/proMatches` solo
+devuelven partidas YA jugadas, nunca las programadas. La API oficial de
+Liquipedia (`api.liquipedia.net`) existe pero requiere solicitar una llave
+(proceso de aprobación, no instantáneo) — no viable con la ventana de TI2026
+corriendo ya. Se usa en su lugar `dota.haglund.dev/v1/matches`, un proyecto
+comunitario que scrapea y cachea (3 horas) el calendario de Liquipedia.
+Verificado con una llamada real (2026-08-13): trae el `Team Spirit vs
+Aurora Gaming`, `Team Yandex vs Team Liquid` reales de la Ronda 2 de TI2026,
+con `startsAt`, nombres de equipo y `matchType` ("Bo3"). Sin SLA ni límite
+de tasa documentado — no golpear más de una vez cada 15-30 minutos (regla
+5, y porque ellos mismos cachean 3h del lado de Liquipedia). Si se cae, no
+hay fixtures hasta que vuelva: el pipeline de predicción debe fallar
+explícito, nunca inventar un cruce de equipos.
 
 ### OpenDota — verificado con llamadas reales (2026-08-13)
 
@@ -109,11 +126,17 @@ datos/cache/   archivos descargados (en .gitignore)
 - Una serie (`series_id`) agrupa varias partidas. `series_type` confirmado
   con datos reales (cruzado contra cantidad real de partidas jugadas por
   serie): 0=Bo1, 3=Bo2, 1=Bo3, 2=Bo5. **Bo2 admite empate real (1-1)** —
-  verificado: ~20-30% de las series Bo2 terminan así. Es el formato de la
-  fase de grupos (formato suizo) de The International. La unidad de
+  verificado: ~20-30% de las series Bo2 terminan así. La unidad de
   predicción es la **serie**, no la partida individual, pero el Elo se
   actualiza partida por partida (`motor/elo.mjs`) y la probabilidad de serie
   se deriva de la probabilidad de partida (`motor/series.mjs`).
+  **Corrección (2026-08-13): la fase de grupos de TI2026 es Bo3, NO Bo2.**
+  Verificado con las 29 partidas reales ya jugadas (100% `series_type=1`) y
+  el calendario real de próximas rondas (100% "Bo3"). La suposición inicial
+  ("formato suizo = Bo2") vino de investigación genérica, no de datos
+  reales de esta edición — quedó mal. Bo2 sigue siendo real en otros
+  torneos del histórico (ver deltaBo2 abajo), solo que no es crítico para
+  TI2026 esta vez.
 - `/proMatches` mezcla TODOS los tiers de torneo, incluido `excluded`
   (amateur). Es la mitad del dataset. Filtrar a `professional`/`premium`
   (cruzando con `/leagues`) mejora el Brier de bo1/bo3/bo5 de forma real —
