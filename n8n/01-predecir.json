@@ -1,0 +1,51 @@
+{
+  "name": "01-predecir",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 01-predecir\nBaja el calendario real (dota.haglund.dev), resuelve los equipos de TI2026 y guarda predicciones nuevas en Supabase (dota_teams/dota_series/dota_predictions). No pide nada que ya esté guardado y calificado.\n\nAjustar el intervalo del trigger después de importar -- con la ventana de TI2026 corriendo, cada 1-2 horas es razonable (dota.haglund.dev cachea 3h del lado de ellos, no hace falta más seguido).",
+        "height": 260,
+        "width": 340
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-260, -40],
+      "id": "d0da0001-0001-4001-8001-000000000001",
+      "name": "Nota"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{}]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 0],
+      "id": "d0da0001-0001-4001-8001-000000000002",
+      "name": "Trigger"
+    },
+    {
+      "parameters": {
+        "command": "node --env-file=\"D:\\monitor-dota2\\.env\" \"D:\\monitor-dota2\\juez\\vivo-motor.mjs\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [300, 0],
+      "id": "d0da0001-0001-4001-8001-000000000003",
+      "name": "Predecir TI2026"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger": {
+      "main": [
+        [{ "node": "Predecir TI2026", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

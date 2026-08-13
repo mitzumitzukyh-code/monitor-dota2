@@ -1,0 +1,51 @@
+{
+  "name": "02-calificar",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 02-calificar\nCruza las predicciones pendientes contra resultados reales de OpenDota por par de equipos, calcula el resultado real y el Brier, y actualiza la fila cuando la serie ya está decidida.\n\nAjustar el intervalo del trigger después de importar -- cada 1-2 horas es razonable.",
+        "height": 220,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-260, -40],
+      "id": "d0da0002-0002-4002-8002-000000000001",
+      "name": "Nota"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{}]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 0],
+      "id": "d0da0002-0002-4002-8002-000000000002",
+      "name": "Trigger"
+    },
+    {
+      "parameters": {
+        "command": "node --env-file=\"D:\\monitor-dota2\\.env\" \"D:\\monitor-dota2\\juez\\vivo-notas.mjs\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [300, 0],
+      "id": "d0da0002-0002-4002-8002-000000000003",
+      "name": "Calificar series"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger": {
+      "main": [
+        [{ "node": "Calificar series", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
