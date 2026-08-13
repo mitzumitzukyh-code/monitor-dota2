@@ -49,18 +49,24 @@ test('probabilidadSerie: bo1 es directo, sin empate', () => {
   assert.ok(cerca(r.ganaB, 0.3));
 });
 
-test('probabilidadSerie: bo2 con p=0.5 da 25/50/25 a mano', () => {
-  const r = probabilidadSerie(0.5, 'bo2');
+test('probabilidadSerie: bo2 con deltaBo2=0 y p=0.5 da 25/50/25 a mano (partidas independientes)', () => {
+  const r = probabilidadSerie(0.5, 'bo2', { deltaBo2: 0 });
   assert.ok(cerca(r.ganaA, 0.25));
   assert.ok(cerca(r.empate, 0.5));
   assert.ok(cerca(r.ganaB, 0.25));
 });
 
-test('probabilidadSerie: bo2 con p=0.7 da 49/42/9 a mano (p², 2p(1-p), (1-p)²)', () => {
-  const r = probabilidadSerie(0.7, 'bo2');
+test('probabilidadSerie: bo2 con deltaBo2=0 y p=0.7 da 49/42/9 a mano (p², 2p(1-p), (1-p)²)', () => {
+  const r = probabilidadSerie(0.7, 'bo2', { deltaBo2: 0 });
   assert.ok(cerca(r.ganaA, 0.49));
   assert.ok(cerca(r.empate, 0.42));
   assert.ok(cerca(r.ganaB, 0.09));
+});
+
+test('probabilidadSerie: bo2 SIN pasar deltaBo2 usa el DELTA_BO2 calibrado de config.mjs, no 0', () => {
+  const r = probabilidadSerie(0.7, 'bo2'); // sin opciones -> default real del proyecto
+  const conDeltaCero = probabilidadSerie(0.7, 'bo2', { deltaBo2: 0 });
+  assert.notEqual(r.empate, conDeltaCero.empate);
 });
 
 test('probabilidadSerie: siempre suma 1, para los cuatro formatos', () => {
@@ -72,4 +78,26 @@ test('probabilidadSerie: siempre suma 1, para los cuatro formatos', () => {
 
 test('probabilidadSerie: formato desconocido revienta en vez de adivinar', () => {
   assert.throws(() => probabilidadSerie(0.5, 'bo7'));
+});
+
+test('probabilidadSerie: bo2 con deltaBo2=ln(3) en p=0.5 da 37.5/25/37.5 a mano', () => {
+  // logit(0.5)=0, así que pSegundaSiGanoA=sigmoide(ln3)=3/4, pSegundaSiGanoB=sigmoide(-ln3)=1/4.
+  // ganaA = 0.5*0.75 = 0.375, ganaB = 0.5*(1-0.25) = 0.375, empate = 0.25.
+  const r = probabilidadSerie(0.5, 'bo2', { deltaBo2: Math.log(3) });
+  assert.ok(cerca(r.ganaA, 0.375, 1e-9));
+  assert.ok(cerca(r.empate, 0.25, 1e-9));
+  assert.ok(cerca(r.ganaB, 0.375, 1e-9));
+});
+
+test('probabilidadSerie: bo2 con deltaBo2 > 0 siempre reduce el empate frente a deltaBo2=0, sin importar p', () => {
+  for (const p of [0.3, 0.45, 0.5, 0.6, 0.8]) {
+    const sinAjuste = probabilidadSerie(p, 'bo2', { deltaBo2: 0 });
+    const conAjuste = probabilidadSerie(p, 'bo2', { deltaBo2: 1.2 });
+    assert.ok(conAjuste.empate < sinAjuste.empate, `p=${p}: empate no bajó`);
+  }
+});
+
+test('probabilidadSerie: bo2 con deltaBo2 sigue sumando 1', () => {
+  const r = probabilidadSerie(0.63, 'bo2', { deltaBo2: 0.8 });
+  assert.ok(cerca(r.ganaA + r.empate + r.ganaB, 1, 1e-9));
 });

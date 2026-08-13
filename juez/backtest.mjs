@@ -114,7 +114,7 @@ export function ejecutarBacktest(partidas, opcionesElo = {}) {
       const ratingA = ratingDe(info.equipoA);
       const ratingB = ratingDe(info.equipoB);
       const p = probabilidadGanar(ratingA, ratingB, opcionesElo.escala);
-      const prediccion = probabilidadSerie(p, info.formato);
+      const prediccion = probabilidadSerie(p, info.formato, { deltaBo2: opcionesElo.deltaBo2 });
       const brier = brierDeSerie(prediccion, info.real);
 
       resultados.push({

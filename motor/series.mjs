@@ -25,6 +25,16 @@ export function probabilidadMejorDeImpar(p, mejorDe) {
   return suma;
 }
 
+import { DELTA_BO2 } from '../config.mjs';
+
+function sigmoide(x) {
+  return 1 / (1 + Math.exp(-x));
+}
+
+function logit(p) {
+  return Math.log(p / (1 - p));
+}
+
 export function formatoDesdeSeriesType(seriesType) {
   switch (seriesType) {
     case 0: return 'bo1';
@@ -37,12 +47,26 @@ export function formatoDesdeSeriesType(seriesType) {
 
 // p = probabilidad de que el equipo A gane UNA partida contra B (motor/elo.mjs).
 // Devuelve { ganaA, empate, ganaB }, siempre suma 1.
-export function probabilidadSerie(p, formato) {
+//
+// deltaBo2: las dos partidas de un Bo2 NO son independientes en la
+// realidad -- ganar la primera aumenta la chance de ganar la segunda más de
+// lo que el rating por sí solo predice (verificado contra el backtest real:
+// el modelo sin este ajuste predecía ~47% de empate contra una tasa real de
+// ~20%. Ver CLAUDE.md). deltaBo2 desplaza la probabilidad condicional de la
+// partida 2 en escala logit: con deltaBo2=0 se reduce exactamente a la
+// fórmula binomial ingenua (partidas independientes, p², 2p(1-p), (1-p)²).
+// Sin calibrar todavía contra el backtest -- ver juez/calibrar.mjs.
+export function probabilidadSerie(p, formato, { deltaBo2 = DELTA_BO2 } = {}) {
   switch (formato) {
     case 'bo1':
       return { ganaA: p, empate: 0, ganaB: 1 - p };
-    case 'bo2':
-      return { ganaA: p * p, empate: 2 * p * (1 - p), ganaB: (1 - p) * (1 - p) };
+    case 'bo2': {
+      const pSegundaSiGanoA = sigmoide(logit(p) + deltaBo2);
+      const pSegundaSiGanoB = sigmoide(logit(p) - deltaBo2);
+      const ganaA = p * pSegundaSiGanoA;
+      const ganaB = (1 - p) * (1 - pSegundaSiGanoB);
+      return { ganaA, empate: 1 - ganaA - ganaB, ganaB };
+    }
     case 'bo3': {
       const ganaA = probabilidadMejorDeImpar(p, 3);
       return { ganaA, empate: 0, ganaB: 1 - ganaA };

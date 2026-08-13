@@ -129,18 +129,26 @@ professional/premium), sweep de K_FACTOR/ESCALA en `juez/calibrar.mjs`
 | Formato | Brier del motor | Brier base ingenua | ¿Se gana el puesto? |
 |---|---|---|---|
 | bo1 | 0.4875 | 0.5 | sí, modesto |
-| bo3 (78% de las series) | 0.4735 | 0.5 | sí, modesto |
+| bo3 (67% de las series) | 0.4735 | 0.5 | sí, modesto |
 | bo5 | 0.4587 | 0.5 | sí |
-| bo2 (fase de grupos de TI) | 0.7083 | 0.6667 | **NO** |
+| bo2 (fase de grupos de TI) | 0.5977 | 0.6667 | sí, con el ajuste de abajo |
 
-**Hallazgo clave sobre bo2:** el modelo predice ~47% de probabilidad de
-empate en promedio, pero la tasa real de empate en Bo2 es ~20%. La fórmula
-`2p(1-p)` asume que las dos partidas de una serie son independientes — en
-la realidad no lo son (ganar la partida 1 aumenta la chance de ganar la 2
-más allá de lo que el rating por sí solo explica). Ningún ajuste de
-K_FACTOR/ESCALA lo arregla porque es un problema de forma del modelo, no de
-escala. **No usar predicciones de bo2 en producción hasta resolver esto**
-(ni en Discord ni en la web — regla 3).
+**bo2 tenía un problema real, ya resuelto:** con la fórmula binomial pura
+(partidas independientes dentro de la serie), el modelo predecía ~47% de
+probabilidad de empate en promedio contra una tasa real de ~20% — perdía
+contra la base ingenua (0.7083). Ningún ajuste de K_FACTOR/ESCALA lo
+arreglaba porque no era un problema de escala: las dos partidas de un Bo2
+NO son independientes en la realidad (ganar la partida 1 aumenta la chance
+de ganar la 2 más de lo que el rating por sí solo explica).
+
+Se agregó `deltaBo2` a `motor/series.mjs`: desplaza la probabilidad
+condicional de la partida 2 en escala logit según quién ganó la partida 1.
+Con `deltaBo2=0` se reduce exactamente a la fórmula binomial vieja (por
+eso no rompió nada). Sweep real: `deltaBo2=1.4` minimiza el Brier de bo2 en
+0.5977, y en ese punto el modelo predice 19.0% de empate en promedio —
+casi exactamente la tasa real observada, buena señal de que el ajuste
+capturó la causa real y no sobreajustó ruido. Valor calibrado en
+`config.mjs` (`DELTA_BO2`).
 
 ## Orden de fases
 
