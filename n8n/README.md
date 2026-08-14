@@ -65,6 +65,49 @@ Están desfasadas a propósito: primero se predice, media hora después se
 califica lo que ya terminó, después se regenera el panel web
 (`salida/web/index.html`), y al final sale el aviso por Discord.
 
+### Qué pasa si se apaga la PC (se va la luz)
+
+**Con la PC apagada no corre nada.** Estas tareas viven en el Programador de
+tareas de Windows: si la máquina está apagada o suspendida, no hay nada que
+las dispare.
+
+Qué se recupera solo al volver la luz, y qué no:
+
+| | Se recupera |
+|---|---|
+| Calificar resultados | **Sí.** Los resultados quedan en OpenDota; el juez los cruza cuando vuelva, sin importar cuánto tarde. |
+| Panel web | **Sí.** Se regenera del estado de Supabase. |
+| Avisos de Discord | **Sí.** `avisados.json` sólo marca lo que de verdad se envió, así que lo pendiente sale en la corrida siguiente. |
+| **Predicciones** | **NO, y esto es lo grave.** |
+
+Si una serie **empieza** mientras la PC está apagada, al volver ya arrancó, y
+la regla 6 la salta a propósito (no se predice sobre algo en curso). Esa
+predicción **se pierde para siempre**: no se puede fabricar después sin
+mentir, porque cualquier número calculado con el partido ya empezado estaría
+contaminado. Es la regla funcionando bien, pero el costo es cobertura.
+
+Lo que sí está configurado para reducir la ventana de pérdida:
+
+- **`StartWhenAvailable`**: si se pierde una corrida, se ejecuta en cuanto la
+  PC vuelva, en vez de esperar la hora siguiente.
+- **Disparador al iniciar sesión** (con 2 min de retraso, para no pelear con
+  el arranque de Windows): al encender y entrar, arranca el ciclo completo.
+- **No se salta por batería** (`DisallowStartIfOnBatteries = false`), que es
+  el default de Windows y habría silenciado las corridas en un portátil sin
+  enchufe.
+- **Límite de 10 minutos** por corrida, para que una llamada colgada a la API
+  no deje la tarea trabada bloqueando las siguientes.
+
+**Lo que ninguna configuración arregla:** las tareas corren con token
+interactivo y `LogonType = Interactive`, así que necesitan que el usuario
+tenga sesión iniciada. Si la PC arranca sola y se queda en la pantalla de
+inicio de sesión, no corre nada hasta que alguien entre.
+
+Si hace falta cobertura de verdad (no perder ninguna ronda), la única
+solución real es que esto corra en algo que no se apague — un servidor, una
+VPS, o un runner en la nube. Con la PC de escritorio la cobertura siempre va
+a depender de que esté prendida.
+
 ### Corren ocultas (si no, son 4 ventanas negras por hora)
 
 Las tareas **no** apuntan directo a los `.cmd`. Van a través de
