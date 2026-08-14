@@ -59,10 +59,32 @@ Tareas creadas y verificadas corriendo (resultado 0, con rastro en los logs):
 | `MonitorDota2-Predecir` | `scripts\predecir.cmd` | cada hora, :05 |
 | `MonitorDota2-Calificar` | `scripts\calificar.cmd` | cada hora, :35 |
 | `MonitorDota2-Panel` | `scripts\panel.cmd` | cada hora, :50 |
+| `MonitorDota2-Avisar` | `scripts\avisar.cmd` | cada hora, :55 |
 
 Están desfasadas a propósito: primero se predice, media hora después se
-califica lo que ya terminó, y al final se regenera el panel web
-(`salida/web/index.html`) con el estado resultante.
+califica lo que ya terminó, después se regenera el panel web
+(`salida/web/index.html`), y al final sale el aviso por Discord.
+
+## Cómo te enterás de las predicciones
+
+Tres formas, de menos a más automática:
+
+1. **El panel web**: abrir `salida/web/index.html` (doble click, no necesita
+   servidor). Se regenera solo cada hora.
+2. **Discord**: `MonitorDota2-Avisar` manda un mensaje cuando hay
+   predicciones nuevas y otro cuando se califican series. **Requiere poner
+   `DISCORD_WEBHOOK` en `.env`** — sin eso la tarea corre, no revienta, y
+   deja en `scripts/log-avisar.txt` que falta el webhook.
+
+   Para sacar el webhook: en Discord, Configuración del canal → 
+   Integraciones → Webhooks → Nuevo webhook → Copiar URL.
+
+   No repite avisos: lleva registro en `salida/avisados.json` de lo que ya
+   mandó, y **sólo marca como avisado lo que de verdad se envió**, así un
+   Discord caído no hace perder el aviso para siempre.
+3. **Los logs**: `scripts/log-*.txt`, uno por tarea, con el código de salida
+   de cada corrida. Ahí se ve si algo falló, porque el Programador de tareas
+   sólo guarda el número.
 
 Para ver el estado, correr a mano o borrarlas cuando TI2026 termine (23 de
 agosto):
