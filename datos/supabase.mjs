@@ -21,6 +21,20 @@ export async function seleccionar(tabla, query = '', { fetchImpl = fetch } = {})
   return res.json();
 }
 
+// PATCH: actualiza sólo las columnas que se pasan, en las filas que matchean
+// la query. A diferencia de upsert, no necesita mandar la fila completa --
+// importante para marcar "ya avisado" sin arriesgar sobreescribir la
+// predicción guardada.
+export async function parchear(tabla, query, cambios, { fetchImpl = fetch } = {}) {
+  const res = await fetchImpl(`${baseUrl()}/rest/v1/${tabla}${query}`, {
+    method: 'PATCH',
+    headers: { ...headers(), Prefer: 'return=minimal' },
+    body: JSON.stringify(cambios),
+  });
+  if (!res.ok) throw new Error(`Supabase parchear(${tabla}) respondió ${res.status}: ${await res.text()}`);
+  return true;
+}
+
 export async function upsert(tabla, filas, { onConflict, fetchImpl = fetch } = {}) {
   const url = new URL(`${baseUrl()}/rest/v1/${tabla}`);
   if (onConflict) url.searchParams.set('on_conflict', onConflict);

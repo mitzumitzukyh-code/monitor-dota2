@@ -7,9 +7,8 @@
 // configurado, avisar() no revienta: lo dice y devuelve enviado:false, para
 // que el flujo de la tarea programada no se caiga por eso.
 
-import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { seleccionar } from '../datos/supabase.mjs';
+import { seleccionar, parchear } from '../datos/supabase.mjs';
 
 import { enVenezuela, hora12, cuandoEnPalabras, diaEnPalabras, agruparPorDia } from './formato.mjs';
 
@@ -153,24 +152,22 @@ export async function enviar(contenido, { fetchImpl = fetch, webhook = process.e
   return { enviado: true };
 }
 
-// Estado local de qué ya se avisó, para que la tarea que corre cada hora no
-// repita el mismo aviso. Se guarda en disco (un solo usuario, una sola
-// máquina); si se borra, el próximo aviso repite y ya.
-const RUTA_ESTADO = new URL('./avisados.json', import.meta.url);
-
-export async function leerAvisados(ruta = RUTA_ESTADO) {
-  try {
-    const datos = JSON.parse(await readFile(ruta, 'utf8'));
-    return { predichas: new Set(datos.predichas ?? []), calificadas: new Set(datos.calificadas ?? []) };
-  } catch {
-    return { predichas: new Set(), calificadas: new Set() };
-  }
-}
-
-export async function guardarAvisados(avisados, ruta = RUTA_ESTADO) {
-  await writeFile(
-    ruta,
-    JSON.stringify({ predichas: [...avisados.predichas], calificadas: [...avisados.calificadas] }, null, 1),
+// El registro de "qué ya se avisó" vive en Supabase, en dos columnas de
+// dota_predictions (avisado_prediccion_en / avisado_resultado_en), no en un
+// archivo.
+//
+// Por qué: en GitHub Actions no hay disco que persista entre corridas. Con
+// un archivo local, el estado se perdía cada vez y Discord mandaba los
+// mismos avisos cada hora. En la base también sobrevive a cambiar de
+// máquina.
+export async function marcarAvisado(seriesIds, columna, { fetchImpl } = {}) {
+  if (seriesIds.length === 0) return;
+  const lista = seriesIds.map((id) => `"${id}"`).join(',');
+  await parchear(
+    'dota_predictions',
+    `?series_id=in.(${lista})`,
+    { [columna]: new Date().toISOString() },
+    { fetchImpl },
   );
 }
 
@@ -193,7 +190,7 @@ export function calcularMetricasSimple(calificadas) {
   };
 }
 
-export async function avisar({ fetchImpl, fetchImplSupabase, rutaEstado } = {}) {
+export async function avisar({ fetchImpl, fetchImplSupabase } = {}) {
   const [seriesDb, predsDb, teamsDb] = await Promise.all([
     seleccionar('dota_series', '?select=*', { fetchImpl: fetchImplSupabase }),
     seleccionar('dota_predictions', '?select=*', { fetchImpl: fetchImplSupabase }),
@@ -213,9 +210,9 @@ export async function avisar({ fetchImpl, fetchImplSupabase, rutaEstado } = {}) 
     else pendientes.push({ ...s, ...p });
   }
 
-  const avisados = await leerAvisados(rutaEstado);
-  const nuevasPredichas = pendientes.filter((p) => !avisados.predichas.has(p.series_id));
-  const nuevasCalificadas = calificadas.filter((c) => !avisados.calificadas.has(c.series_id));
+  // Lo pendiente de avisar sale de las columnas de la base, no de un archivo.
+  const nuevasPredichas = pendientes.filter((p) => !p.avisado_prediccion_en);
+  const nuevasCalificadas = calificadas.filter((c) => !c.avisado_resultado_en);
 
   const enviados = [];
 
@@ -223,19 +220,26 @@ export async function avisar({ fetchImpl, fetchImplSupabase, rutaEstado } = {}) 
   if (msgPred) {
     const r = await enviar(msgPred, { fetchImpl });
     enviados.push({ tipo: 'predicciones', cuantas: nuevasPredichas.length, ...r });
-    if (r.enviado) for (const p of nuevasPredichas) avisados.predichas.add(p.series_id);
+    // Sólo se marca lo que DE VERDAD se envió: si Discord está caído, el
+    // aviso queda pendiente y sale en la corrida siguiente en vez de
+    // perderse para siempre.
+    if (r.enviado) {
+      await marcarAvisado(nuevasPredichas.map((p) => p.series_id), 'avisado_prediccion_en', {
+        fetchImpl: fetchImplSupabase,
+      });
+    }
   }
 
   const msgRes = mensajeResultados(nuevasCalificadas, nombre, calcularMetricasSimple(calificadas));
   if (msgRes) {
     const r = await enviar(msgRes, { fetchImpl });
     enviados.push({ tipo: 'resultados', cuantas: nuevasCalificadas.length, ...r });
-    if (r.enviado) for (const c of nuevasCalificadas) avisados.calificadas.add(c.series_id);
+    if (r.enviado) {
+      await marcarAvisado(nuevasCalificadas.map((c) => c.series_id), 'avisado_resultado_en', {
+        fetchImpl: fetchImplSupabase,
+      });
+    }
   }
-
-  // Sólo se marca como avisado lo que de verdad se envió, así un webhook
-  // caído no hace perder el aviso para siempre.
-  if (enviados.some((e) => e.enviado)) await guardarAvisados(avisados, rutaEstado);
 
   return { enviados, nuevasPredichas: nuevasPredichas.length, nuevasCalificadas: nuevasCalificadas.length };
 }

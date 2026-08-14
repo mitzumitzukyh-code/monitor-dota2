@@ -1,0 +1,106 @@
+name: Monitor TI2026
+
+# Corre en los servidores de GitHub, no en la PC de casa. El motivo concreto:
+# el racionamiento eléctrico del bloque A deja cortes de 5 horas diarios, y
+# varios caen justo en el horario en que TI juega (22:00-06:00 hora
+# Venezuela). Con las tareas en la PC, una serie que empieza durante el corte
+# se pierde para siempre -- la regla 6 la salta por diseño y no se puede
+# predecir hacia atrás sin mentir.
+#
+# El cron de GitHub NO es exacto: puede retrasarse varios minutos en horas de
+# pico. Con intervalo de 20 min sigue habiendo margen de sobra frente a
+# series que se anuncian con horas de anticipación.
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  # Para poder dispararlo a mano desde la pestaña Actions.
+  workflow_dispatch:
+
+# Un solo ciclo a la vez: dos corridas en paralelo podrían predecir la misma
+# serie dos veces o mandar el aviso duplicado.
+concurrency:
+  group: monitor-ti2026
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  ciclo:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 22: el glob de `--test "pruebas/**/*.test.mjs"` necesita 22+ para
+      # expandirse igual que en local. Con 20 el patrón no resuelve y las
+      # pruebas pasarían sin correr, que es peor que fallar.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Sin dependencias que instalar: motor/ y juez/ son matemática pura y
+      # el resto usa sólo builtins de Node.
+      - name: Comprobar que los secretos están puestos
+        run: |
+          faltan=""
+          [ -z "$SUPABASE_URL" ] && faltan="$faltan SUPABASE_URL"
+          [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && faltan="$faltan SUPABASE_SERVICE_ROLE_KEY"
+          [ -z "$DISCORD_WEBHOOK" ] && faltan="$faltan DISCORD_WEBHOOK"
+          if [ -n "$faltan" ]; then
+            echo "Faltan secretos:$faltan"
+            echo "Ponerlos en Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+          echo "Los tres secretos están puestos."
+
+      - name: Pruebas
+        run: node --test "pruebas/**/*.test.mjs"
+
+      # 1. Predecir las series que todavía no empezaron. Es el paso que más
+      #    urge: si se pierde, la predicción no se recupera.
+      - name: Predecir
+        run: node juez/vivo-motor.mjs
+
+      # 2. Calificar lo que ya terminó. Si esto falla una vez no se pierde
+      #    nada: los resultados siguen en OpenDota para la corrida siguiente.
+      - name: Calificar
+        if: always()
+        run: node juez/vivo-notas.mjs
+
+      # 3. Avisar por Discord lo nuevo. El registro de qué ya se avisó está en
+      #    Supabase, así que no repite entre corridas.
+      - name: Avisar por Discord
+        if: always()
+        run: node salida/discord.mjs
+
+      # 4. Regenerar el panel y publicarlo en GitHub Pages.
+      - name: Generar el panel
+        if: always()
+        run: node salida/web/generar.mjs
+
+      - name: Preparar Pages
+        if: always()
+        uses: actions/configure-pages@v5
+
+      - name: Subir el panel
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: salida/web
+
+      - name: Publicar en Pages
+        id: despliegue
+        if: always()
+        uses: actions/deploy-pages@v4
