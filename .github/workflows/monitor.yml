@@ -16,6 +16,12 @@ on:
     - cron: '*/20 * * * *'
   # Para poder dispararlo a mano desde la pestaña Actions.
   workflow_dispatch:
+  # También en cada push a main: sirve de CI (las pruebas corren antes de
+  # tocar nada) y da una forma de disparar el ciclo sin abrir el navegador.
+  # Es seguro porque el ciclo es idempotente: no re-predice una serie ya
+  # guardada, no re-avisa lo ya avisado, y no califica dos veces.
+  push:
+    branches: [main]
 
 # Un solo ciclo a la vez: dos corridas en paralelo podrían predecir la misma
 # serie dos veces o mandar el aviso duplicado.
