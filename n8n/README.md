@@ -44,13 +44,43 @@ Después de arrancar así, confirmar que funcionó: en un workflow, presionar
 `N` y buscar "Execute Command". Si aparece en la lista, quedó habilitado. Si
 sigue diciendo "We didn't make that... yet", la variable no se aplicó.
 
-### Alternativa sin bajar esa protección
+### Lo que se usa de verdad: Programador de tareas de Windows
 
-Estos flujos no hacen nada que n8n aporte de verdad: son dos scripts de Node
-en la misma máquina, sin ramificaciones ni integraciones. El Programador de
-tareas de Windows los corre igual, sin habilitar ejecución de comandos
-arbitrarios en un servicio web. Ver `n8n/../scripts/` — `predecir.cmd` y
-`calificar.cmd` están listos para apuntarles una tarea programada.
+**Decidido el 2026-08-14: la automatización NO corre por n8n.** Estos flujos
+no hacen nada que n8n aporte — son dos scripts de Node en la misma máquina,
+sin ramificaciones ni integraciones. El Programador de tareas los corre
+igual, sin habilitar ejecución de comandos arbitrarios en un servicio web.
+Los JSON quedan en el repo por si algún día hace falta n8n de verdad.
+
+Tareas creadas y verificadas corriendo (resultado 0, con rastro en los logs):
+
+| Tarea | Script | Frecuencia |
+|---|---|---|
+| `MonitorDota2-Predecir` | `scripts\predecir.cmd` | cada hora, :05 |
+| `MonitorDota2-Calificar` | `scripts\calificar.cmd` | cada hora, :35 |
+
+Están desfasadas 30 min a propósito: primero se predice, y media hora
+después se califica lo que ya terminó.
+
+Para ver el estado, correr a mano o borrarlas cuando TI2026 termine (23 de
+agosto):
+
+```bash
+schtasks /query /tn "MonitorDota2-Predecir" /fo LIST /v
+```
+
+```bash
+schtasks /run /tn "MonitorDota2-Calificar"
+```
+
+```bash
+schtasks /delete /tn "MonitorDota2-Predecir" /f
+```
+
+Los scripts dejan rastro en `scripts/log-predecir.txt` y
+`scripts/log-calificar.txt` (en `.gitignore`, crecen con cada corrida).
+Ahí se ve si una corrida falló, porque el Programador solo guarda el código
+de salida.
 
 ## Cómo importar (gotchas reales, verificados)
 
