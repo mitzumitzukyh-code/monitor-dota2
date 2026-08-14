@@ -29,12 +29,12 @@ test('mensajePredicciones: pone al favorito primero y la hora de Venezuela', () 
     [{ series_id: 'a', equipo_a: 1, equipo_b: 2, prob_gana_a: 0.549, prob_gana_b: 0.451, formato: 'bo3', start_time: '2026-08-15T02:00:00Z' }],
     nombre,
   );
-  assert.ok(msg.includes('Team Spirit 54.9%'), 'el favorito va primero con su probabilidad');
-  assert.ok(msg.includes('Aurora Gaming 45.1%'));
-  assert.ok(msg.includes('BO3'));
+  assert.ok(msg.includes('**Team Spirit** 55%'), 'el favorito va primero, redondeado: ' + msg);
+  assert.ok(msg.includes('Aurora Gaming 45%'));
+  assert.ok(!msg.includes('BO3'), 'el formato tecnico ya no se muestra en el aviso');
   // 02:00 UTC del 15 => 22:00 del 14 en Venezuela
-  assert.ok(msg.includes('2026-08-14 22:00'), 'hora convertida a Venezuela: ' + msg);
-  assert.ok(msg.includes('no se reescribe'));
+  assert.ok(/hoy |mañana |ayer |\d{2}\/\d{2} /.test(msg), 'debe usar fecha en palabras: ' + msg);
+  assert.ok(msg.includes('quedan guardados'), 'debe decir que no se cambian');
 });
 
 test('mensajePredicciones: si el favorito es el equipo B, lo pone primero igual', () => {
@@ -42,7 +42,7 @@ test('mensajePredicciones: si el favorito es el equipo B, lo pone primero igual'
     [{ series_id: 'a', equipo_a: 3, equipo_b: 4, prob_gana_a: 0.123, prob_gana_b: 0.877, formato: 'bo3', start_time: '2026-08-14T05:00:00Z' }],
     nombre,
   );
-  assert.ok(msg.includes('Team Falcons 87.7%'), 'Falcons es el favorito y va primero');
+  assert.ok(msg.includes('**Team Falcons** 88%'), 'Falcons es el favorito y va primero: ' + msg);
   assert.ok(msg.indexOf('Team Falcons') < msg.indexOf('Iron Wing'));
 });
 
@@ -57,7 +57,7 @@ test('mensajeResultados: marca acierto y fallo, y avisa cuando el Brier es peor 
   );
   assert.ok(msg.includes('✅'), 'la primera acertó');
   assert.ok(msg.includes('❌'), 'la segunda falló');
-  assert.ok(msg.includes('peor que 0.50'), 'debe avisar del Brier peor que la base');
+  assert.ok(msg.includes('el golpe del día'), 'debe marcar el fallo con mas confianza: ' + msg);
 });
 
 test('mensajeResultados: incluye el acumulado y el aviso de que no concluye con n chico', () => {
@@ -66,9 +66,9 @@ test('mensajeResultados: incluye el acumulado y el aviso de que no concluye con 
     { series_id: 'b', equipo_a: 3, equipo_b: 4, prob_gana_a: 0.6, prob_gana_b: 0.4, formato: 'bo3', resultado_real: 'ganaB', victorias_a: 0, victorias_b: 2, brier: 1.2 },
   ];
   const msg = mensajeResultados(calificadas, nombre, calcularMetricasSimple(calificadas));
-  assert.ok(msg.includes('Acumulado'));
-  assert.ok(msg.includes('vs 0.500 de adivinar'));
-  assert.ok(msg.includes('todavía no concluye nada'));
+  assert.ok(msg.includes('Acertamos'), 'resumen en llano');
+  assert.ok(msg.includes('0.500 de adivinar'), 'el numero tecnico va al pie');
+  assert.ok(msg.includes('no alcanza para saber si sirve'), 'en lenguaje llano: ' + msg);
 });
 
 test('recortar: respeta el límite de Discord con aviso, en vez de dejar que corte a la mitad', () => {
