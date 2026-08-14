@@ -40,6 +40,76 @@ function logit(p) {
   return Math.log(p / (1 - p));
 }
 
+// Cuántas partidas hay que ganar para cerrar cada formato.
+const VICTORIAS_NECESARIAS = { bo1: 1, bo2: 2, bo3: 2, bo5: 3 };
+
+// Probabilidad de cada MARCADOR posible de la serie (2–0, 2–1, 1–2, 0–2 en
+// un Bo3). Es el equivalente honesto de la matriz de marcadores exactos de
+// Dixon-Coles en el proyecto de fútbol: no agrega ningún supuesto nuevo,
+// sale de la misma p de partida.
+//
+// Para un "primero a k": A gana con marcador k–j si gana k partidas y
+// pierde j, y la ÚLTIMA la gana él. Las j derrotas se reparten entre las
+// k−1+j partidas previas -> C(k−1+j, j) · p^k · (1−p)^j.
+//
+// Bo2 no es un "primero a k" (se juegan las dos partidas siempre y el 1–1
+// es un resultado válido), así que va aparte y respeta el mismo deltaBo2
+// de correlación intra-serie que probabilidadSerie.
+export function distribucionMarcadores(p, formato, { deltaBo2 = DELTA_BO2 } = {}) {
+  if (formato === 'bo2') {
+    const pSegundaSiGanoA = sigmoide(logit(p) + deltaBo2);
+    const pSegundaSiGanoB = sigmoide(logit(p) - deltaBo2);
+    const ganaA = p * pSegundaSiGanoA;
+    const ganaB = (1 - p) * (1 - pSegundaSiGanoB);
+    return [
+      { marcador: '2–0', prob: ganaA, gana: 'A' },
+      { marcador: '1–1', prob: 1 - ganaA - ganaB, gana: 'empate' },
+      { marcador: '0–2', prob: ganaB, gana: 'B' },
+    ];
+  }
+
+  const k = VICTORIAS_NECESARIAS[formato];
+  if (!k) throw new Error(`formato de serie desconocido: ${formato}`);
+
+  const deA = [];
+  const deB = [];
+  for (let j = 0; j < k; j++) {
+    const peso = combinaciones(k - 1 + j, j);
+    deA.push({ marcador: `${k}–${j}`, prob: peso * p ** k * (1 - p) ** j, gana: 'A' });
+    deB.push({ marcador: `${j}–${k}`, prob: peso * (1 - p) ** k * p ** j, gana: 'B' });
+  }
+  // A de mejor a peor, después B de peor a mejor: deja el 2–1 y el 1–2
+  // pegados en el medio, que es donde se decide la serie.
+  return [...deA, ...deB.reverse()];
+}
+
+// Recupera la p de PARTIDA a partir de la probabilidad de SERIE ya
+// calculada. La ficha necesita esto para que los marcadores que muestra
+// sean consistentes con la predicción que de verdad se guardó, en vez de
+// con un recálculo del Elo que puede haber cambiado (el histórico crece).
+//
+// probabilidadMejorDeImpar es monótona creciente en p, así que una
+// bisección converge sin sorpresas. Para bo2 se invierte ganaA, que
+// también es monótona.
+export function probabilidadPartidaDesdeSerie(probGanaA, formato, { deltaBo2 = DELTA_BO2, tolerancia = 1e-12 } = {}) {
+  if (formato === 'bo1') return probGanaA;
+
+  const ganaADesdeP = (p) => {
+    if (formato === 'bo2') return p * sigmoide(logit(p) + deltaBo2);
+    return probabilidadMejorDeImpar(p, formato === 'bo3' ? 3 : 5);
+  };
+
+  let lo = 1e-9;
+  let hi = 1 - 1e-9;
+  for (let i = 0; i < 200; i++) {
+    const medio = (lo + hi) / 2;
+    if (ganaADesdeP(medio) < probGanaA) lo = medio;
+    else hi = medio;
+    if (hi - lo < tolerancia) break;
+  }
+  return (lo + hi) / 2;
+}
+
 export function formatoDesdeSeriesType(seriesType) {
   switch (seriesType) {
     case 0: return 'bo1';

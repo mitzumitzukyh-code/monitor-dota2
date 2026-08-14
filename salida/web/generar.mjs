@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { seleccionar } from '../../datos/supabase.mjs';
 import { partidasDeLaLiga, historicoConLiga } from '../../datos/liga.mjs';
 import { ratings, ratingDeEquipo, probabilidadGanar } from '../../motor/elo.mjs';
+import { distribucionMarcadores, probabilidadPartidaDesdeSerie } from '../../motor/series.mjs';
 import { EQUIPOS_TI2026 } from '../../datos/equipos-ti2026.mjs';
 
 const LEAGUE_ID_TI2026 = 19719;
@@ -68,6 +69,25 @@ export function calcularMetricas(calificadas) {
   };
 }
 
+// Los series_id traen ':' (ej. "mfiWqjJT5B:0003") y Windows no lo admite en
+// nombres de archivo.
+export function archivoDeFicha(seriesId) {
+  return 'serie-' + String(seriesId).replace(/[^a-zA-Z0-9._-]/g, '-') + '.html';
+}
+
+// Últimos resultados de un equipo ANTES de un instante dado, más reciente
+// primero. Para la fila de forma de la ficha.
+export function formaDeEquipo(partidas, teamId, antesDe, cuantas = 6) {
+  return partidas
+    .filter((p) => p.start_time < antesDe && (p.radiant_team_id === teamId || p.dire_team_id === teamId))
+    .sort((a, b) => b.start_time - a.start_time)
+    .slice(0, cuantas)
+    .map((p) => {
+      const esRadiant = p.radiant_team_id === teamId;
+      return { gano: esRadiant === Boolean(p.radiant_win), start_time: p.start_time };
+    });
+}
+
 function tarjeta({ etiqueta, valor, sufijo = '', delta, referencia, nota, alerta = false }) {
   return `      <div style="padding: 20px 24px; border-right: 1px solid rgba(243,242,242,0.18);${alerta ? ' background: rgba(124,20,5,0.22);' : ''}">
         <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: #9b9797; margin-bottom: 10px;">${esc(etiqueta)}</div>
@@ -89,7 +109,7 @@ function filaSerie(c, nombre) {
   const marcador = `${c.victorias_a ?? '-'}–${c.victorias_b ?? '-'}`;
   const ganador = c.resultado_real === 'ganaA' ? nombre(c.equipo_a) : c.resultado_real === 'ganaB' ? nombre(c.equipo_b) : 'empate';
 
-  return `          <div style="display: grid; grid-template-columns: minmax(0,1fr) 92px 62px 70px; gap: 16px; align-items: center; padding: 12px 24px; border-bottom: 1px solid rgba(243,242,242,0.14);${peor ? ' background: rgba(124,20,5,0.18);' : ''}">
+  return `          <a href="${esc(archivoDeFicha(c.series_id))}" style="display: grid; grid-template-columns: minmax(0,1fr) 92px 62px 70px; gap: 16px; align-items: center; padding: 12px 24px; border-bottom: 1px solid rgba(243,242,242,0.14); color: inherit; text-decoration: none;${peor ? ' background: rgba(124,20,5,0.18);' : ''}" title="Ver la ficha de esta serie">
             <div style="min-width: 0;">
               <div style="display: grid; grid-template-columns: 14px minmax(0,1fr) auto; gap: 10px; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-variant-numeric: tabular-nums;">
                 <span style="font-size: 10px; color: ${favA ? '#ff563c' : '#9b9797'};">${favA ? '▶' : ''}</span>
@@ -112,7 +132,7 @@ function filaSerie(c, nombre) {
             </div>
             <div style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; color: ${peor ? '#ff9783' : '#f3f2f2'};">${brier.toFixed(3)}</div>
             <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-align: right; color: ${acerto ? '#f3f2f2' : '#9b9797'};">${acerto ? '■ ACIERTO' : '◇ FALLO'}</div>
-          </div>`;
+          </a>`;
 }
 
 function seccion(titulo, derecha, cuerpo) {
@@ -254,6 +274,168 @@ ${seccion('FUERZA ELO · LOS 16 DE TI2026', 'RATING AL MOMENTO DE GENERAR', fila
 `;
 }
 
+function envoltorio(titulo, contenido) {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(titulo)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #171615; }
+  a { color: #ff563c; text-decoration: none; }
+  a:hover { color: #ff9783; }
+  ::selection { background: rgba(255,86,60,0.35); }
+</style>
+</head>
+<body>
+<div style="min-height: 100vh; background: #171615; color: #f3f2f2; font-family: 'Archivo', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased;">
+${contenido}
+</div>
+</body>
+</html>
+`;
+}
+
+export function construirFicha({ serie, nombre, p, marcadores, ratingA, ratingB, formaA, formaB, generadoEn }) {
+  const nombreA = nombre(serie.equipo_a);
+  const nombreB = nombre(serie.equipo_b);
+  const pa = Number(serie.prob_gana_a);
+  const pb = Number(serie.prob_gana_b);
+  const empate = Number(serie.prob_empate);
+  const favA = pa >= pb;
+  const brier = Number(serie.brier);
+  const base = BASE_INGENUA[serie.formato] ?? 0.5;
+  const acerto = (favA ? 'ganaA' : 'ganaB') === serie.resultado_real;
+
+  const marcadorReal =
+    serie.victorias_a != null && serie.victorias_b != null ? `${serie.victorias_a}–${serie.victorias_b}` : null;
+  const ordenados = marcadores.slice().sort((a, b) => b.prob - a.prob);
+  const filaReal = marcadores.find((m) => m.marcador === marcadorReal);
+  const puestoReal = filaReal ? ordenados.findIndex((m) => m.marcador === marcadorReal) + 1 : null;
+  const maxProb = Math.max(...marcadores.map((m) => m.prob));
+
+  const filasMarcadores = marcadores
+    .map((m) => {
+      const esReal = m.marcador === marcadorReal;
+      const quien = m.gana === 'A' ? nombreA : m.gana === 'B' ? nombreB : 'empate';
+      return `        <div style="display: grid; grid-template-columns: 58px minmax(0,1fr) 120px 62px; gap: 14px; align-items: center; padding: 10px 24px; border-bottom: 1px solid rgba(243,242,242,0.12);${esReal ? ' background: rgba(255,86,60,0.16);' : ''}">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-variant-numeric: tabular-nums; color: ${esReal ? '#f3f2f2' : '#bab6b6'};">${esc(m.marcador)}</span>
+          <div style="height: 10px; background: rgba(243,242,242,0.08);">
+            <div style="width: ${((m.prob / maxProb) * 100).toFixed(1)}%; height: 100%; background: ${esReal ? '#ff563c' : 'rgba(255,86,60,0.42)'};"></div>
+          </div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(quien)}</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; color: ${esReal ? '#ff563c' : '#f3f2f2'};">${pct(m.prob)}<span style="color:#9b9797;">%</span></span>
+        </div>`;
+    })
+    .join('\n');
+
+  const forma = (lista) =>
+    lista.length
+      ? lista
+          .map(
+            (f) =>
+              `<span style="display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; ${f.gano ? 'background:#ff563c; color:#171615;' : 'border:1px solid rgba(243,242,242,0.35); color:#9b9797;'}">${f.gano ? 'V' : 'D'}</span>`,
+          )
+          .join('')
+      : `<span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9b9797;">sin partidas previas registradas</span>`;
+
+  const diferencia = ratingA - ratingB;
+  const narrativa = [
+    `El motor daba ${pct(favA ? pa : pb)}% a ${esc(favA ? nombreA : nombreB)} y ${acerto ? 'acertó' : 'falló'}.`,
+    marcadorReal && puestoReal
+      ? `El marcador real ${marcadorReal} era el ${puestoReal}.º más probable de ${marcadores.length} (${pct(filaReal.prob)}%).`
+      : '',
+    brier > base
+      ? `El Brier de esta serie (${brier.toFixed(4)}) quedó por encima de su base ingenua (${base.toFixed(3)}): en esta serie el modelo aportó menos que tirar una moneda.`
+      : `El Brier de esta serie (${brier.toFixed(4)}) quedó por debajo de su base ingenua (${base.toFixed(3)}).`,
+    `Todo sale de una diferencia de ${Math.abs(Math.round(diferencia))} puntos de Elo, que da ${pct(p)}% de ganar UNA partida y ${pct(pa)}% de ganar el ${serie.formato.toUpperCase()}.`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const contenido = `  <div style="display: flex; align-items: stretch; justify-content: space-between; flex-wrap: wrap; border-bottom: 2px solid rgba(243,242,242,0.45); padding: 0 24px;">
+    <div style="display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 14px 0;">
+      <a href="index.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em;">← PANEL</a>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9b9797;">FICHA DE SERIE · ${esc(serie.formato.toUpperCase())} · ${esc(String(serie.start_time).slice(0, 16).replace('T', ' '))} UTC</span>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 22px 24px; border-bottom: 2px solid rgba(243,242,242,0.45);">
+    <div style="font-family: 'Archivo', sans-serif; font-size: clamp(24px, 4vw, 40px); font-weight: 600; line-height: 1.1;">
+      <span style="color: ${serie.resultado_real === 'ganaA' ? '#f3f2f2' : '#9b9797'};">${esc(nombreA)}</span>
+      <span style="color: #ff563c;"> vs </span>
+      <span style="color: ${serie.resultado_real === 'ganaB' ? '#f3f2f2' : '#9b9797'};">${esc(nombreB)}</span>
+    </div>
+    <div style="text-align: right; font-family: 'IBM Plex Mono', monospace;">
+      <div style="font-size: 11px; letter-spacing: 0.12em; color: #9b9797;">RESULTADO REAL</div>
+      <div style="font-size: 28px; font-variant-numeric: tabular-nums; margin-top: 4px;">${esc(marcadorReal ?? '—')}</div>
+      <div style="font-size: 10px; letter-spacing: 0.08em; margin-top: 6px; color: ${acerto ? '#f3f2f2' : '#9b9797'};">${acerto ? '■ ACIERTO' : '◇ FALLO'}</div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); border-bottom: 2px solid rgba(243,242,242,0.45);">
+${tarjeta({ etiqueta: 'GANA ' + nombreA.toUpperCase(), valor: pct(pa), sufijo: '%', nota: serie.resultado_real === 'ganaA' ? 'ocurrió' : null })}
+${empate > 0 ? tarjeta({ etiqueta: 'EMPATE', valor: pct(empate), sufijo: '%', nota: serie.resultado_real === 'empate' ? 'ocurrió' : null }) + '\n' : ''}${tarjeta({ etiqueta: 'GANA ' + nombreB.toUpperCase(), valor: pct(pb), sufijo: '%', nota: serie.resultado_real === 'ganaB' ? 'ocurrió' : null })}
+${tarjeta({ etiqueta: 'BRIER DE LA SERIE', valor: brier.toFixed(4), delta: (brier - base >= 0 ? '+' : '−') + Math.abs(brier - base).toFixed(4), referencia: `vs ${base.toFixed(3)} = base ingenua`, alerta: brier > base })}
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); border-bottom: 2px solid rgba(243,242,242,0.45);">
+
+    <div style="border-right: 2px solid rgba(243,242,242,0.45);">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 24px; border-bottom: 1px solid rgba(243,242,242,0.28);">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.14em;">MARCADORES POSIBLES</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; letter-spacing: 0.08em;">DERIVADO DE p = ${pct(p)}% POR PARTIDA</span>
+      </div>
+${filasMarcadores}
+      <div style="padding: 12px 24px 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9b9797; letter-spacing: 0.06em;">FILA TINTADA = MARCADOR QUE DE VERDAD PASÓ · BARRA RELATIVA AL MÁS PROBABLE</div>
+    </div>
+
+    <div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 24px; border-bottom: 1px solid rgba(243,242,242,0.28);">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.14em;">DE DÓNDE SALE</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; letter-spacing: 0.08em;">ELO RECONSTRUIDO AL INICIO</span>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0,1fr) 76px; gap: 14px; align-items: center; padding: 12px 24px; border-bottom: 1px solid rgba(243,242,242,0.12);">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(nombreA)}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-variant-numeric: tabular-nums; text-align: right; color: #ff563c;">${Math.round(ratingA)}</span>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0,1fr) 76px; gap: 14px; align-items: center; padding: 12px 24px; border-bottom: 1px solid rgba(243,242,242,0.12);">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(nombreB)}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-variant-numeric: tabular-nums; text-align: right; color: #ff563c;">${Math.round(ratingB)}</span>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0,1fr) 76px; gap: 14px; align-items: center; padding: 12px 24px; border-bottom: 1px solid rgba(243,242,242,0.28);">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; letter-spacing: 0.08em;">DIFERENCIA → p POR PARTIDA</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-variant-numeric: tabular-nums; text-align: right;">${diferencia >= 0 ? '+' : '−'}${Math.abs(Math.round(diferencia))}</span>
+      </div>
+
+      <div style="padding: 14px 24px; border-bottom: 1px solid rgba(243,242,242,0.28);">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: #9b9797; margin-bottom: 10px;">FORMA ANTES DE LA SERIE · MÁS RECIENTE A LA IZQUIERDA</div>
+        <div style="display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center; margin-bottom: 8px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(nombreA)}</span>
+          <div style="display: flex; gap: 4px;">${forma(formaA)}</div>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(nombreB)}</span>
+          <div style="display: flex; gap: 4px;">${forma(formaB)}</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="padding: 16px 24px; border-bottom: 2px solid rgba(243,242,242,0.45); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #bab6b6; line-height: 1.65; max-width: 96ch;">${esc(narrativa)}</div>
+
+  <div style="padding: 16px 24px 40px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; line-height: 1.7; max-width: 100ch;">
+    Los marcadores salen de la misma p de partida que produjo la predicción guardada (se recupera invirtiendo la fórmula del formato), así que no agregan ningún supuesto nuevo: la suma de los marcadores de cada equipo da exactamente su probabilidad de serie. Los ratings Elo están reconstruidos con partidas anteriores al inicio de esta serie, nunca con lo que pasó después. Generado ${esc(generadoEn)}.
+  </div>`;
+
+  return envoltorio(`${nombreA} vs ${nombreB} · Monitor Dota 2`, contenido);
+}
+
 async function main() {
   const [seriesDb, predsDb, teamsDb] = await Promise.all([
     seleccionar('dota_series', '?select=*&order=start_time'),
@@ -290,8 +472,34 @@ async function main() {
   const destino = new URL('./index.html', import.meta.url);
   await writeFile(destino, html);
 
+  // Una ficha por serie calificada. Los ratings se reconstruyen al INICIO de
+  // cada serie (no con los de ahora), así la ficha no muestra información
+  // que no existía cuando se predijo.
+  let fichas = 0;
+  for (const s of calificadas) {
+    const inicio = Math.floor(new Date(s.start_time).getTime() / 1000);
+    const rMomento = ratings(partidas, inicio);
+    const p = probabilidadPartidaDesdeSerie(Number(s.prob_gana_a), s.formato);
+    const marcadores = distribucionMarcadores(p, s.formato);
+
+    const ficha = construirFicha({
+      serie: s,
+      nombre,
+      p,
+      marcadores,
+      ratingA: ratingDeEquipo(rMomento, s.equipo_a),
+      ratingB: ratingDeEquipo(rMomento, s.equipo_b),
+      formaA: formaDeEquipo(partidas, s.equipo_a, inicio),
+      formaB: formaDeEquipo(partidas, s.equipo_b, inicio),
+      generadoEn,
+    });
+    await writeFile(new URL('./' + archivoDeFicha(s.series_id), import.meta.url), ficha);
+    fichas++;
+  }
+
   console.log(`Panel generado: ${fileURLToPath(destino)}`);
   console.log(`  ${calificadas.length} series calificadas, ${pendientes.length} pendientes, ${fuerzas.length} equipos`);
+  console.log(`  ${fichas} fichas de serie generadas`);
   if (metricas.n) {
     console.log(`  Brier ${metricas.media.toFixed(4)} vs base ${metricas.baseMedia.toFixed(3)} · concluyente: ${metricas.concluyente ? 'sí' : 'NO (n chico)'}`);
   }

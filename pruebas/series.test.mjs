@@ -4,6 +4,8 @@ import {
   probabilidadMejorDeImpar,
   probabilidadSerie,
   formatoDesdeSeriesType,
+  distribucionMarcadores,
+  probabilidadPartidaDesdeSerie,
 } from '../motor/series.mjs';
 
 function cerca(a, b, epsilon = 1e-9) {
@@ -100,4 +102,85 @@ test('probabilidadSerie: bo2 con deltaBo2 > 0 siempre reduce el empate frente a 
 test('probabilidadSerie: bo2 con deltaBo2 sigue sumando 1', () => {
   const r = probabilidadSerie(0.63, 'bo2', { deltaBo2: 0.8 });
   assert.ok(cerca(r.ganaA + r.empate + r.ganaB, 1, 1e-9));
+});
+
+// --- distribución de marcadores: el equivalente honesto de la matriz de
+// marcadores de Dixon-Coles en LaLiga, pero para series de Dota. Cada
+// marcador posible del formato con su probabilidad, derivada de p.
+
+test('distribucionMarcadores: bo1 sólo tiene 1–0 y 0–1', () => {
+  const d = distribucionMarcadores(0.7, 'bo1');
+  assert.deepEqual(d.map((x) => x.marcador), ['1–0', '0–1']);
+  assert.ok(cerca(d[0].prob, 0.7));
+  assert.ok(cerca(d[1].prob, 0.3));
+});
+
+test('distribucionMarcadores: bo3 con p=0.5 da 25/25/25/25 a mano', () => {
+  // 2–0 = p² = 0.25 | 2–1 = 2p²(1−p) = 0.25 | 1–2 = 2p(1−p)² = 0.25 | 0–2 = (1−p)² = 0.25
+  const d = distribucionMarcadores(0.5, 'bo3');
+  assert.deepEqual(d.map((x) => x.marcador), ['2–0', '2–1', '1–2', '0–2']);
+  for (const x of d) assert.ok(cerca(x.prob, 0.25), x.marcador + ' dio ' + x.prob);
+});
+
+test('distribucionMarcadores: bo3 con p=0.6 verificado a mano', () => {
+  // p=0.6: 2–0 = 0.36 | 2–1 = 2(0.36)(0.4) = 0.288 | 1–2 = 2(0.6)(0.16) = 0.192 | 0–2 = 0.16
+  const d = distribucionMarcadores(0.6, 'bo3');
+  assert.ok(cerca(d[0].prob, 0.36));
+  assert.ok(cerca(d[1].prob, 0.288));
+  assert.ok(cerca(d[2].prob, 0.192));
+  assert.ok(cerca(d[3].prob, 0.16));
+});
+
+test('distribucionMarcadores: bo5 con p=0.5 tiene 6 marcadores y suma 1', () => {
+  const d = distribucionMarcadores(0.5, 'bo5');
+  assert.deepEqual(d.map((x) => x.marcador), ['3–0', '3–1', '3–2', '2–3', '1–3', '0–3']);
+  assert.ok(cerca(d.reduce((s, x) => s + x.prob, 0), 1));
+});
+
+test('distribucionMarcadores: bo2 incluye el 1–1 y suma 1', () => {
+  const d = distribucionMarcadores(0.5, 'bo2');
+  assert.deepEqual(d.map((x) => x.marcador), ['2–0', '1–1', '0–2']);
+  assert.ok(cerca(d.reduce((s, x) => s + x.prob, 0), 1));
+});
+
+test('distribucionMarcadores: siempre suma 1 y es consistente con probabilidadSerie', () => {
+  for (const formato of ['bo1', 'bo2', 'bo3', 'bo5']) {
+    for (const p of [0.2, 0.5, 0.73]) {
+      const d = distribucionMarcadores(p, formato);
+      assert.ok(cerca(d.reduce((s, x) => s + x.prob, 0), 1, 1e-9), formato + ' p=' + p + ' no suma 1');
+
+      // La suma de los marcadores que gana A tiene que dar exactamente el
+      // ganaA de probabilidadSerie -- si no, las dos vistas se contradicen.
+      const serie = probabilidadSerie(p, formato);
+      const sumaA = d.filter((x) => x.gana === 'A').reduce((s, x) => s + x.prob, 0);
+      assert.ok(cerca(sumaA, serie.ganaA, 1e-9), formato + ' p=' + p + ': marcadores de A suman ' + sumaA + ' pero probabilidadSerie dice ' + serie.ganaA);
+    }
+  }
+});
+
+test('distribucionMarcadores: formato desconocido revienta en vez de adivinar', () => {
+  assert.throws(() => distribucionMarcadores(0.5, 'bo9'));
+});
+
+// --- inversión: recuperar la p de partida desde la probabilidad de serie
+// ya guardada, para que la ficha muestre marcadores consistentes con lo
+// que de verdad se predijo (y no con un recálculo que puede haber
+// cambiado si el histórico creció).
+
+test('probabilidadPartidaDesdeSerie: invierte bo3 correctamente (ida y vuelta)', () => {
+  for (const p of [0.12, 0.35, 0.5, 0.68, 0.91]) {
+    const serie = probabilidadSerie(p, 'bo3');
+    const recuperada = probabilidadPartidaDesdeSerie(serie.ganaA, 'bo3');
+    assert.ok(cerca(recuperada, p, 1e-6), 'p=' + p + ' recuperó ' + recuperada);
+  }
+});
+
+test('probabilidadPartidaDesdeSerie: invierte bo1 y bo5 (ida y vuelta)', () => {
+  for (const formato of ['bo1', 'bo5']) {
+    for (const p of [0.25, 0.5, 0.8]) {
+      const serie = probabilidadSerie(p, formato);
+      const recuperada = probabilidadPartidaDesdeSerie(serie.ganaA, formato);
+      assert.ok(cerca(recuperada, p, 1e-6), formato + ' p=' + p + ' recuperó ' + recuperada);
+    }
+  }
 });
