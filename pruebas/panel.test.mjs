@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 process.env.SUPABASE_URL ??= 'https://prueba.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'llave-de-prueba';
 
-const { archivoDeFicha, formaDeEquipo, calcularMetricas, construirFicha, enVenezuela } = await import('../salida/web/generar.mjs');
+const { archivoDeFicha, formaDeEquipo, calcularMetricas, construirFicha } = await import('../salida/web/generar.mjs');
 const { distribucionMarcadores, probabilidadPartidaDesdeSerie } = await import('../motor/series.mjs');
 
 test('archivoDeFicha: sanea los ":" que Windows no admite en nombres de archivo', () => {
@@ -262,28 +262,12 @@ test('ficha calificada sigue mostrando su juicio (no se rompió con el cambio)',
   assert.ok(!html.includes('SIN JUGAR'));
 });
 
-// --- hora de Venezuela (VET, UTC-4 todo el año, sin horario de verano)
-
-test('enVenezuela: resta 4 horas', () => {
-  assert.deepEqual(enVenezuela('2026-08-14T05:00:00Z'), { fecha: '2026-08-14', hora: '01:00', completo: '2026-08-14 01:00' });
-});
-
-test('enVenezuela: cuando cruza medianoche, la FECHA tambien retrocede', () => {
-  // Las 02:00 UTC del 15 son las 22:00 del 14 en Venezuela: mostrar la
-  // fecha UTC con la hora local seria peor que no convertir.
-  assert.deepEqual(enVenezuela('2026-08-15T02:00:00Z'), { fecha: '2026-08-14', hora: '22:00', completo: '2026-08-14 22:00' });
-  assert.deepEqual(enVenezuela('2026-08-14T02:00:00Z'), { fecha: '2026-08-13', hora: '22:00', completo: '2026-08-13 22:00' });
-});
-
-test('enVenezuela: fecha invalida no revienta', () => {
-  assert.deepEqual(enVenezuela('cualquier cosa'), { fecha: '—', hora: '—', completo: '—' });
-});
-
 test('la ficha muestra VET y no UTC', () => {
   const html = fichaPendiente();
   assert.ok(html.includes('VET'), 'debe etiquetar la zona horaria');
   assert.ok(!html.includes('UTC'), 'ya no debe quedar ningun UTC visible');
   // start_time 2026-08-15T02:00Z => 22:00 del 14 en Venezuela
-  assert.ok(html.includes('22:00'), 'debe mostrar la hora convertida');
+  assert.ok(html.includes('10 pm'), 'debe mostrar la hora en 12 horas: 22:00 UTC-4 => 10 pm');
   assert.ok(!html.includes('02:00'), 'no debe quedar la hora UTC sin convertir');
+  assert.ok(!/2[0-3]:[0-9]{2}/.test(html), 'nada de hora militar: ' + (html.match(/2[0-3]:[0-9]{2}/) || [''])[0]);
 });

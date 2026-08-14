@@ -10,6 +10,53 @@ export async function partidasDeLaLiga(leagueId, { fetchImpl = fetch } = {}) {
   return res.json();
 }
 
+// Agrupa las partidas de un torneo en SERIES: quiénes jugaron, cómo quedó y
+// cuándo arrancó. Sirve para saber qué se jugó de verdad, sin depender de si
+// el sistema lo había predicho o no.
+export function seriesDeLaLiga(partidasLiga) {
+  const porSerie = new Map();
+  for (const p of partidasLiga) {
+    if (!p.series_id || !p.radiant_team_id || !p.dire_team_id) continue;
+    if (!porSerie.has(p.series_id)) porSerie.set(p.series_id, []);
+    porSerie.get(p.series_id).push(p);
+  }
+
+  const series = [];
+  for (const [seriesId, juegos] of porSerie) {
+    juegos.sort((a, b) => a.start_time - b.start_time);
+    const primera = juegos[0];
+    const equipoA = primera.radiant_team_id;
+    const equipoB = primera.dire_team_id;
+
+    let victoriasA = 0;
+    let victoriasB = 0;
+    let consistente = true;
+    for (const j of juegos) {
+      const equipos = new Set([j.radiant_team_id, j.dire_team_id]);
+      if (!equipos.has(equipoA) || !equipos.has(equipoB)) {
+        consistente = false;
+        break;
+      }
+      const ganador = j.radiant_win ? j.radiant_team_id : j.dire_team_id;
+      if (ganador === equipoA) victoriasA++;
+      else victoriasB++;
+    }
+    if (!consistente) continue;
+
+    series.push({
+      seriesId,
+      equipoA,
+      equipoB,
+      victoriasA,
+      victoriasB,
+      startTime: primera.start_time,
+      partidas: juegos.length,
+    });
+  }
+
+  return series.sort((a, b) => a.startTime - b.startTime);
+}
+
 // Fusiona las partidas de un torneo en vivo con el histórico bajado a disco,
 // sin duplicar por match_id. El histórico es un snapshot: sin esto, predecir
 // una ronda de TI ignora todo lo que pasó en las rondas anteriores del mismo

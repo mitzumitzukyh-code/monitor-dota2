@@ -35,7 +35,7 @@ test('mensajePredicciones: pone al favorito primero y la hora de Venezuela', () 
   // 02:00 UTC del 15 => 22:00 del 14 en Venezuela
   // El día va como encabezado del grupo, y la hora en cada línea.
   assert.ok(/\*\*(Hoy|Mañana|Ayer|\d{2}\/\d{2})\*\*/.test(msg), 'debe agrupar por día en palabras: ' + msg);
-  assert.ok(msg.includes('`22:00`'), 'la hora va en la línea: ' + msg);
+  assert.ok(msg.includes('`10 pm`'), 'la hora va en la línea, en 12 horas: ' + msg);
   assert.ok(msg.includes('quedan guardados'), 'debe decir que no se cambian');
 });
 

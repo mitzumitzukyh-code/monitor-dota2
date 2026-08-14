@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { partidasDeLaLiga, historicoConLiga } from '../datos/liga.mjs';
+import { partidasDeLaLiga, historicoConLiga, seriesDeLaLiga } from '../datos/liga.mjs';
 
 function partidaLiga(match_id, start_time, extra = {}) {
   return {
@@ -68,4 +68,46 @@ test('historicoConLiga: deja los campos que el motor necesita, con los nombres d
   assert.equal(p.dire_team_id, 222);
   assert.equal(p.radiant_win, true);
   assert.equal(p.series_type, 1);
+});
+
+// --- seriesDeLaLiga: agrupa lo que de verdad se jugó, sin depender de si el
+// sistema lo había predicho. Sirve para la agenda del día.
+
+test('seriesDeLaLiga: agrupa por serie y cuenta el marcador aunque cambien de lado', () => {
+  const partidas = [
+    { match_id: 2, series_id: 10, start_time: 2000, radiant_team_id: 'B', dire_team_id: 'A', radiant_win: false },
+    { match_id: 1, series_id: 10, start_time: 1000, radiant_team_id: 'A', dire_team_id: 'B', radiant_win: true },
+  ];
+  const series = seriesDeLaLiga(partidas);
+
+  assert.equal(series.length, 1);
+  assert.equal(series[0].equipoA, 'A', 'A es quien fue radiant en la primera partida');
+  assert.equal(series[0].victoriasA, 2, 'A gano las dos, jugando de los dos lados');
+  assert.equal(series[0].victoriasB, 0);
+  assert.equal(series[0].startTime, 1000, 'la hora es la de la primera partida');
+});
+
+test('seriesDeLaLiga: devuelve las series en orden cronologico', async () => {
+  const partidas = [
+    { match_id: 9, series_id: 20, start_time: 5000, radiant_team_id: 'C', dire_team_id: 'D', radiant_win: true },
+    { match_id: 1, series_id: 10, start_time: 1000, radiant_team_id: 'A', dire_team_id: 'B', radiant_win: true },
+  ];
+  const series = seriesDeLaLiga(partidas);
+  assert.deepEqual(series.map((s) => s.seriesId), [10, 20]);
+});
+
+test('seriesDeLaLiga: salta partidas sin serie o sin equipos', async () => {
+  const partidas = [
+    { match_id: 1, series_id: null, start_time: 1000, radiant_team_id: 'A', dire_team_id: 'B', radiant_win: true },
+    { match_id: 2, series_id: 10, start_time: 2000, radiant_team_id: null, dire_team_id: 'B', radiant_win: true },
+  ];
+  assert.deepEqual(seriesDeLaLiga(partidas), []);
+});
+
+test('seriesDeLaLiga: descarta una serie con un tercer equipo mezclado', async () => {
+  const partidas = [
+    { match_id: 1, series_id: 10, start_time: 1000, radiant_team_id: 'A', dire_team_id: 'B', radiant_win: true },
+    { match_id: 2, series_id: 10, start_time: 2000, radiant_team_id: 'A', dire_team_id: 'C', radiant_win: true },
+  ];
+  assert.deepEqual(seriesDeLaLiga(partidas), []);
 });

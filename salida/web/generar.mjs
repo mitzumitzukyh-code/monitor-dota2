@@ -17,6 +17,7 @@ import { partidasDeLaLiga, historicoConLiga } from '../../datos/liga.mjs';
 import { ratings, ratingDeEquipo, probabilidadGanar } from '../../motor/elo.mjs';
 import { distribucionMarcadores, probabilidadPartidaDesdeSerie } from '../../motor/series.mjs';
 import { EQUIPOS_TI2026 } from '../../datos/equipos-ti2026.mjs';
+import { enVenezuela, hora12 } from '../formato.mjs';
 
 const LEAGUE_ID_TI2026 = 19719;
 
@@ -32,17 +33,14 @@ function pct(x) {
   return (x * 100).toFixed(1);
 }
 
-// Venezuela es UTC−4 todo el año (VET, sin horario de verano), así que
-// basta restar 4 horas y formatear. OJO: cambia también la fecha -- las
-// 02:00 UTC del 15 son las 22:00 del 14 acá, y mostrar la fecha UTC con la
-// hora local sería peor que no convertir.
-export function enVenezuela(iso) {
-  const ms = new Date(iso).getTime();
-  if (!Number.isFinite(ms)) return { fecha: '—', hora: '—', completo: '—' };
-  const local = new Date(ms - 4 * 3600 * 1000).toISOString();
-  const fecha = local.slice(0, 10);
-  const hora = local.slice(11, 16);
-  return { fecha, hora, completo: `${fecha} ${hora}` };
+// Fechas y horas salen del módulo compartido con los avisos de Discord, así
+// el panel y Discord nunca muestran la misma serie a horas distintas.
+export { enVenezuela, hora12 };
+
+// Fecha + hora en reloj de 12 horas, que es como se lee.
+function fechaYHora(iso) {
+  const { fecha, hora, valida } = enVenezuela(iso);
+  return valida ? `${fecha} · ${hora12(hora)}` : '—';
 }
 
 export function calcularMetricas(calificadas) {
@@ -225,7 +223,7 @@ export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerz
               </div>
             </div>
             <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; text-align: right;">
-              <div style="color: #f3f2f2; font-size: 14px; font-variant-numeric: tabular-nums;">${esc(enVenezuela(p.start_time).hora)}</div>
+              <div style="color: #f3f2f2; font-size: 14px; font-variant-numeric: tabular-nums;">${esc(hora12(enVenezuela(p.start_time).hora))}</div>
               <div style="margin-top: 4px;">${esc(p.formato.toUpperCase())}</div>
             </div>
           </a>`;
@@ -412,7 +410,7 @@ export function construirFicha({ serie, nombre, p, marcadores, ratingA, ratingB,
   const contenido = `  <div style="display: flex; align-items: stretch; justify-content: space-between; flex-wrap: wrap; border-bottom: 2px solid rgba(243,242,242,0.45); padding: 0 24px;">
     <div style="display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 14px 0;">
       <a href="index.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em;">← PANEL</a>
-      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9b9797;">FICHA DE SERIE · ${esc(serie.formato.toUpperCase())} · ${esc(enVenezuela(serie.start_time).completo)} VET</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9b9797;">FICHA DE SERIE · ${esc(serie.formato.toUpperCase())} · ${esc(fechaYHora(serie.start_time))} VET</span>
       ${calificada ? '' : `<span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.12em; padding: 3px 8px; background: #ff563c; color: #171615;">SIN JUGAR</span>`}
     </div>
   </div>
@@ -430,7 +428,7 @@ ${
       <div style="font-size: 28px; font-variant-numeric: tabular-nums; margin-top: 4px;">${esc(marcadorReal ?? '—')}</div>
       <div style="font-size: 10px; letter-spacing: 0.08em; margin-top: 6px; color: ${acerto ? '#f3f2f2' : '#9b9797'};">${acerto ? '■ ACIERTO' : '◇ FALLO'}</div>`
     : `      <div style="font-size: 11px; letter-spacing: 0.12em; color: #9b9797;">EMPIEZA</div>
-      <div style="font-size: 22px; font-variant-numeric: tabular-nums; margin-top: 4px;">${esc(enVenezuela(serie.start_time).hora)}</div>
+      <div style="font-size: 22px; font-variant-numeric: tabular-nums; margin-top: 4px;">${esc(hora12(enVenezuela(serie.start_time).hora))}</div>
       <div style="font-size: 10px; letter-spacing: 0.08em; margin-top: 6px; color: #9b9797;">${esc(enVenezuela(serie.start_time).fecha)} · VET</div>`
 }
     </div>
@@ -540,7 +538,7 @@ async function main() {
   );
 
   const metricas = calcularMetricas(calificadas);
-  const generadoEn = enVenezuela(new Date().toISOString()).completo + ' VET';
+  const generadoEn = fechaYHora(new Date().toISOString()) + ' VET';
 
   const html = construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn });
   const destino = new URL('./index.html', import.meta.url);

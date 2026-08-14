@@ -11,71 +11,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { seleccionar } from '../datos/supabase.mjs';
 
-// Venezuela es UTC−4 todo el año. Duplicado a propósito respecto al panel
-// web: este módulo no debe depender del generador de HTML.
-function horaVenezuela(iso) {
-  const ms = new Date(iso).getTime();
-  if (!Number.isFinite(ms)) return '—';
-  const local = new Date(ms - 4 * 3600 * 1000).toISOString();
-  return `${local.slice(0, 10)} ${local.slice(11, 16)}`;
-}
+import { enVenezuela, hora12, cuandoEnPalabras, diaEnPalabras, agruparPorDia } from './formato.mjs';
 
-// Cuántos días de diferencia hay entre una fecha local y hoy.
-function diasDesdeHoy(fechaLocal, ahora) {
-  const hoy = horaVenezuela(ahora.toISOString()).split(' ')[0];
-  return Math.round((new Date(fechaLocal + 'T00:00:00Z') - new Date(hoy + 'T00:00:00Z')) / 86400000);
-}
-
-// "hoy 22:00" se entiende de una; "2026-08-14 22:00" hay que descifrarlo.
-export function cuandoEnPalabras(iso, ahora = new Date()) {
-  const completo = horaVenezuela(iso);
-  if (completo === '—') return '—';
-  const [fecha, hora] = completo.split(' ');
-
-  const dias = diasDesdeHoy(fecha, ahora);
-  if (dias === 0) return `hoy ${hora}`;
-  if (dias === 1) return `mañana ${hora}`;
-  if (dias === -1) return `ayer ${hora}`;
-  const [, mes, dia] = fecha.split('-');
-  return `${dia}/${mes} ${hora}`;
-}
-
-// El nombre del día para agrupar. En hora de Venezuela una jornada de TI
-// cruza la medianoche (las 02:00 y 05:00 UTC caen 22:00 y 01:00 acá), así
-// que agrupar por día evita repetir "ayer"/"hoy" en cada renglón.
-export function diaEnPalabras(fechaLocal, ahora = new Date()) {
-  const dias = diasDesdeHoy(fechaLocal, ahora);
-  if (dias === 0) return 'Hoy';
-  if (dias === 1) return 'Mañana';
-  if (dias === -1) return 'Ayer';
-  const [, mes, dia] = fechaLocal.split('-');
-  return `${dia}/${mes}`;
-}
-
-// Agrupa por día local, en orden cronológico, con la hora de cada elemento.
-// Tolera que a una fila le falte la fecha: la manda a un grupo aparte en vez
-// de tumbar el aviso completo (encontrado por una prueba, no en producción).
-export function agruparPorDia(items, campoFecha = 'start_time', ahora = new Date()) {
-  const SIN_FECHA = '9999-99-99';
-  const porDia = new Map();
-
-  for (const it of items) {
-    const completo = horaVenezuela(it[campoFecha]);
-    const valida = completo !== '—' && completo.includes(' ');
-    const fecha = valida ? completo.split(' ')[0] : SIN_FECHA;
-    const hora = valida ? completo.split(' ')[1] : '';
-    if (!porDia.has(fecha)) porDia.set(fecha, []);
-    porDia.get(fecha).push({ ...it, _hora: hora, _fecha: valida ? fecha : null });
-  }
-
-  return [...porDia.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0])) // SIN_FECHA queda al final
-    .map(([fecha, lista]) => ({
-      fecha: fecha === SIN_FECHA ? null : fecha,
-      titulo: fecha === SIN_FECHA ? 'Sin fecha' : diaEnPalabras(fecha, ahora),
-      items: lista.sort((a, b) => (a._hora ?? '').localeCompare(b._hora ?? '')),
-    }));
-}
+export { enVenezuela, hora12, cuandoEnPalabras, diaEnPalabras, agruparPorDia };
 
 const BASE_INGENUA = { bo1: 0.5, bo2: 2 / 3, bo3: 0.5, bo5: 0.5 };
 
