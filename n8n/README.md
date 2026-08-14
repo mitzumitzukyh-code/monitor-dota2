@@ -58,9 +58,11 @@ Tareas creadas y verificadas corriendo (resultado 0, con rastro en los logs):
 |---|---|---|
 | `MonitorDota2-Predecir` | `scripts\predecir.cmd` | cada hora, :05 |
 | `MonitorDota2-Calificar` | `scripts\calificar.cmd` | cada hora, :35 |
+| `MonitorDota2-Panel` | `scripts\panel.cmd` | cada hora, :50 |
 
-Están desfasadas 30 min a propósito: primero se predice, y media hora
-después se califica lo que ya terminó.
+Están desfasadas a propósito: primero se predice, media hora después se
+califica lo que ya terminó, y al final se regenera el panel web
+(`salida/web/index.html`) con el estado resultante.
 
 Para ver el estado, correr a mano o borrarlas cuando TI2026 termine (23 de
 agosto):
