@@ -32,6 +32,19 @@ function pct(x) {
   return (x * 100).toFixed(1);
 }
 
+// Venezuela es UTC−4 todo el año (VET, sin horario de verano), así que
+// basta restar 4 horas y formatear. OJO: cambia también la fecha -- las
+// 02:00 UTC del 15 son las 22:00 del 14 acá, y mostrar la fecha UTC con la
+// hora local sería peor que no convertir.
+export function enVenezuela(iso) {
+  const ms = new Date(iso).getTime();
+  if (!Number.isFinite(ms)) return { fecha: '—', hora: '—', completo: '—' };
+  const local = new Date(ms - 4 * 3600 * 1000).toISOString();
+  const fecha = local.slice(0, 10);
+  const hora = local.slice(11, 16);
+  return { fecha, hora, completo: `${fecha} ${hora}` };
+}
+
 export function calcularMetricas(calificadas) {
   const n = calificadas.length;
   if (n === 0) return { n: 0 };
@@ -191,12 +204,32 @@ export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerz
 
   const cuerpoPendientes = pendientes.length
     ? pendientes
-        .map(
-          (p) => `          <div style="display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: center; padding: 12px 24px; border-bottom: 1px solid rgba(243,242,242,0.14);">
-            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(nombre(p.equipo_a))} vs ${esc(nombre(p.equipo_b))}</span>
-            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797;">${esc(p.formato.toUpperCase())} · ${esc(String(p.start_time).slice(11, 16))}</span>
-          </div>`,
-        )
+        .map((p) => {
+          const pa = Number(p.prob_gana_a);
+          const pb = Number(p.prob_gana_b);
+          return `          <a href="${esc(archivoDeFicha(p.series_id))}" style="display: grid; grid-template-columns: minmax(0,1fr) 96px; gap: 16px; align-items: center; padding: 12px 24px; border-bottom: 1px solid rgba(243,242,242,0.14); color: inherit; text-decoration: none;" title="Ver la ficha de esta serie">
+            <div style="min-width: 0;">
+              <div style="display: grid; grid-template-columns: 14px minmax(0,1fr) auto; gap: 10px; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-variant-numeric: tabular-nums;">
+                <span style="font-size: 10px; color: ${pa >= pb ? '#ff563c' : '#9b9797'};">${pa >= pb ? '▶' : ''}</span>
+                <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(nombre(p.equipo_a))}</span>
+                <span style="color: #ff563c; font-weight: 500;">${pct(pa)}<span style="color:#9b9797;">%</span></span>
+              </div>
+              <div style="display: grid; grid-template-columns: 14px minmax(0,1fr) auto; gap: 10px; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-variant-numeric: tabular-nums; margin-top: 6px;">
+                <span style="font-size: 10px; color: ${pb > pa ? '#ff563c' : '#9b9797'};">${pb > pa ? '▶' : ''}</span>
+                <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(nombre(p.equipo_b))}</span>
+                <span style="color: #ff563c; font-weight: 500;">${pct(pb)}<span style="color:#9b9797;">%</span></span>
+              </div>
+              <div style="display: flex; height: 8px; margin-top: 10px; background: rgba(243,242,242,0.08);">
+                <div style="width: ${pct(pa)}%; background: #ff563c;"></div>
+                <div style="width: ${pct(pb)}%; border: 1px solid #ff9783; box-sizing: border-box;"></div>
+              </div>
+            </div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; text-align: right;">
+              <div style="color: #f3f2f2; font-size: 14px; font-variant-numeric: tabular-nums;">${esc(enVenezuela(p.start_time).hora)}</div>
+              <div style="margin-top: 4px;">${esc(p.formato.toUpperCase())}</div>
+            </div>
+          </a>`;
+        })
         .join('\n')
     : vacio(
         'Ninguna serie próxima con los dos equipos definidos. En el formato suizo de TI los cruces de la ronda siguiente salen del resultado de la actual, así que el calendario los publica como TBD y no se puede predecir sobre eso. En cuanto se definan, el flujo los predice antes de que empiecen.',
@@ -253,12 +286,12 @@ ${tarjetas}
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); border-bottom: 2px solid rgba(243,242,242,0.45);">
 
     <div style="border-right: 2px solid rgba(243,242,242,0.45);">
-${seccion('SERIES CALIFICADAS', `${m.n} SERIES · ▶ = FAVORITO DEL MOTOR`, cuerpoCalificadas)}
+${seccion('SERIES CALIFICADAS', `${m.n} ${m.n === 1 ? "SERIE" : "SERIES"} · ▶ = FAVORITO DEL MOTOR`, cuerpoCalificadas)}
 ${calificadas.length ? `      <div style="padding: 12px 24px 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9b9797; letter-spacing: 0.06em;">FILA TINTADA = BRIER POR ENCIMA DE SU BASE INGENUA</div>` : ''}
     </div>
 
     <div>
-${seccion('PRÓXIMAS SERIES PREDICHAS', `${pendientes.length} SERIES`, cuerpoPendientes)}
+${seccion('PRÓXIMAS SERIES PREDICHAS', `${pendientes.length} ${pendientes.length === 1 ? "SERIE" : "SERIES"}`, cuerpoPendientes)}
 ${seccion('FUERZA ELO · LOS 16 DE TI2026', 'RATING AL MOMENTO DE GENERAR', filasFuerzas)}
     </div>
 
@@ -307,12 +340,20 @@ export function construirFicha({ serie, nombre, p, marcadores, ratingA, ratingB,
   const pb = Number(serie.prob_gana_b);
   const empate = Number(serie.prob_empate);
   const favA = pa >= pb;
-  const brier = Number(serie.brier);
   const base = BASE_INGENUA[serie.formato] ?? 0.5;
-  const acerto = (favA ? 'ganaA' : 'ganaB') === serie.resultado_real;
+
+  // Una serie pendiente tiene predicción pero todavía no resultado: se
+  // puede mostrar de dónde sale el número y qué marcadores son posibles,
+  // pero no hay resultado ni Brier que enseñar. Inventar un juicio acá
+  // sería justamente lo que el proyecto no hace.
+  const calificada = Boolean(serie.resultado_real);
+  const brier = calificada ? Number(serie.brier) : null;
+  const acerto = calificada && (favA ? 'ganaA' : 'ganaB') === serie.resultado_real;
 
   const marcadorReal =
-    serie.victorias_a != null && serie.victorias_b != null ? `${serie.victorias_a}–${serie.victorias_b}` : null;
+    calificada && serie.victorias_a != null && serie.victorias_b != null
+      ? `${serie.victorias_a}–${serie.victorias_b}`
+      : null;
   const ordenados = marcadores.slice().sort((a, b) => b.prob - a.prob);
   const filaReal = marcadores.find((m) => m.marcador === marcadorReal);
   const puestoReal = filaReal ? ordenados.findIndex((m) => m.marcador === marcadorReal) + 1 : null;
@@ -344,43 +385,76 @@ export function construirFicha({ serie, nombre, p, marcadores, ratingA, ratingB,
       : `<span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9b9797;">sin partidas previas registradas</span>`;
 
   const diferencia = ratingA - ratingB;
-  const narrativa = [
-    `El motor daba ${pct(favA ? pa : pb)}% a ${esc(favA ? nombreA : nombreB)} y ${acerto ? 'acertó' : 'falló'}.`,
-    marcadorReal && puestoReal
-      ? `El marcador real ${marcadorReal} era el ${puestoReal}.º más probable de ${marcadores.length} (${pct(filaReal.prob)}%).`
-      : '',
-    brier > base
-      ? `El Brier de esta serie (${brier.toFixed(4)}) quedó por encima de su base ingenua (${base.toFixed(3)}): en esta serie el modelo aportó menos que tirar una moneda.`
-      : `El Brier de esta serie (${brier.toFixed(4)}) quedó por debajo de su base ingenua (${base.toFixed(3)}).`,
-    `Todo sale de una diferencia de ${Math.abs(Math.round(diferencia))} puntos de Elo, que da ${pct(p)}% de ganar UNA partida y ${pct(pa)}% de ganar el ${serie.formato.toUpperCase()}.`,
-  ]
+  const masProbable = marcadores.reduce((mejor, m) => (m.prob > mejor.prob ? m : mejor), marcadores[0]);
+
+  const narrativa = (
+    calificada
+      ? [
+          `El motor daba ${pct(favA ? pa : pb)}% a ${esc(favA ? nombreA : nombreB)} y ${acerto ? 'acertó' : 'falló'}.`,
+          marcadorReal && puestoReal
+            ? `El marcador real ${marcadorReal} era el ${puestoReal}.º más probable de ${marcadores.length} (${pct(filaReal.prob)}%).`
+            : '',
+          brier > base
+            ? `El Brier de esta serie (${brier.toFixed(4)}) quedó por encima de su base ingenua (${base.toFixed(3)}): en esta serie el modelo aportó menos que tirar una moneda.`
+            : `El Brier de esta serie (${brier.toFixed(4)}) quedó por debajo de su base ingenua (${base.toFixed(3)}).`,
+        ]
+      : [
+          `Serie sin jugar: esta predicción ya está guardada y no se va a reescribir, así que cuando termine se puede juzgar contra lo que de verdad pasó.`,
+          `El motor da ${pct(favA ? pa : pb)}% a ${esc(favA ? nombreA : nombreB)}, y el marcador más probable es ${masProbable.marcador} con ${pct(masProbable.prob)}%.`,
+        ]
+  )
+    .concat([
+      `Todo sale de una diferencia de ${Math.abs(Math.round(diferencia))} puntos de Elo, que da ${pct(p)}% de ganar UNA partida y ${pct(pa)}% de ganar el ${serie.formato.toUpperCase()}.`,
+    ])
     .filter(Boolean)
     .join(' ');
 
   const contenido = `  <div style="display: flex; align-items: stretch; justify-content: space-between; flex-wrap: wrap; border-bottom: 2px solid rgba(243,242,242,0.45); padding: 0 24px;">
     <div style="display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 14px 0;">
       <a href="index.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em;">← PANEL</a>
-      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9b9797;">FICHA DE SERIE · ${esc(serie.formato.toUpperCase())} · ${esc(String(serie.start_time).slice(0, 16).replace('T', ' '))} UTC</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9b9797;">FICHA DE SERIE · ${esc(serie.formato.toUpperCase())} · ${esc(enVenezuela(serie.start_time).completo)} VET</span>
+      ${calificada ? '' : `<span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.12em; padding: 3px 8px; background: #ff563c; color: #171615;">SIN JUGAR</span>`}
     </div>
   </div>
 
   <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 22px 24px; border-bottom: 2px solid rgba(243,242,242,0.45);">
     <div style="font-family: 'Archivo', sans-serif; font-size: clamp(24px, 4vw, 40px); font-weight: 600; line-height: 1.1;">
-      <span style="color: ${serie.resultado_real === 'ganaA' ? '#f3f2f2' : '#9b9797'};">${esc(nombreA)}</span>
+      <span style="color: ${!calificada || serie.resultado_real === 'ganaA' ? '#f3f2f2' : '#9b9797'};">${esc(nombreA)}</span>
       <span style="color: #ff563c;"> vs </span>
-      <span style="color: ${serie.resultado_real === 'ganaB' ? '#f3f2f2' : '#9b9797'};">${esc(nombreB)}</span>
+      <span style="color: ${!calificada || serie.resultado_real === 'ganaB' ? '#f3f2f2' : '#9b9797'};">${esc(nombreB)}</span>
     </div>
     <div style="text-align: right; font-family: 'IBM Plex Mono', monospace;">
-      <div style="font-size: 11px; letter-spacing: 0.12em; color: #9b9797;">RESULTADO REAL</div>
+${
+  calificada
+    ? `      <div style="font-size: 11px; letter-spacing: 0.12em; color: #9b9797;">RESULTADO REAL</div>
       <div style="font-size: 28px; font-variant-numeric: tabular-nums; margin-top: 4px;">${esc(marcadorReal ?? '—')}</div>
-      <div style="font-size: 10px; letter-spacing: 0.08em; margin-top: 6px; color: ${acerto ? '#f3f2f2' : '#9b9797'};">${acerto ? '■ ACIERTO' : '◇ FALLO'}</div>
+      <div style="font-size: 10px; letter-spacing: 0.08em; margin-top: 6px; color: ${acerto ? '#f3f2f2' : '#9b9797'};">${acerto ? '■ ACIERTO' : '◇ FALLO'}</div>`
+    : `      <div style="font-size: 11px; letter-spacing: 0.12em; color: #9b9797;">EMPIEZA</div>
+      <div style="font-size: 22px; font-variant-numeric: tabular-nums; margin-top: 4px;">${esc(enVenezuela(serie.start_time).hora)}</div>
+      <div style="font-size: 10px; letter-spacing: 0.08em; margin-top: 6px; color: #9b9797;">${esc(enVenezuela(serie.start_time).fecha)} · VET</div>`
+}
     </div>
   </div>
 
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); border-bottom: 2px solid rgba(243,242,242,0.45);">
-${tarjeta({ etiqueta: 'GANA ' + nombreA.toUpperCase(), valor: pct(pa), sufijo: '%', nota: serie.resultado_real === 'ganaA' ? 'ocurrió' : null })}
-${empate > 0 ? tarjeta({ etiqueta: 'EMPATE', valor: pct(empate), sufijo: '%', nota: serie.resultado_real === 'empate' ? 'ocurrió' : null }) + '\n' : ''}${tarjeta({ etiqueta: 'GANA ' + nombreB.toUpperCase(), valor: pct(pb), sufijo: '%', nota: serie.resultado_real === 'ganaB' ? 'ocurrió' : null })}
-${tarjeta({ etiqueta: 'BRIER DE LA SERIE', valor: brier.toFixed(4), delta: (brier - base >= 0 ? '+' : '−') + Math.abs(brier - base).toFixed(4), referencia: `vs ${base.toFixed(3)} = base ingenua`, alerta: brier > base })}
+${tarjeta({ etiqueta: 'GANA ' + nombreA.toUpperCase(), valor: pct(pa), sufijo: '%', nota: calificada && serie.resultado_real === 'ganaA' ? 'ocurrió' : null })}
+${empate > 0 ? tarjeta({ etiqueta: 'EMPATE', valor: pct(empate), sufijo: '%', nota: calificada && serie.resultado_real === 'empate' ? 'ocurrió' : null }) + '\n' : ''}${tarjeta({ etiqueta: 'GANA ' + nombreB.toUpperCase(), valor: pct(pb), sufijo: '%', nota: calificada && serie.resultado_real === 'ganaB' ? 'ocurrió' : null })}
+${
+  calificada
+    ? tarjeta({
+        etiqueta: 'BRIER DE LA SERIE',
+        valor: brier.toFixed(4),
+        delta: (brier - base >= 0 ? '+' : '−') + Math.abs(brier - base).toFixed(4),
+        referencia: `vs ${base.toFixed(3)} = base ingenua`,
+        alerta: brier > base,
+      })
+    : tarjeta({
+        etiqueta: 'BRIER DE LA SERIE',
+        valor: '—',
+        referencia: `se calcula al terminar, contra ${base.toFixed(3)}`,
+        nota: 'la predicción de arriba queda congelada',
+      })
+}
   </div>
 
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); border-bottom: 2px solid rgba(243,242,242,0.45);">
@@ -391,13 +465,13 @@ ${tarjeta({ etiqueta: 'BRIER DE LA SERIE', valor: brier.toFixed(4), delta: (brie
         <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; letter-spacing: 0.08em;">DERIVADO DE p = ${pct(p)}% POR PARTIDA</span>
       </div>
 ${filasMarcadores}
-      <div style="padding: 12px 24px 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9b9797; letter-spacing: 0.06em;">FILA TINTADA = MARCADOR QUE DE VERDAD PASÓ · BARRA RELATIVA AL MÁS PROBABLE</div>
+      <div style="padding: 12px 24px 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9b9797; letter-spacing: 0.06em;">${calificada ? 'FILA TINTADA = MARCADOR QUE DE VERDAD PASÓ · BARRA RELATIVA AL MÁS PROBABLE' : 'BARRA RELATIVA AL MÁS PROBABLE · TODAVÍA NO PASÓ NINGUNO'}</div>
     </div>
 
     <div>
       <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 24px; border-bottom: 1px solid rgba(243,242,242,0.28);">
         <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.14em;">DE DÓNDE SALE</span>
-        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; letter-spacing: 0.08em;">ELO RECONSTRUIDO AL INICIO</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; letter-spacing: 0.08em;">ELO AL MOMENTO DE PREDECIR</span>
       </div>
       <div style="display: grid; grid-template-columns: minmax(0,1fr) 76px; gap: 14px; align-items: center; padding: 12px 24px; border-bottom: 1px solid rgba(243,242,242,0.12);">
         <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(nombreA)}</span>
@@ -430,7 +504,7 @@ ${filasMarcadores}
   <div style="padding: 16px 24px; border-bottom: 2px solid rgba(243,242,242,0.45); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #bab6b6; line-height: 1.65; max-width: 96ch;">${esc(narrativa)}</div>
 
   <div style="padding: 16px 24px 40px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b9797; line-height: 1.7; max-width: 100ch;">
-    Los marcadores salen de la misma p de partida que produjo la predicción guardada (se recupera invirtiendo la fórmula del formato), así que no agregan ningún supuesto nuevo: la suma de los marcadores de cada equipo da exactamente su probabilidad de serie. Los ratings Elo están reconstruidos con partidas anteriores al inicio de esta serie, nunca con lo que pasó después. Generado ${esc(generadoEn)}.
+    Los marcadores salen de la misma p de partida que produjo la predicción guardada (se recupera invirtiendo la fórmula del formato), así que no agregan ningún supuesto nuevo: la suma de los marcadores de cada equipo da exactamente su probabilidad de serie. Los ratings Elo están reconstruidos con partidas anteriores al momento en que se hizo la predicción, nunca con lo que pasó después. Generado ${esc(generadoEn)}.
   </div>`;
 
   return envoltorio(`${nombreA} vs ${nombreB} · Monitor Dota 2`, contenido);
@@ -466,18 +540,19 @@ async function main() {
   );
 
   const metricas = calcularMetricas(calificadas);
-  const generadoEn = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+  const generadoEn = enVenezuela(new Date().toISOString()).completo + ' VET';
 
   const html = construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn });
   const destino = new URL('./index.html', import.meta.url);
   await writeFile(destino, html);
 
-  // Una ficha por serie calificada. Los ratings se reconstruyen al INICIO de
-  // cada serie (no con los de ahora), así la ficha no muestra información
-  // que no existía cuando se predijo.
+  // Una ficha por serie, calificada o pendiente. Los ratings se reconstruyen
+  // al momento en que se PREDIJO (creada_en), no con los de ahora: así la
+  // ficha no muestra información que no existía cuando se hizo la
+  // predicción. Si falta creada_en se cae al inicio de la serie.
   let fichas = 0;
-  for (const s of calificadas) {
-    const inicio = Math.floor(new Date(s.start_time).getTime() / 1000);
+  for (const s of [...calificadas, ...pendientes]) {
+    const inicio = Math.floor(new Date(s.creada_en ?? s.start_time).getTime() / 1000);
     const rMomento = ratings(partidas, inicio);
     const p = probabilidadPartidaDesdeSerie(Number(s.prob_gana_a), s.formato);
     const marcadores = distribucionMarcadores(p, s.formato);

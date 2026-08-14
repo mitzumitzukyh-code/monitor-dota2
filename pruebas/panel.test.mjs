@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 process.env.SUPABASE_URL ??= 'https://prueba.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'llave-de-prueba';
 
-const { archivoDeFicha, formaDeEquipo, calcularMetricas, construirFicha } = await import('../salida/web/generar.mjs');
+const { archivoDeFicha, formaDeEquipo, calcularMetricas, construirFicha, enVenezuela } = await import('../salida/web/generar.mjs');
 const { distribucionMarcadores, probabilidadPartidaDesdeSerie } = await import('../motor/series.mjs');
 
 test('archivoDeFicha: sanea los ":" que Windows no admite en nombres de archivo', () => {
@@ -155,4 +155,135 @@ test('construirFicha: escapa el HTML de los nombres de equipo (no inyecta)', () 
 
   assert.ok(!html.includes('<script>alert(1)</script>'), 'el nombre no debe entrar como HTML crudo');
   assert.ok(html.includes('&lt;script&gt;'), 'debe quedar escapado');
+});
+
+// --- fichas de series PENDIENTES (predichas, sin jugar). Hoy no hay
+// ninguna en la base real porque el suizo de TI publica los cruces de la
+// ronda siguiente como TBD, así que el caso se cubre acá.
+
+const seriePendiente = {
+  series_id: 'pend:1',
+  formato: 'bo3',
+  equipo_a: 1,
+  equipo_b: 2,
+  start_time: '2026-08-15T02:00:00Z',
+  creada_en: '2026-08-14T11:00:00Z',
+  prob_gana_a: 0.6477403040230347,
+  prob_empate: 0,
+  prob_gana_b: 0.35225969597696527,
+  resultado_real: null,
+  victorias_a: null,
+  victorias_b: null,
+  brier: null,
+};
+
+function fichaPendiente(extra = {}) {
+  const serie = { ...seriePendiente, ...extra };
+  const p = probabilidadPartidaDesdeSerie(Number(serie.prob_gana_a), serie.formato);
+  return construirFicha({
+    serie,
+    nombre: (id) => (id === 1 ? 'Team Yandex' : 'Team Liquid'),
+    p,
+    marcadores: distribucionMarcadores(p, serie.formato),
+    ratingA: 1868,
+    ratingB: 1798,
+    formaA: [{ gano: true, start_time: 1 }, { gano: false, start_time: 2 }],
+    formaB: [{ gano: true, start_time: 1 }],
+    generadoEn: '2026-08-14 07:30 VET',
+  });
+}
+
+test('ficha pendiente: NO inventa resultado, Brier ni juicio', () => {
+  const html = fichaPendiente();
+
+  assert.ok(!html.includes('ACIERTO'), 'no puede haber juicio sin resultado');
+  assert.ok(!html.includes('FALLO'), 'no puede haber juicio sin resultado');
+  assert.ok(!html.includes('RESULTADO REAL'), 'no hay resultado real todavía');
+  assert.ok(!html.includes('ocurrió'), 'ningún marcador ocurrió todavía');
+  assert.ok(html.includes('SIN JUGAR'), 'debe marcarse como sin jugar');
+  assert.ok(html.includes('EMPIEZA'), 'debe decir cuándo empieza');
+});
+
+test('ficha pendiente: muestra la predicción y los marcadores posibles', () => {
+  const html = fichaPendiente();
+
+  assert.ok(html.includes('Team Yandex'));
+  assert.ok(html.includes('Team Liquid'));
+  assert.ok(html.includes('64.8'), 'debe mostrar la probabilidad predicha');
+  assert.ok(html.includes('2–0') && html.includes('2–1') && html.includes('1–2') && html.includes('0–2'),
+    'debe listar los cuatro marcadores del bo3');
+  assert.ok(html.includes('TODAVÍA NO PASÓ NINGUNO'), 'la leyenda no debe hablar de marcador real');
+});
+
+test('ficha pendiente: la tarjeta de Brier dice que se calcula al terminar, no un número', () => {
+  const html = fichaPendiente();
+  assert.ok(html.includes('se calcula al terminar'), 'debe explicar que el Brier todavía no existe');
+  assert.ok(html.includes('la predicción de arriba queda congelada'));
+});
+
+test('ficha pendiente: la narrativa dice el marcador más probable y que no se reescribe', () => {
+  const html = fichaPendiente();
+  assert.ok(html.includes('Serie sin jugar'));
+  assert.ok(html.includes('no se va a reescribir'));
+  assert.ok(html.includes('marcador más probable'));
+});
+
+test('ficha pendiente: bo2 muestra la tarjeta de empate y el 1–1 entre los marcadores', () => {
+  const html = fichaPendiente({ formato: 'bo2', prob_gana_a: 0.42, prob_empate: 0.2, prob_gana_b: 0.38 });
+  assert.ok(html.includes('EMPATE'), 'un bo2 sí puede empatar');
+  assert.ok(html.includes('1–1'));
+});
+
+test('ficha calificada sigue mostrando su juicio (no se rompió con el cambio)', () => {
+  const serie = {
+    ...seriePendiente,
+    resultado_real: 'ganaB',
+    victorias_a: 1,
+    victorias_b: 2,
+    brier: 0.839135002911707,
+  };
+  const p = probabilidadPartidaDesdeSerie(Number(serie.prob_gana_a), 'bo3');
+  const html = construirFicha({
+    serie,
+    nombre: (id) => (id === 1 ? 'Team Yandex' : 'Team Liquid'),
+    p,
+    marcadores: distribucionMarcadores(p, 'bo3'),
+    ratingA: 1868,
+    ratingB: 1798,
+    formaA: [],
+    formaB: [],
+    generadoEn: 'x',
+  });
+
+  assert.ok(html.includes('RESULTADO REAL'));
+  assert.ok(html.includes('1–2'));
+  assert.ok(html.includes('◇ FALLO'), 'el favorito era Yandex y perdió');
+  assert.ok(html.includes('0.8391'));
+  assert.ok(!html.includes('SIN JUGAR'));
+});
+
+// --- hora de Venezuela (VET, UTC-4 todo el año, sin horario de verano)
+
+test('enVenezuela: resta 4 horas', () => {
+  assert.deepEqual(enVenezuela('2026-08-14T05:00:00Z'), { fecha: '2026-08-14', hora: '01:00', completo: '2026-08-14 01:00' });
+});
+
+test('enVenezuela: cuando cruza medianoche, la FECHA tambien retrocede', () => {
+  // Las 02:00 UTC del 15 son las 22:00 del 14 en Venezuela: mostrar la
+  // fecha UTC con la hora local seria peor que no convertir.
+  assert.deepEqual(enVenezuela('2026-08-15T02:00:00Z'), { fecha: '2026-08-14', hora: '22:00', completo: '2026-08-14 22:00' });
+  assert.deepEqual(enVenezuela('2026-08-14T02:00:00Z'), { fecha: '2026-08-13', hora: '22:00', completo: '2026-08-13 22:00' });
+});
+
+test('enVenezuela: fecha invalida no revienta', () => {
+  assert.deepEqual(enVenezuela('cualquier cosa'), { fecha: '—', hora: '—', completo: '—' });
+});
+
+test('la ficha muestra VET y no UTC', () => {
+  const html = fichaPendiente();
+  assert.ok(html.includes('VET'), 'debe etiquetar la zona horaria');
+  assert.ok(!html.includes('UTC'), 'ya no debe quedar ningun UTC visible');
+  // start_time 2026-08-15T02:00Z => 22:00 del 14 en Venezuela
+  assert.ok(html.includes('22:00'), 'debe mostrar la hora convertida');
+  assert.ok(!html.includes('02:00'), 'no debe quedar la hora UTC sin convertir');
 });
