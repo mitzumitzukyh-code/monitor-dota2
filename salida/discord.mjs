@@ -20,19 +20,61 @@ function horaVenezuela(iso) {
   return `${local.slice(0, 10)} ${local.slice(11, 16)}`;
 }
 
+// Cuántos días de diferencia hay entre una fecha local y hoy.
+function diasDesdeHoy(fechaLocal, ahora) {
+  const hoy = horaVenezuela(ahora.toISOString()).split(' ')[0];
+  return Math.round((new Date(fechaLocal + 'T00:00:00Z') - new Date(hoy + 'T00:00:00Z')) / 86400000);
+}
+
 // "hoy 22:00" se entiende de una; "2026-08-14 22:00" hay que descifrarlo.
 export function cuandoEnPalabras(iso, ahora = new Date()) {
   const completo = horaVenezuela(iso);
   if (completo === '—') return '—';
   const [fecha, hora] = completo.split(' ');
-  const hoy = horaVenezuela(ahora.toISOString()).split(' ')[0];
 
-  const dias = Math.round((new Date(fecha + 'T00:00:00Z') - new Date(hoy + 'T00:00:00Z')) / 86400000);
+  const dias = diasDesdeHoy(fecha, ahora);
   if (dias === 0) return `hoy ${hora}`;
   if (dias === 1) return `mañana ${hora}`;
   if (dias === -1) return `ayer ${hora}`;
   const [, mes, dia] = fecha.split('-');
   return `${dia}/${mes} ${hora}`;
+}
+
+// El nombre del día para agrupar. En hora de Venezuela una jornada de TI
+// cruza la medianoche (las 02:00 y 05:00 UTC caen 22:00 y 01:00 acá), así
+// que agrupar por día evita repetir "ayer"/"hoy" en cada renglón.
+export function diaEnPalabras(fechaLocal, ahora = new Date()) {
+  const dias = diasDesdeHoy(fechaLocal, ahora);
+  if (dias === 0) return 'Hoy';
+  if (dias === 1) return 'Mañana';
+  if (dias === -1) return 'Ayer';
+  const [, mes, dia] = fechaLocal.split('-');
+  return `${dia}/${mes}`;
+}
+
+// Agrupa por día local, en orden cronológico, con la hora de cada elemento.
+// Tolera que a una fila le falte la fecha: la manda a un grupo aparte en vez
+// de tumbar el aviso completo (encontrado por una prueba, no en producción).
+export function agruparPorDia(items, campoFecha = 'start_time', ahora = new Date()) {
+  const SIN_FECHA = '9999-99-99';
+  const porDia = new Map();
+
+  for (const it of items) {
+    const completo = horaVenezuela(it[campoFecha]);
+    const valida = completo !== '—' && completo.includes(' ');
+    const fecha = valida ? completo.split(' ')[0] : SIN_FECHA;
+    const hora = valida ? completo.split(' ')[1] : '';
+    if (!porDia.has(fecha)) porDia.set(fecha, []);
+    porDia.get(fecha).push({ ...it, _hora: hora, _fecha: valida ? fecha : null });
+  }
+
+  return [...porDia.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0])) // SIN_FECHA queda al final
+    .map(([fecha, lista]) => ({
+      fecha: fecha === SIN_FECHA ? null : fecha,
+      titulo: fecha === SIN_FECHA ? 'Sin fecha' : diaEnPalabras(fecha, ahora),
+      items: lista.sort((a, b) => (a._hora ?? '').localeCompare(b._hora ?? '')),
+    }));
 }
 
 const BASE_INGENUA = { bo1: 0.5, bo2: 2 / 3, bo3: 0.5, bo5: 0.5 };
@@ -48,24 +90,44 @@ export function recortar(texto, limite = 1900) {
   return texto.slice(0, limite - 40).trimEnd() + '\n… (recortado, ver el panel)';
 }
 
+// Los grupos por día dejan un renglón vacío al cerrar, que se suma al que
+// separa las secciones. Colapsar es más simple que llevar la cuenta.
+function limpiarVacios(lineas) {
+  const salida = [];
+  for (const l of lineas) {
+    if (l === '' && salida[salida.length - 1] === '') continue;
+    salida.push(l);
+  }
+  while (salida[salida.length - 1] === '') salida.pop();
+  return salida;
+}
+
 // Predicciones nuevas: lo que el motor cree que va a pasar, antes de que
 // pase. En lenguaje llano -- nada de jerga.
 export function mensajePredicciones(pendientes, nombre, ahora = new Date()) {
   if (pendientes.length === 0) return null;
 
-  const lineas = pendientes.map((p) => {
-    const pa = Number(p.prob_gana_a);
-    const pb = Number(p.prob_gana_b);
-    const favA = pa >= pb;
-    const fav = favA ? nombre(p.equipo_a) : nombre(p.equipo_b);
-    const otro = favA ? nombre(p.equipo_b) : nombre(p.equipo_a);
-    const probFav = Math.round((favA ? pa : pb) * 100);
-    const parejo = probFav <= 55 ? ' — muy parejo' : '';
-    return `\`${cuandoEnPalabras(p.start_time, ahora)}\`  **${fav}** ${probFav}% vs ${otro} ${100 - probFav}%${parejo}`;
-  });
+  const lineas = [];
+  for (const grupo of agruparPorDia(pendientes, 'start_time', ahora)) {
+    lineas.push(`**${grupo.titulo}**`);
+    for (const p of grupo.items) {
+      const pa = Number(p.prob_gana_a);
+      const pb = Number(p.prob_gana_b);
+      const favA = pa >= pb;
+      const fav = favA ? nombre(p.equipo_a) : nombre(p.equipo_b);
+      const otro = favA ? nombre(p.equipo_b) : nombre(p.equipo_a);
+      const probFav = Math.round((favA ? pa : pb) * 100);
+      const parejo = probFav <= 55 ? ' — muy parejo' : '';
+      const cuando = p._hora ? `\`${p._hora}\`  ` : '';
+      lineas.push(`${cuando}**${fav}** ${probFav}% vs ${otro} ${100 - probFav}%${parejo}`);
+    }
+    lineas.push('');
+  }
 
   const titulo = pendientes.length === 1 ? '🔮 **Viene 1 serie**' : `🔮 **Vienen ${pendientes.length} series**`;
-  return recortar([titulo, '', ...lineas, '', '_Estos números quedan guardados tal cual, para poder medirlos después._'].join('\n'));
+  return recortar(
+    limpiarVacios([titulo, '', ...lineas, '', '_Hora de Venezuela. Estos números quedan guardados tal cual, para poder medirlos después._']).join('\n'),
+  );
 }
 
 // Series que ya se jugaron: el juicio contra la realidad, en lenguaje llano.
@@ -84,24 +146,30 @@ export function mensajeResultados(calificadas, nombre, metricas, ahora = new Dat
     if (!peorFallo || confianza > peorFallo.confianza) peorFallo = { id: c.series_id, confianza };
   }
 
-  const lineas = calificadas.map((c) => {
-    const pa = Number(c.prob_gana_a);
-    const pb = Number(c.prob_gana_b);
-    const favA = pa >= pb;
-    const acerto = (favA ? 'ganaA' : 'ganaB') === c.resultado_real;
-    const ganoA = c.resultado_real === 'ganaA';
-    const ganador = ganoA ? nombre(c.equipo_a) : nombre(c.equipo_b);
-    const perdedor = ganoA ? nombre(c.equipo_b) : nombre(c.equipo_a);
-    const marcadorGanador = ganoA ? `${c.victorias_a}–${c.victorias_b}` : `${c.victorias_b}–${c.victorias_a}`;
-    const favorito = favA ? nombre(c.equipo_a) : nombre(c.equipo_b);
-    const probFav = Math.round((favA ? pa : pb) * 100);
+  const lineas = [];
+  for (const grupo of agruparPorDia(calificadas, 'start_time', ahora)) {
+    lineas.push(`**${grupo.titulo}**`);
+    for (const c of grupo.items) {
+      const pa = Number(c.prob_gana_a);
+      const pb = Number(c.prob_gana_b);
+      const favA = pa >= pb;
+      const acerto = (favA ? 'ganaA' : 'ganaB') === c.resultado_real;
+      const ganoA = c.resultado_real === 'ganaA';
+      const ganador = ganoA ? nombre(c.equipo_a) : nombre(c.equipo_b);
+      const perdedor = ganoA ? nombre(c.equipo_b) : nombre(c.equipo_a);
+      const marcadorGanador = ganoA ? `${c.victorias_a}–${c.victorias_b}` : `${c.victorias_b}–${c.victorias_a}`;
+      const favorito = favA ? nombre(c.equipo_a) : nombre(c.equipo_b);
+      const probFav = Math.round((favA ? pa : pb) * 100);
 
-    const comentario = acerto
-      ? `le dábamos ${probFav}%`
-      : `íbamos con ${favorito}, ${probFav}%${peorFallo && peorFallo.id === c.series_id ? ' — el golpe del día' : ''}`;
+      const comentario = acerto
+        ? `le dábamos ${probFav}%`
+        : `íbamos con ${favorito}, ${probFav}%${peorFallo && peorFallo.id === c.series_id ? ' — el golpe del día' : ''}`;
 
-    return `${acerto ? '✅' : '❌'} **${ganador}** le ganó ${marcadorGanador} a ${perdedor}  _(${comentario})_`;
-  });
+      const cuando = c._hora ? `\`${c._hora}\` ` : '';
+      lineas.push(`${cuando}${acerto ? '✅' : '❌'} **${ganador}** le ganó ${marcadorGanador} a ${perdedor}  _(${comentario})_`);
+    }
+    lineas.push('');
+  }
 
   const partes = [
     calificadas.length === 1 ? '🎯 **Terminó 1 serie**' : `🎯 **Terminaron ${calificadas.length} series**`,
@@ -126,10 +194,10 @@ export function mensajeResultados(calificadas, nombre, metricas, ahora = new Dat
     }
 
     partes.push('');
-    partes.push(`_Para el que quiera el número: Brier ${metricas.media.toFixed(4)} contra ${metricas.baseMedia.toFixed(3)} de adivinar._`);
+    partes.push(`_Hora de Venezuela. Para el que quiera el número: Brier ${metricas.media.toFixed(4)} contra ${metricas.baseMedia.toFixed(3)} de adivinar._`);
   }
 
-  return recortar(partes.join('\n'));
+  return recortar(limpiarVacios(partes).join('\n'));
 }
 
 export async function enviar(contenido, { fetchImpl = fetch, webhook = process.env.DISCORD_WEBHOOK } = {}) {

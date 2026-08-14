@@ -33,7 +33,9 @@ test('mensajePredicciones: pone al favorito primero y la hora de Venezuela', () 
   assert.ok(msg.includes('Aurora Gaming 45%'));
   assert.ok(!msg.includes('BO3'), 'el formato tecnico ya no se muestra en el aviso');
   // 02:00 UTC del 15 => 22:00 del 14 en Venezuela
-  assert.ok(/hoy |mañana |ayer |\d{2}\/\d{2} /.test(msg), 'debe usar fecha en palabras: ' + msg);
+  // El día va como encabezado del grupo, y la hora en cada línea.
+  assert.ok(/\*\*(Hoy|Mañana|Ayer|\d{2}\/\d{2})\*\*/.test(msg), 'debe agrupar por día en palabras: ' + msg);
+  assert.ok(msg.includes('`22:00`'), 'la hora va en la línea: ' + msg);
   assert.ok(msg.includes('quedan guardados'), 'debe decir que no se cambian');
 });
 
@@ -191,4 +193,47 @@ test('avisar: sin webhook configurado no revienta y no marca nada como avisado',
   assert.equal(r.enviados[0].enviado, false);
   assert.match(r.enviados[0].razon, /DISCORD_WEBHOOK/);
   await rm(RUTA_ESTADO, { force: true });
+});
+
+// Bug encontrado por una prueba (no en producción): si a una serie le
+// faltaba start_time, el agrupado por día reventaba con TypeError y se caía
+// el aviso COMPLETO, incluidas las series que sí tenían fecha.
+test('agrupar: una serie sin fecha no tumba el aviso, va a un grupo aparte', () => {
+  const msg = mensajeResultados(
+    [
+      { series_id: 'a', equipo_a: 1, equipo_b: 2, prob_gana_a: 0.6, prob_gana_b: 0.4, formato: 'bo3', resultado_real: 'ganaA', victorias_a: 2, victorias_b: 0, brier: 0.3, start_time: '2026-08-14T05:00:00Z' },
+      { series_id: 'b', equipo_a: 3, equipo_b: 4, prob_gana_a: 0.6, prob_gana_b: 0.4, formato: 'bo3', resultado_real: 'ganaA', victorias_a: 2, victorias_b: 0, brier: 0.3 }, // sin start_time
+    ],
+    nombre,
+    null,
+  );
+
+  assert.ok(msg.includes('Team Spirit'), 'la serie con fecha debe seguir apareciendo');
+  assert.ok(msg.includes('Iron Wing'), 'la serie sin fecha también debe aparecer');
+  assert.ok(msg.includes('Sin fecha'), 'debe marcarla como sin fecha en vez de inventarle una');
+  assert.ok(!msg.includes('``'), 'no debe quedar un hueco de hora vacío: ' + msg);
+});
+
+test('agrupar: las series sin fecha van al final, no al principio', () => {
+  const msg = mensajeResultados(
+    [
+      { series_id: 'b', equipo_a: 3, equipo_b: 4, prob_gana_a: 0.6, prob_gana_b: 0.4, formato: 'bo3', resultado_real: 'ganaA', victorias_a: 2, victorias_b: 0, brier: 0.3 },
+      { series_id: 'a', equipo_a: 1, equipo_b: 2, prob_gana_a: 0.6, prob_gana_b: 0.4, formato: 'bo3', resultado_real: 'ganaA', victorias_a: 2, victorias_b: 0, brier: 0.3, start_time: '2026-08-14T05:00:00Z' },
+    ],
+    nombre,
+    null,
+  );
+  assert.ok(msg.indexOf('Team Spirit') < msg.indexOf('Sin fecha'), 'lo fechado va primero: ' + msg);
+});
+
+test('agrupar: series de días distintos salen en orden cronológico', () => {
+  const msg = mensajeResultados(
+    [
+      { series_id: 'nueva', equipo_a: 3, equipo_b: 4, prob_gana_a: 0.6, prob_gana_b: 0.4, formato: 'bo3', resultado_real: 'ganaA', victorias_a: 2, victorias_b: 0, brier: 0.3, start_time: '2026-08-20T05:00:00Z' },
+      { series_id: 'vieja', equipo_a: 1, equipo_b: 2, prob_gana_a: 0.6, prob_gana_b: 0.4, formato: 'bo3', resultado_real: 'ganaA', victorias_a: 2, victorias_b: 0, brier: 0.3, start_time: '2026-08-14T05:00:00Z' },
+    ],
+    nombre,
+    null,
+  );
+  assert.ok(msg.indexOf('Team Spirit') < msg.indexOf('Iron Wing'), 'la del 14 va antes que la del 20: ' + msg);
 });
