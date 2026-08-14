@@ -65,6 +65,34 @@ Están desfasadas a propósito: primero se predice, media hora después se
 califica lo que ya terminó, después se regenera el panel web
 (`salida/web/index.html`), y al final sale el aviso por Discord.
 
+### Corren ocultas (si no, son 4 ventanas negras por hora)
+
+Las tareas **no** apuntan directo a los `.cmd`. Van a través de
+`scripts/oculto.vbs`, así:
+
+```
+wscript.exe //B "D:\monitor-dota2\scripts\oculto.vbs" "D:\monitor-dota2\scripts\predecir.cmd"
+```
+
+Al principio apuntaban directo al `.cmd`. Como las tareas corren con token
+interactivo (para no tener que guardar la contraseña del usuario en el
+Programador), Windows mostraba la ventana de consola en cada corrida:
+**cuatro ventanas negras por hora**, saltando encima de lo que estuvieras
+haciendo.
+
+`oculto.vbs` usa `WScript.Shell.Run` con estilo de ventana 0 y
+`bWaitOnReturn=True`: esconde la consola pero **deja pasar el código de
+salida** al Programador, así una corrida fallida sigue viéndose en la
+columna "Último resultado". Sin ese `True` la tarea siempre diría 0 y el
+fallo quedaría invisible.
+
+Si alguna vez hay que volver a apuntar una tarea al `.cmd` directo (para
+depurar viéndola correr):
+
+```bash
+schtasks /change /tn "MonitorDota2-Predecir" /tr "D:\monitor-dota2\scripts\predecir.cmd"
+```
+
 ## Cómo te enterás de las predicciones
 
 Tres formas, de menos a más automática:
