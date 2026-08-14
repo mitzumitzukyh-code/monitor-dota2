@@ -13,7 +13,12 @@ name: Monitor TI2026
 
 on:
   schedule:
-    - cron: '*/20 * * * *'
+    # Cada 10 min. El cron de GitHub se retrasa varios minutos en horas de
+    # pico, así que el intervalo corto compensa: lo que importa no es la
+    # precisión sino que pase varias veces entre el momento en que el suizo
+    # publica un cruce y el momento en que ese cruce empieza a jugarse.
+    # Con el repo público los minutos son ilimitados, así que no cuesta nada.
+    - cron: '*/10 * * * *'
   # Para poder dispararlo a mano desde la pestaña Actions.
   workflow_dispatch:
   # También en cada push a main: sirve de CI (las pruebas corren antes de
