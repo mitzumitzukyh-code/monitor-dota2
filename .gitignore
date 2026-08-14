@@ -1,3 +1,4 @@
 datos/cache/
 node_modules/
 .env
+scripts/log-*.txt

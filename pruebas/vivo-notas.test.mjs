@@ -5,8 +5,8 @@ import { resultadoDelPar, claseReal, actualizarNotas } from '../juez/vivo-notas.
 process.env.SUPABASE_URL ??= 'https://prueba.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'llave-de-prueba';
 
-function juego(radiant_team_id, dire_team_id, radiant_win) {
-  return { radiant_team_id, dire_team_id, radiant_win };
+function juego(radiant_team_id, dire_team_id, radiant_win, start_time = 1000) {
+  return { radiant_team_id, dire_team_id, radiant_win, start_time };
 }
 
 function respuestaFetch(json) {
@@ -32,6 +32,51 @@ test('resultadoDelPar: ignora partidas de otros equipos mezcladas en la misma li
   const partidasLiga = [juego('A', 'B', true), juego('X', 'Y', true), juego('A', 'B', true)];
   const r = resultadoDelPar(partidasLiga, 'A', 'B');
   assert.deepEqual(r, { victoriasA: 2, victoriasB: 0 });
+});
+
+// Bug real encontrado en revisión (2026-08-14): sin acotar por ventana
+// temporal, una revancha del mismo par en otra serie (grupo y luego
+// playoffs de TI) se sumaba a la serie anterior como si fuera una sola.
+test('resultadoDelPar: NO mezcla una revancha posterior del mismo par (series distintas)', () => {
+  const HORA = 3600;
+  const partidasLiga = [
+    // Serie de fase de grupos: A gana 2-0, arranca en t=1000
+    juego('A', 'B', true, 1000),
+    juego('B', 'A', false, 1000 + 2400),
+    // Revancha en playoffs, DÍAS después: B gana 2-0
+    juego('A', 'B', false, 1000 + 72 * HORA),
+    juego('B', 'A', true, 1000 + 72 * HORA + 2400),
+  ];
+
+  const grupos = resultadoDelPar(partidasLiga, 'A', 'B', { desdeTimestamp: 1000, victoriasNecesarias: 2 });
+  assert.deepEqual(grupos, { victoriasA: 2, victoriasB: 0 }, 'la serie de grupos debe ser 2-0 para A, sin contar la revancha');
+
+  const playoffs = resultadoDelPar(partidasLiga, 'A', 'B', { desdeTimestamp: 1000 + 72 * HORA, victoriasNecesarias: 2 });
+  assert.deepEqual(playoffs, { victoriasA: 0, victoriasB: 2 }, 'la revancha debe ser 2-0 para B, sin contar la de grupos');
+});
+
+test('resultadoDelPar: corta al decidirse la serie, no cuenta partidas de más', () => {
+  const partidasLiga = [
+    juego('A', 'B', true, 1000),
+    juego('A', 'B', true, 2000), // aquí ya se decidió 2-0 en bo3
+    juego('A', 'B', false, 3000), // ruido: no debería contarse
+  ];
+  const r = resultadoDelPar(partidasLiga, 'A', 'B', { desdeTimestamp: 1000, victoriasNecesarias: 2 });
+  assert.deepEqual(r, { victoriasA: 2, victoriasB: 0 });
+});
+
+test('resultadoDelPar: tolera que la serie arranque ANTES de la hora programada (pasa de verdad)', () => {
+  // Real: LGD vs Nigma estaba programada 05:00 y arrancó 04:11 (49 min antes).
+  const programado = 10000;
+  const partidasLiga = [juego('A', 'B', true, programado - 49 * 60), juego('A', 'B', true, programado + 600)];
+  const r = resultadoDelPar(partidasLiga, 'A', 'B', { desdeTimestamp: programado, victoriasNecesarias: 2 });
+  assert.deepEqual(r, { victoriasA: 2, victoriasB: 0 });
+});
+
+test('resultadoDelPar: sin desdeTimestamp mantiene el comportamiento viejo (cuenta todo el par)', () => {
+  const partidasLiga = [juego('A', 'B', true, 1000), juego('B', 'A', true, 2000)];
+  const r = resultadoDelPar(partidasLiga, 'A', 'B');
+  assert.deepEqual(r, { victoriasA: 1, victoriasB: 1 });
 });
 
 test('claseReal: bo3 se decide con 2 victorias, no antes', () => {
@@ -68,11 +113,14 @@ test('actualizarNotas: califica una serie decidida y deja intacta una que todav�
     { series_id: 's1', prob_gana_a: 0.7, prob_empate: 0, prob_gana_b: 0.3 },
     { series_id: 's2', prob_gana_a: 0.5, prob_empate: 0, prob_gana_b: 0.5 },
   ];
+  // Los start_time de las partidas tienen que ser coherentes con el
+  // start_time de la serie -- resultadoDelPar acota por ventana temporal.
+  const t0 = Math.floor(new Date('2026-08-14T00:00:00Z').getTime() / 1000);
   // s1: 111 le ganó 2-0 a 222 (decidida). s2: 333 le ganó 1 partida a 444, sigue abierta.
   const partidasLigaReales = [
-    juego(111, 222, true),
-    juego(222, 111, false),
-    juego(333, 444, true),
+    juego(111, 222, true, t0 + 120),
+    juego(222, 111, false, t0 + 2700),
+    juego(333, 444, true, t0 + 180),
   ];
 
   let llamadasSupabase = [];

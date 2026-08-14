@@ -84,6 +84,27 @@ datos/cache/   archivos descargados (en .gitignore)
 | Partidas de un torneo específico | OpenDota API, `/leagues/{id}/matches` | gratis, sin llave (no trae nombre de equipo, hay que resolverlo con `/teams/{id}`) |
 | Calendario de próximos partidos (fixtures) | `https://dota.haglund.dev/v1/matches` (comunidad, cachea Liquipedia) | gratis, sin llave, sin límite documentado -- proyecto no oficial |
 
+### Dos bugs reales del pipeline en vivo, encontrados y corregidos (2026-08-14)
+
+1. **Fuga temporal en producción (rompía la regla 6).** El feed de fixtures
+   sigue listando series que YA empezaron — verificado: 5 de TI2026 a la vez.
+   Con el flujo corriendo cada hora, esas series se predecían usando ratings
+   que ya incluían partidas de esa misma serie, y encima sobreescribían la
+   predicción original, invalidando el Brier ya calculado. Arreglado en
+   `juez/vivo-motor.mjs`: se salta todo fixture cuyo `startsAt` ya pasó, y
+   **una predicción guardada nunca se reescribe** (si se reescribe, el Brier
+   deja de corresponder a lo que se predijo y el auto-juicio es mentira).
+
+2. **Series distintas del mismo par sumadas como una.** `resultadoDelPar`
+   contaba todas las partidas entre dos equipos en toda la liga. En TI un par
+   se enfrenta en grupos y puede reenfrentarse en playoffs — las dos series
+   se habrían fusionado. Al 14 de agosto todavía no había ninguna revancha
+   (por eso no corrompió datos), pero el bracket del 20-23 las garantiza.
+   Arreglado acotando por ventana temporal desde el inicio programado y
+   cortando el conteo en cuanto la serie se decide. Ojo con la tolerancia
+   hacia atrás: las series arrancan antes de lo programado con frecuencia
+   (real: LGD vs Nigma arrancó 49 min antes).
+
 ### Calendario de próximos partidos — sin fuente oficial gratis
 
 OpenDota **no tiene fixtures**: `/leagues/{id}/matches` y `/proMatches` solo
@@ -172,6 +193,39 @@ eso no rompió nada). Sweep real: `deltaBo2=1.4` minimiza el Brier de bo2 en
 casi exactamente la tasa real observada, buena señal de que el ajuste
 capturó la causa real y no sobreajustó ruido. Valor calibrado en
 `config.mjs` (`DELTA_BO2`).
+
+## Primera medición en vivo real (2026-08-14) — TI2026 Round 2 y 3
+
+Ocho series predichas el 13 de agosto antes de jugarse, calificadas contra
+el resultado real:
+
+| | |
+|---|---|
+| Brier promedio | **0.6043** (base ingenua bo3: 0.5) |
+| Mediana | 0.4319 |
+| Series mejores que la ingenua | 5 de 8 |
+| Aciertos del favorito | 5 de 8 |
+| Intervalo ~95% de la media | [0.3039, 0.9047] |
+
+**No se puede concluir nada de esto todavía.** Con n=8 el intervalo de
+confianza contiene a la base ingenua, así que el resultado es compatible
+tanto con "el motor sirve" como con "no sirve". La media está arrastrada por
+un solo upset: Iron Wing (predicho 12.3%) le ganó 2-1 a Team Falcons, con un
+Brier de 1.5379 — más del doble que cualquier otra serie. La mediana (0.4319)
+y el conteo (5 de 8 bajo 0.5) apuntan en la dirección opuesta a la media.
+
+Revisado: ese 12.3% no fue un número inventado. Iron Wing tenía 29 partidas
+reales de historial y rating 1575, contra 334 partidas y 1796 de Falcons.
+La evidencia con peso estadístico sigue siendo el backtest de 8.116 series
+(bo3 = 0.4735), no esta muestra.
+
+**Hipótesis pendiente para Fase 2:** el Elo clásico no expresa incertidumbre.
+Un equipo con 29 partidas tiene un rating mucho menos confiable que uno con
+334, pero el modelo trata los dos igual y produce probabilidades igual de
+extremas. El proyecto de LaLiga maneja esto con suavizado bayesiano
+(`PESO_PRIOR_PARTIDOS`); acá no hay equivalente. Encoger la probabilidad
+hacia 0.5 en proporción a la poca experiencia es testeable contra el
+backtest — si no baja el Brier, se bota (regla 4).
 
 ## Orden de fases
 

@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { ratings, ratingDeEquipo, probabilidadGanar } from '../motor/elo.mjs';
 import { probabilidadSerie } from '../motor/series.mjs';
 import { proximosPartidos, fixturesResueltos } from '../datos/fixtures.mjs';
-import { upsert } from '../datos/supabase.mjs';
+import { partidasDeLaLiga, historicoConLiga } from '../datos/liga.mjs';
+import { upsert, seleccionar } from '../datos/supabase.mjs';
 
 const LEAGUE_ID_TI2026 = 19719;
 
@@ -22,19 +23,70 @@ export async function predecirProximos({
   leagueId = LEAGUE_ID_TI2026,
   historico,
   ahora = Date.now() / 1000,
+  refrescarLiga = true,
   fetchImplFixtures,
   fetchImplSupabase,
+  fetchImplLiga,
 } = {}) {
   const partidos = await proximosPartidos({ fetchImpl: fetchImplFixtures });
   const fixtures = fixturesResueltos(partidos, subcadenaLiga);
 
-  const historicoReal = historico ?? JSON.parse(await readFile(new URL('../datos/historico.json', import.meta.url), 'utf8'));
-  const r = ratings(historicoReal, ahora);
-
   const predicciones = [];
   const sinFormato = [];
+  const yaEmpezaron = [];
+  const yaPredichas = [];
 
+  // Regla 6 en producción: el feed sigue listando series que YA empezaron
+  // (verificado con datos reales). Predecirlas usaría ratings que incluyen
+  // partidas de esa misma serie -- fuga temporal. Se descartan de una.
+  const candidatas = [];
   for (const f of fixtures) {
+    if (new Date(f.startsAt).getTime() / 1000 <= ahora) {
+      yaEmpezaron.push(f);
+      continue;
+    }
+    candidatas.push(f);
+  }
+
+  // Una predicción es un compromiso registrado: una vez guardada no se
+  // reescribe, aunque después haya ratings más frescos. Si se sobreescribe,
+  // el Brier ya calculado deja de corresponder a lo que se predijo y el
+  // auto-juicio se vuelve mentira.
+  if (candidatas.length > 0) {
+    const existentes = await seleccionar(
+      'dota_predictions',
+      `?select=series_id&series_id=in.(${candidatas.map((f) => `"${f.id}"`).join(',')})`,
+      { fetchImpl: fetchImplSupabase },
+    );
+    const yaGuardadas = new Set(existentes.map((p) => p.series_id));
+    for (let i = candidatas.length - 1; i >= 0; i--) {
+      if (yaGuardadas.has(candidatas[i].id)) {
+        yaPredichas.push(candidatas[i]);
+        candidatas.splice(i, 1);
+      }
+    }
+  }
+
+  if (candidatas.length === 0) {
+    return { predicciones, sinFormato, yaEmpezaron, yaPredichas, agregadasDeLaLiga: 0 };
+  }
+
+  const historicoBase = historico ?? JSON.parse(await readFile(new URL('../datos/historico.json', import.meta.url), 'utf8'));
+
+  // El histórico en disco es un snapshot. Sin refrescar, predecir una ronda
+  // de TI ignora todo lo que pasó en las rondas anteriores del mismo torneo.
+  let historicoReal = historicoBase;
+  let agregadasDeLaLiga = 0;
+  if (refrescarLiga) {
+    const partidasLiga = await partidasDeLaLiga(leagueId, { fetchImpl: fetchImplLiga });
+    const fusion = historicoConLiga(historicoBase, partidasLiga);
+    historicoReal = fusion.partidas;
+    agregadasDeLaLiga = fusion.agregadas;
+  }
+
+  const r = ratings(historicoReal, ahora);
+
+  for (const f of candidatas) {
     const formato = formatoDesdeMatchType(f.matchType);
     if (!formato) {
       sinFormato.push(f);
@@ -90,16 +142,25 @@ export async function predecirProximos({
     );
   }
 
-  return { predicciones, sinFormato };
+  return { predicciones, sinFormato, yaEmpezaron, yaPredichas, agregadasDeLaLiga };
 }
 
 async function main() {
-  const { predicciones, sinFormato } = await predecirProximos();
-  console.log(`${predicciones.length} predicciones guardadas.`);
+  const { predicciones, sinFormato, yaEmpezaron, yaPredichas, agregadasDeLaLiga } = await predecirProximos();
+  if (agregadasDeLaLiga > 0) {
+    console.log(`${agregadasDeLaLiga} partidas nuevas del torneo agregadas al histórico en memoria (ratings frescos).`);
+  }
+  console.log(`${predicciones.length} predicciones nuevas guardadas.`);
   for (const p of predicciones) {
     console.log(
       `  ${p.fixture.nombreA} vs ${p.fixture.nombreB} (${p.formato}, ${p.fixture.startsAt}): A=${(p.prediccion.ganaA * 100).toFixed(1)}% empate=${(p.prediccion.empate * 100).toFixed(1)}% B=${(p.prediccion.ganaB * 100).toFixed(1)}%`,
     );
+  }
+  if (yaEmpezaron.length > 0) {
+    console.log(`${yaEmpezaron.length} series ya empezadas, saltadas (regla 6, no se predice sobre el presente).`);
+  }
+  if (yaPredichas.length > 0) {
+    console.log(`${yaPredichas.length} series ya tenían predicción guardada, no se tocaron.`);
   }
   if (sinFormato.length > 0) {
     console.log(`${sinFormato.length} partidos sin formato reconocible, no se predijeron:`, sinFormato.map((f) => f.matchType));

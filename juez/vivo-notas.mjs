@@ -6,43 +6,76 @@
 
 import { fileURLToPath } from 'node:url';
 import { seleccionar, upsert } from '../datos/supabase.mjs';
+import { partidasDeLaLiga } from '../datos/liga.mjs';
 import { brierDeSerie } from './backtest.mjs';
 
-const BASE_LEAGUE_MATCHES = 'https://api.opendota.com/api/leagues';
-
-export async function partidasDeLaLiga(leagueId, { fetchImpl = fetch } = {}) {
-  const res = await fetchImpl(`${BASE_LEAGUE_MATCHES}/${leagueId}/matches`);
-  if (!res.ok) throw new Error(`OpenDota respondió ${res.status}`);
-  return res.json();
-}
+export { partidasDeLaLiga };
 
 // Cuántas partidas hacen falta ganar para cerrar la serie, según el
 // formato -- para saber si ya está DECIDIDA o todavía puede seguir.
-function victoriasParaGanar(formato) {
+export function victoriasParaGanar(formato) {
   return { bo1: 1, bo2: 2, bo3: 2, bo5: 3 }[formato] ?? null;
 }
 
 // Busca, entre las partidas reales de la liga, las que enfrentan a ese par
 // de equipos (sin importar quién jugó de radiant/dire) y cuenta victorias.
 // null si el par de equipos no aparece todavía.
-export function resultadoDelPar(partidasLiga, equipoA, equipoB) {
+//
+// OJO (bug real corregido 2026-08-14): un par de equipos puede enfrentarse
+// en MÁS DE UNA serie del mismo torneo -- fase de grupos y después
+// playoffs. Sin acotar, las dos series se sumaban como si fueran una sola.
+// Por eso hay que pasar `desdeTimestamp` (el inicio programado de LA serie
+// que se está calificando) y `victoriasNecesarias` del formato:
+//
+//   - toleranciaAntesSegundos: las series arrancan antes de lo programado
+//     con frecuencia (real: LGD vs Nigma arrancó 49 min antes). 2h da
+//     margen sin alcanzar la ronda anterior, que está a ~3h.
+//   - ventanaSerieSegundos: corta por arriba para que una revancha del
+//     mismo par (días después, en bracket) no entre en esta serie.
+//   - victoriasNecesarias: deja de contar en cuanto la serie se decide,
+//     así ninguna partida posterior se cuela.
+export function resultadoDelPar(
+  partidasLiga,
+  equipoA,
+  equipoB,
+  {
+    desdeTimestamp = null,
+    victoriasNecesarias = null,
+    toleranciaAntesSegundos = 2 * 3600,
+    ventanaSerieSegundos = 8 * 3600,
+  } = {},
+) {
+  let candidatas = partidasLiga
+    .filter(
+      (p) =>
+        (p.radiant_team_id === equipoA && p.dire_team_id === equipoB) ||
+        (p.radiant_team_id === equipoB && p.dire_team_id === equipoA),
+    )
+    .sort((a, b) => a.start_time - b.start_time);
+
+  if (desdeTimestamp !== null) {
+    candidatas = candidatas.filter((p) => p.start_time >= desdeTimestamp - toleranciaAntesSegundos);
+    if (candidatas.length > 0) {
+      const limite = candidatas[0].start_time + ventanaSerieSegundos;
+      candidatas = candidatas.filter((p) => p.start_time <= limite);
+    }
+  }
+
+  if (candidatas.length === 0) return null;
+
   let victoriasA = 0;
   let victoriasB = 0;
-  let encontrado = false;
-
-  for (const p of partidasLiga) {
-    const esElPar =
-      (p.radiant_team_id === equipoA && p.dire_team_id === equipoB) ||
-      (p.radiant_team_id === equipoB && p.dire_team_id === equipoA);
-    if (!esElPar) continue;
-
-    encontrado = true;
+  for (const p of candidatas) {
     const ganador = p.radiant_win ? p.radiant_team_id : p.dire_team_id;
     if (ganador === equipoA) victoriasA++;
     else victoriasB++;
+
+    if (victoriasNecesarias && (victoriasA >= victoriasNecesarias || victoriasB >= victoriasNecesarias)) {
+      break;
+    }
   }
 
-  return encontrado ? { victoriasA, victoriasB } : null;
+  return { victoriasA, victoriasB };
 }
 
 export function claseReal(resultado, formato) {
@@ -84,7 +117,13 @@ export async function actualizarNotas({ fetchImpl, fetchImplSupabase } = {}) {
     const partidasLiga = await partidasDeLaLiga(leagueId, { fetchImpl });
 
     for (const s of series) {
-      const resultado = resultadoDelPar(partidasLiga, s.equipo_a, s.equipo_b);
+      // start_time viene de Postgres como texto ISO -- a epoch en segundos,
+      // que es la unidad de start_time de OpenDota.
+      const desdeTimestamp = Math.floor(new Date(s.start_time).getTime() / 1000);
+      const resultado = resultadoDelPar(partidasLiga, s.equipo_a, s.equipo_b, {
+        desdeTimestamp,
+        victoriasNecesarias: victoriasParaGanar(s.formato),
+      });
       if (!resultado) continue;
 
       const real = claseReal(resultado, s.formato);
