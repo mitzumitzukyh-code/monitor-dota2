@@ -65,6 +65,25 @@ Están desfasadas a propósito: primero se predice, media hora después se
 califica lo que ya terminó, después se regenera el panel web
 (`salida/web/index.html`), y al final sale el aviso por Discord.
 
+## ⚠️ Esto ya NO es lo que corre en producción
+
+Desde el 2026-08-14 el ciclo corre en **GitHub Actions**, no en esta PC:
+`.github/workflows/monitor.yml`, cada 20 minutos.
+
+El motivo fue el racionamiento eléctrico (bloque A): cortes de 5 horas
+diarios, varios encima del horario en que TI juega. Ver la sección de abajo
+sobre qué se recuperaba y qué no.
+
+Las cuatro tareas del Programador quedaron **desactivadas** (no borradas)
+para no duplicar trabajo. Si alguna vez hace falta volver a correr en local:
+
+```bash
+schtasks /change /tn "MonitorDota2-Predecir" /enable
+```
+
+Lo que sigue abajo queda como registro de cómo funcionaba y de los problemas
+que aparecieron, que siguen siendo válidos si se vuelve a esa vía.
+
 ### Qué pasa si se apaga la PC (se va la luz)
 
 **Con la PC apagada no corre nada.** Estas tareas viven en el Programador de
