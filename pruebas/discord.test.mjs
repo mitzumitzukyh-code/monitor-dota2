@@ -83,8 +83,35 @@ test('recortar: no toca un mensaje que ya entra', () => {
   assert.equal(recortar('corto', 100), 'corto');
 });
 
+// Corre `fn` con DISCORD_WEBHOOK fuera del entorno, y lo restaura después.
+// Necesario porque en GitHub Actions la variable SÍ está puesta.
+async function sinWebhookEnElEntorno(fn) {
+  const previo = process.env.DISCORD_WEBHOOK;
+  delete process.env.DISCORD_WEBHOOK;
+  try {
+    return await fn();
+  } finally {
+    if (previo !== undefined) process.env.DISCORD_WEBHOOK = previo;
+  }
+}
+
 test('enviar: sin DISCORD_WEBHOOK no revienta, devuelve enviado:false con la razón', async () => {
-  const r = await enviar('hola', { webhook: undefined, fetchImpl: async () => { throw new Error('no debe llamarse'); } });
+  // OJO: pasar `webhook: undefined` NO desactiva el default. En JS el default
+  // de destructuring se aplica justamente cuando el valor es undefined, así
+  // que tomaría process.env.DISCORD_WEBHOOK. Este test pasaba en local sólo
+  // porque la variable no estaba en el entorno, y falló en GitHub Actions
+  // donde sí está: era un test falsamente verde. Hay que sacarla de verdad.
+  const r = await sinWebhookEnElEntorno(() =>
+    enviar('hola', { fetchImpl: async () => { throw new Error('no debe llamarse'); } }),
+  );
+  assert.equal(r.enviado, false);
+  assert.match(r.razon, /DISCORD_WEBHOOK/);
+});
+
+test('enviar: un webhook vacío tampoco intenta enviar', async () => {
+  // La cadena vacía sí evita el default (no es undefined), y es lo que
+  // llegaría de un secreto mal configurado.
+  const r = await enviar('hola', { webhook: '', fetchImpl: async () => { throw new Error('no debe llamarse'); } });
   assert.equal(r.enviado, false);
   assert.match(r.razon, /DISCORD_WEBHOOK/);
 });
@@ -212,16 +239,19 @@ test('avisar: predicción y resultado se marcan en columnas distintas', async ()
 });
 
 test('avisar: sin webhook no toca la red ni marca nada', async () => {
-  delete process.env.DISCORD_WEBHOOK;
   const patches = [];
 
-  const r = await avisar({
-    fetchImpl: async () => { throw new Error('no debe tocar la red sin webhook'); },
-    fetchImplSupabase: supabaseFalso(
-      { series: [unaSerie], preds: [{ series_id: 's1', prob_gana_a: 0.6, prob_gana_b: 0.4, resultado_real: null, brier: null, avisado_prediccion_en: null }], teams: equipos },
-      patches,
-    ),
-  });
+  // Con el helper y no con un `delete` suelto: así el test no depende de ser
+  // el último del archivo ni deja el entorno sucio para los que vengan.
+  const r = await sinWebhookEnElEntorno(() =>
+    avisar({
+      fetchImpl: async () => { throw new Error('no debe tocar la red sin webhook'); },
+      fetchImplSupabase: supabaseFalso(
+        { series: [unaSerie], preds: [{ series_id: 's1', prob_gana_a: 0.6, prob_gana_b: 0.4, resultado_real: null, brier: null, avisado_prediccion_en: null }], teams: equipos },
+        patches,
+      ),
+    }),
+  );
 
   assert.equal(r.enviados[0].enviado, false);
   assert.match(r.enviados[0].razon, /DISCORD_WEBHOOK/);
