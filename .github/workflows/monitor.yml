@@ -52,18 +52,49 @@ jobs:
 
       # Sin dependencias que instalar: motor/ y juez/ son matemática pura y
       # el resto usa sólo builtins de Node.
-      - name: Comprobar que los secretos están puestos
+      # Valida que existan Y que tengan la forma correcta. Comprobar sólo que
+      # no estén vacíos no alcanzó: la corrida #2 fallo porque SUPABASE_URL
+      # traía el nombre de la variable pegado adelante
+      # ("SUPABASE_URL=https://..."), que es lo que sale de copiar la línea
+      # entera del .env. El error terminaba siendo un ERR_INVALID_URL enterrado
+      # en un stack de undici, imposible de relacionar con el secreto.
+      - name: Comprobar los secretos
         run: |
-          faltan=""
-          [ -z "$SUPABASE_URL" ] && faltan="$faltan SUPABASE_URL"
-          [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && faltan="$faltan SUPABASE_SERVICE_ROLE_KEY"
-          [ -z "$DISCORD_WEBHOOK" ] && faltan="$faltan DISCORD_WEBHOOK"
-          if [ -n "$faltan" ]; then
-            echo "Faltan secretos:$faltan"
-            echo "Ponerlos en Settings > Secrets and variables > Actions"
-            exit 1
+          problemas=0
+
+          revisar_prefijo() {
+            if printf '%s' "$2" | grep -q "^$1="; then
+              echo "::error::$1 incluye el nombre de la variable en el valor. Poner sólo lo que va DESPUÉS del '=' del .env."
+              problemas=1
+            fi
+          }
+
+          for nombre in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY DISCORD_WEBHOOK; do
+            valor=$(printf '%s' "${!nombre}")
+            if [ -z "$valor" ]; then
+              echo "::error::Falta el secreto $nombre. Ponerlo en Settings > Secrets and variables > Actions."
+              problemas=1
+              continue
+            fi
+            revisar_prefijo "$nombre" "$valor"
+            if printf '%s' "$valor" | grep -qE '^[[:space:]]|[[:space:]]$'; then
+              echo "::error::$nombre tiene espacios al principio o al final."
+              problemas=1
+            fi
+          done
+
+          if ! printf '%s' "$SUPABASE_URL" | grep -qE '^https://[a-z0-9.-]+\.supabase\.co/?$'; then
+            echo "::error::SUPABASE_URL no tiene la forma https://<proyecto>.supabase.co"
+            problemas=1
           fi
-          echo "Los tres secretos están puestos."
+
+          if ! printf '%s' "$DISCORD_WEBHOOK" | grep -qE '^https://(discord|discordapp)\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+$'; then
+            echo "::error::DISCORD_WEBHOOK no tiene la forma https://discord.com/api/webhooks/<id>/<token>"
+            problemas=1
+          fi
+
+          [ "$problemas" -eq 1 ] && exit 1
+          echo "Los tres secretos están puestos y con la forma correcta."
 
       - name: Pruebas
         run: node --test "pruebas/**/*.test.mjs"

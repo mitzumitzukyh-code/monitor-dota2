@@ -2,8 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { predecirProximos } from '../juez/vivo-motor.mjs';
 
-process.env.SUPABASE_URL ??= 'https://prueba.supabase.co';
-process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'llave-de-prueba';
+// Forzado, NO con ??=: si el entorno trae un valor (como en GitHub Actions,
+// donde estan los secretos reales), las pruebas apuntarian a la base de
+// verdad. Con ??= eso pasaba, y encima heredaban un valor invalido si el
+// secreto estaba mal copiado.
+process.env.SUPABASE_URL = 'https://prueba.supabase.co';
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'llave-de-prueba';
 
 function fixturePartido({ leagueName, startsAt, teamA, teamB, matchType = 'Bo3' }) {
   return {
