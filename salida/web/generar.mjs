@@ -13,7 +13,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { seleccionar } from '../../datos/supabase.mjs';
-import { partidasDeLaLiga, historicoConLiga } from '../../datos/liga.mjs';
+import { partidasDeLaLiga, seriesDeLaLiga, historicoConLiga } from '../../datos/liga.mjs';
+import { grillaDePosiciones } from './grilla.mjs';
 import { ratings, ratingDeEquipo, probabilidadGanar } from '../../motor/elo.mjs';
 import { distribucionMarcadores, probabilidadPartidaDesdeSerie } from '../../motor/series.mjs';
 import { EQUIPOS_TI2026 } from '../../datos/equipos-ti2026.mjs';
@@ -160,7 +161,16 @@ function vacio(mensaje) {
   return `        <div style="padding: 28px 24px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #9b9797; line-height: 1.6;">${esc(mensaje)}</div>`;
 }
 
-export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn }) {
+export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn, seriesLiga = [], destacados = new Set() }) {
+  // La grilla se arma de las series REALES del torneo, no de las predichas:
+  // hay series de TI que el sistema nunca llegó a predecir y aun así cuentan
+  // para la posición.
+  const g = grillaDePosiciones(seriesLiga, nombre, { destacados });
+  const grilla = {
+    ...g,
+    derecha: `${seriesLiga.length} ${seriesLiga.length === 1 ? 'SERIE' : 'SERIES'} JUGADAS EN TI2026`,
+  };
+
   const m = metricas;
   const deltaBrier = m.n ? m.media - m.baseMedia : 0;
   const peorQueBase = m.n && deltaBrier > 0;
@@ -281,10 +291,14 @@ ${tarjetas}
 
   <div style="padding: 16px 24px; border-bottom: 2px solid rgba(243,242,242,0.45); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #bab6b6; line-height: 1.65; max-width: 96ch;">${esc(lectura)}</div>
 
+  <div style="border-bottom: 2px solid rgba(243,242,242,0.45);">
+${seccion(grilla.titulo, grilla.derecha, grilla.html)}
+  </div>
+
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); border-bottom: 2px solid rgba(243,242,242,0.45);">
 
     <div style="border-right: 2px solid rgba(243,242,242,0.45);">
-${seccion('SERIES CALIFICADAS', `${m.n} ${m.n === 1 ? "SERIE" : "SERIES"} · ▶ = FAVORITO DEL MOTOR`, cuerpoCalificadas)}
+${seccion('SERIES CALIFICADAS', `${m.n} ${m.n === 1 ? 'SERIE' : 'SERIES'} · ▶ = FAVORITO DEL MOTOR`, cuerpoCalificadas)}
 ${calificadas.length ? `      <div style="padding: 12px 24px 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9b9797; letter-spacing: 0.06em;">FILA TINTADA = BRIER POR ENCIMA DE SU BASE INGENUA</div>` : ''}
     </div>
 
@@ -540,7 +554,21 @@ async function main() {
   const metricas = calcularMetricas(calificadas);
   const generadoEn = fechaYHora(new Date().toISOString()) + ' VET';
 
-  const html = construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn });
+  const seriesLiga = seriesDeLaLiga(partidasLiga);
+  // Se destacan los equipos de la última jornada jugada, para que la grilla
+  // diga de un vistazo quién se movió hoy.
+  const ultima = calificadas.length ? calificadas[calificadas.length - 1].start_time : null;
+  const destacados = new Set();
+  if (ultima) {
+    const desde = new Date(ultima).getTime() - 8 * 3600 * 1000;
+    for (const c of calificadas) {
+      if (new Date(c.start_time).getTime() < desde) continue;
+      destacados.add(c.equipo_a);
+      destacados.add(c.equipo_b);
+    }
+  }
+
+  const html = construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn, seriesLiga, destacados });
   const destino = new URL('./index.html', import.meta.url);
   await writeFile(destino, html);
 
