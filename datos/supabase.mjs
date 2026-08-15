@@ -2,6 +2,8 @@
 // LaLiga (reutilizado a propósito) -- tablas con prefijo dota_ para no
 // chocar con las de fútbol.
 
+import { fetchConReintentos } from './reintentar.mjs';
+
 function headers() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   return {
@@ -15,7 +17,7 @@ function baseUrl() {
   return process.env.SUPABASE_URL;
 }
 
-export async function seleccionar(tabla, query = '', { fetchImpl = fetch } = {}) {
+export async function seleccionar(tabla, query = '', { fetchImpl = fetchConReintentos } = {}) {
   const res = await fetchImpl(`${baseUrl()}/rest/v1/${tabla}${query}`, { headers: headers() });
   if (!res.ok) throw new Error(`Supabase seleccionar(${tabla}) respondió ${res.status}: ${await res.text()}`);
   return res.json();
@@ -25,7 +27,7 @@ export async function seleccionar(tabla, query = '', { fetchImpl = fetch } = {})
 // la query. A diferencia de upsert, no necesita mandar la fila completa --
 // importante para marcar "ya avisado" sin arriesgar sobreescribir la
 // predicción guardada.
-export async function parchear(tabla, query, cambios, { fetchImpl = fetch } = {}) {
+export async function parchear(tabla, query, cambios, { fetchImpl = fetchConReintentos } = {}) {
   const res = await fetchImpl(`${baseUrl()}/rest/v1/${tabla}${query}`, {
     method: 'PATCH',
     headers: { ...headers(), Prefer: 'return=minimal' },
@@ -35,7 +37,7 @@ export async function parchear(tabla, query, cambios, { fetchImpl = fetch } = {}
   return true;
 }
 
-export async function upsert(tabla, filas, { onConflict, fetchImpl = fetch } = {}) {
+export async function upsert(tabla, filas, { onConflict, fetchImpl = fetchConReintentos } = {}) {
   const url = new URL(`${baseUrl()}/rest/v1/${tabla}`);
   if (onConflict) url.searchParams.set('on_conflict', onConflict);
 

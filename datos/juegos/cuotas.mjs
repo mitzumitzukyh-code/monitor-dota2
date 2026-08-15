@@ -17,6 +17,7 @@
 // medirse contra él.
 
 import { DISCIPLINAS } from './bo3.mjs';
+import { fetchConReintentos } from '../reintentar.mjs';
 
 const BASE = 'https://api.bo3.gg/api/v1';
 const MS_ENTRE_PETICIONES = 400;
@@ -98,7 +99,7 @@ async function pedir(url, fetchImpl) {
 // Captura las cuotas de lo que viene. Se corre seguido (cada 15-30 min) para
 // tener también el MOVIMIENTO de la cuota, no solo un valor suelto: cómo se
 // mueve antes del saque es información por sí sola.
-export async function capturarCuotas(juegos = ['cs2'], { fetchImpl = fetch, limite = 100 } = {}) {
+export async function capturarCuotas(juegos = ['cs2'], { fetchImpl = fetchConReintentos, limite = 100 } = {}) {
   const capturadoEn = new Date().toISOString();
   const filas = [];
 

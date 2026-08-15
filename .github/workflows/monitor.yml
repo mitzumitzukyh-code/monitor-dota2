@@ -145,6 +145,26 @@ jobs:
         if: always()
         run: node salida/web/generar.mjs
 
+      # Aviso de fallo. Sin esto, una corrida rota se descubre por casualidad
+      # días después: GitHub manda correo, pero se pierde entre el resto.
+      # Va a Discord, que es donde el dueño ya mira.
+      #
+      # `if: failure()` sólo se dispara si algo anterior falló de verdad, y
+      # `continue-on-error` evita que un problema avisando tape el problema
+      # real en el resumen de la corrida.
+      - name: Avisar si el ciclo falló
+        if: failure()
+        continue-on-error: true
+        run: |
+          curl -sS -X POST "$DISCORD_WEBHOOK" \
+            -H 'Content-Type: application/json' \
+            --data @- <<JSON
+          {
+            "content": "⚠️ **El ciclo falló** — corrida \`${GITHUB_RUN_NUMBER}\`\nRevisar: <https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}>",
+            "allowed_mentions": { "parse": [] }
+          }
+          JSON
+
       - name: Preparar Pages
         if: always()
         uses: actions/configure-pages@v5

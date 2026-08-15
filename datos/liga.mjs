@@ -2,9 +2,11 @@
 // que predice (para tener ratings frescos) y el que califica (para saber
 // cómo terminó cada serie).
 
+import { fetchConReintentos } from './reintentar.mjs';
+
 const BASE_LEAGUE_MATCHES = 'https://api.opendota.com/api/leagues';
 
-export async function partidasDeLaLiga(leagueId, { fetchImpl = fetch } = {}) {
+export async function partidasDeLaLiga(leagueId, { fetchImpl = fetchConReintentos } = {}) {
   const res = await fetchImpl(`${BASE_LEAGUE_MATCHES}/${leagueId}/matches`);
   if (!res.ok) throw new Error(`OpenDota respondió ${res.status}`);
   return res.json();

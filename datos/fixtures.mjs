@@ -5,10 +5,11 @@
 
 import { fileURLToPath } from 'node:url';
 import { teamIdPorNombre } from './equipos-ti2026.mjs';
+import { fetchConReintentos } from './reintentar.mjs';
 
 const URL_FIXTURES = 'https://dota.haglund.dev/v1/matches';
 
-export async function proximosPartidos({ fetchImpl = fetch } = {}) {
+export async function proximosPartidos({ fetchImpl = fetchConReintentos } = {}) {
   const res = await fetchImpl(URL_FIXTURES);
   if (!res.ok) throw new Error(`dota.haglund.dev respondió ${res.status}`);
   return res.json();

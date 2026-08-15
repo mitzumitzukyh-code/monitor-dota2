@@ -17,6 +17,8 @@
 // 23 -- cambiarle la fuente por debajo mientras corre rompería la regla 3.
 // Migrar Dota a bo3.gg es una decisión aparte, para después del torneo.
 
+import { fetchConReintentos } from '../reintentar.mjs';
+
 const BASE = 'https://api.bo3.gg/api/v1';
 
 // Tope duro del servidor: pedir 500 o 1000 igual devuelve 100 (verificado).
@@ -116,7 +118,7 @@ function construirUrl({ disciplinaId, estado, tier, orden = '-start_date', limit
 // para poder probar con poco antes de bajar decenas de miles.
 export async function bajarPartidas(
   juego,
-  { tier = null, maxPaginas = Infinity, fetchImpl = fetch, alAvanzar = null } = {},
+  { tier = null, maxPaginas = Infinity, fetchImpl = fetchConReintentos, alAvanzar = null } = {},
 ) {
   const disciplinaId = DISCIPLINAS[juego];
   if (!disciplinaId) throw new Error(`juego desconocido: ${juego}`);
@@ -154,7 +156,7 @@ export async function bajarPartidas(
 }
 
 // Partidas futuras: el calendario. Mismo endpoint, otro estado.
-export async function proximasPartidas(juego, { fetchImpl = fetch, limite = POR_PAGINA } = {}) {
+export async function proximasPartidas(juego, { fetchImpl = fetchConReintentos, limite = POR_PAGINA } = {}) {
   const disciplinaId = DISCIPLINAS[juego];
   if (!disciplinaId) throw new Error(`juego desconocido: ${juego}`);
   const url = construirUrl({
@@ -170,7 +172,7 @@ export async function proximasPartidas(juego, { fetchImpl = fetch, limite = POR_
 
 // Nombres de equipo. Se resuelven aparte y se cachean: cambian lentísimo y
 // pedirlos en cada corrida sería gastar por gusto (regla 5).
-export async function nombresDeEquipos(ids, { fetchImpl = fetch } = {}) {
+export async function nombresDeEquipos(ids, { fetchImpl = fetchConReintentos } = {}) {
   const nombres = new Map();
   for (const id of [...new Set(ids)].filter(Boolean)) {
     const datos = await pedir(`${BASE}/teams/${id}`, fetchImpl);
