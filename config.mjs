@@ -46,3 +46,40 @@ export const GLICKO_VOL_INICIAL = 0.06;
 // de motor/glicko2.mjs), y eso hace que la RD baje más rápido de lo previsto.
 // TAU es la perilla para compensarlo cuando se calibre.
 export const GLICKO_TAU = 0.5;
+
+// --- Coeficientes POR JUEGO -------------------------------------------------
+//
+// Los de arriba (K_FACTOR, ESCALA) son los de Dota y quedan como están porque
+// TI2026 está en producción con ellos. Pero un Bo3 de CS2 no tiene la misma
+// varianza que uno de Dota, y calibrar por juego dio una mejora real y medida
+// (ver CLAUDE.md, Fase 1 de CS2): el Elo con los coeficientes de Dota daba
+// brier 0.23386 sobre CS2, y con los suyos 0.23190.
+//
+// Un juego NO hereda los coeficientes de otro. Antes de agregar una entrada
+// acá hay que correr juez/calibrar-cs2.mjs adaptado a ese juego.
+export const COEFICIENTES = {
+  dota2: {
+    motor: 'elo',
+    kFactor: 24,
+    escala: 400,
+    // Glicko-2 NO se ha probado contra el histórico de Dota. Le ganó a Elo en
+    // CS2, pero la regla es que un juego no hereda la aprobación de otro.
+    // Hasta que se corra ese experimento, Dota sigue con Elo.
+    glicko: null,
+  },
+  cs2: {
+    // Calibrado con barrido 80/20 cronológico sobre 72.630 partidas y medido
+    // sobre el 20% reciente que el barrido nunca vio. Glicko-2 le gana a Elo
+    // de forma concluyente: dif -0.002162, IC95 [-0.003145, -0.001179],
+    // t = -4.31 sobre n = 12.447.
+    motor: 'glicko2',
+    kFactor: 20,
+    escala: 200,
+    glicko: { tau: 1.2, rdInicial: 200, volInicial: 0.06 },
+  },
+};
+
+// El barrido dejó ver algo que conviene tener escrito: en Elo lo que manda es
+// la RAZÓN K/escala, no los valores sueltos. K=20/escala=200 y K=40/escala=400
+// dieron brier idéntico (0.22406). Si alguien "sube K" sin tocar la escala,
+// está cambiando esa razón, no la velocidad de aprendizaje sola.

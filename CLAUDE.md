@@ -289,6 +289,42 @@ extremas. El proyecto de LaLiga maneja esto con suavizado bayesiano
 hacia 0.5 en proporción a la poca experiencia es testeable contra el
 backtest — si no baja el Brier, se bota (regla 4).
 
+### Fase 1 de CS2 — cerrada (2026-08-15). Glicko-2 se ganó el puesto
+
+Barrido con **separación cronológica 80/20**: se calibró con las 58.103
+partidas viejas y se reportó sobre las 14.527 recientes, que el barrido nunca
+vio. Esa separación no es adorno — sin ella se estaría midiendo cuál
+combinación tuvo más suerte, que es exactamente el error que costó la Fase 2
+de LaLiga (68 combinaciones, "mejora" de 0.055% que era ruido).
+
+Sobre el holdout:
+
+| | Brier | Acierto |
+|---|---|---|
+| base ingenua (50-50) | 0.25000 | — |
+| Elo con los coeficientes de **Dota** (24/400) | 0.23386 | 60.70% |
+| Elo calibrado para CS2 (20/200) | 0.23190 | 61.25% |
+| **Glicko-2 calibrado (tau 1.2, RD 200)** | **0.22905** | **62.40%** |
+
+Pareado contra el Elo ya calibrado: dif media **−0.002162**, IC95
+**[−0.003145, −0.001179]**, **t = −4.31** sobre n = 12.447. Concluyente.
+
+Esto cierra la duda que había quedado abierta: Glicko-2 no gana sólo porque
+el Elo estuviera mal afinado, gana también contra un Elo afinado para CS2.
+
+Dos cosas que dejó ver el barrido y conviene no olvidar:
+
+- **En Elo manda la razón K/escala, no los valores sueltos.** K=20/escala=200
+  y K=40/escala=400 dieron brier idéntico. "Subir K" sin tocar la escala no
+  es acelerar el aprendizaje, es cambiar esa razón.
+- **En Glicko-2 lo que movió la aguja fue el RD inicial (200, no los 350 del
+  paper); TAU casi no importó.** Con RD 200 los cinco valores de TAU probados
+  quedaron dentro de 0.00001 de Brier.
+
+**Dota 2 sigue en Elo.** Glicko-2 no se ha probado contra su histórico, y un
+juego no hereda la aprobación de otro. Los coeficientes por juego viven en
+`COEFICIENTES` de `config.mjs`.
+
 ## Orden de fases
 
 Las fases son **por juego**. Dota 2 va en la 4; CS2 arrancó Fase 0 el 15 de
