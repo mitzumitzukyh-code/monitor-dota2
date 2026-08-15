@@ -1,11 +1,15 @@
-# Monitor Dota 2
+# Monitor Esports
 
 ## Qué es esto
 
-Sistema que monitorea partidas profesionales de Dota 2 (arrancando con The
-International), calcula la probabilidad de victoria de cada equipo en una
-serie, se pone nota a sí mismo contra los resultados reales, y avisa por
-Discord.
+Sistema que monitorea partidas profesionales de deportes electrónicos,
+calcula la probabilidad de victoria de cada equipo en una serie, se pone nota
+a sí mismo contra los resultados reales, y avisa por Discord.
+
+Arrancó siendo solo Dota 2 (de ahí el nombre del repo, `monitor-dota2`, que
+todavía no se ha renombrado). Desde el 15 de agosto de 2026 es **multijuego**:
+Dota 2, CS2 y League of Legends, con la puerta abierta a Valorant, R6 Siege,
+MLBB y Deadlock sin escribir un adaptador nuevo. Ver "Cómo agregar un juego".
 
 Proyecto hermano de `Monitor LaLiga` (repo separado) — misma disciplina de
 fases, mismo estilo de trabajo, pero **matemática distinta**: Dota no tiene
@@ -13,9 +17,13 @@ goles, así que no aplica Dixon-Coles. El motor de fuerza es Elo puro
 (actualización secuencial por resultado, como `motor/elo.mjs` de LaLiga),
 no una matriz de Poisson.
 
-Un solo usuario: el dueño. **No hay** login, registro, cobro, multiusuario
-ni panel de administración. Si una tarea implica cualquiera de esas cosas,
-está fuera de alcance — pregunta antes de escribirla.
+**Hoy** es de un solo usuario: el dueño. No hay login, registro, cobro,
+multiusuario ni panel de administración, y nada de eso se escribe todavía.
+
+**Más adelante sí**, pero condicionado: ver "Hacia dónde va esto" al final.
+Mientras el sistema no se haya ganado el puesto contra el backtest, cualquier
+tarea de cobro, cuentas o multiusuario sigue fuera de alcance — pregunta
+antes de escribirla.
 
 ## Contexto: por qué existe esto ahora
 
@@ -31,6 +39,8 @@ limpias, cualquier número que salga es ruido.
 - Cero dependencias en `motor/` y `juez/` — es matemática pura
 - Supabase para guardar (solo a partir de Fase 3, si se llega)
 - Discord webhook para avisos y errores (solo a partir de Fase 4, si se llega)
+- Telegram (API de bot) como destino futuro de los avisos — ver "Hacia dónde
+  va esto". No escrito todavía.
 
 ## Las seis reglas duras
 
@@ -67,13 +77,20 @@ Estas no se negocian. Si un cambio las rompe, no se hace.
 ## Estructura
 
 ```
-datos/     lo que entra (histórico de partidas profesionales, vía OpenDota)
-motor/     elo.mjs, ajustes.mjs
-juez/      backtest.mjs, notas.mjs
-salida/    discord.mjs
-pruebas/   una prueba por cada función del motor
-datos/cache/   archivos descargados (en .gitignore)
+datos/          lo que entra
+  juegos/       bo3.mjs (adaptador multijuego), bajar-historico.mjs
+  liga.mjs      OpenDota — solo Dota 2
+  fixtures.mjs  haglund.dev — solo Dota 2
+  cache/        archivos descargados (en .gitignore)
+motor/          elo.mjs, series.mjs — AGNÓSTICOS del juego
+juez/           backtest.mjs, notas.mjs, tabla.mjs, calibrar.mjs
+salida/         discord.mjs, formato.mjs, web/
+pruebas/        una prueba por cada función del motor
 ```
+
+`motor/` no sabe de qué juego se trata y así debe quedarse: si una función
+del motor necesita preguntar "¿esto es CS2 o Dota?", el juego está mal
+modelado y lo que falta es un campo en los datos, no un `if` en el motor.
 
 ## Fuentes de datos
 
@@ -83,6 +100,51 @@ datos/cache/   archivos descargados (en .gitignore)
 | Torneos / leagueid | OpenDota API, `/leagues` | gratis, sin llave |
 | Partidas de un torneo específico | OpenDota API, `/leagues/{id}/matches` | gratis, sin llave (no trae nombre de equipo, hay que resolverlo con `/teams/{id}`) |
 | Calendario de próximos partidos (fixtures) | `https://dota.haglund.dev/v1/matches` (comunidad, cachea Liquipedia) | gratis, sin llave, sin límite documentado -- proyecto no oficial |
+
+### bo3.gg — fuente multijuego, verificada con llamadas reales (2026-08-15)
+
+Gratis, sin llave, sin registro. Cubre **8 disciplinas con el mismo esquema**,
+así que un solo adaptador (`datos/juegos/bo3.mjs`) sirve para todas — no hace
+falta uno por juego, que era el plan hasta comprobar esto.
+
+| `discipline_id` | slug | juego | partidas jugadas |
+|---|---|---|---|
+| 1 | csgo | Counter-Strike 2 | 73.165 |
+| 2 | valorant | Valorant | — |
+| 3 | lol | League of Legends | 14.199 |
+| 4 | dota2 | Dota 2 | — |
+| 5 / 7 / 8 | deadlock / r6siege / mlbb | — | — |
+
+Lo verificado con llamadas reales, no con documentación:
+
+- `/matches` trae `team1_id`, `team2_id`, `winner_team_id`, marcador,
+  `bo_type` (1/3/5), `start_date`, `tier` (s/a/b/c) y `status`.
+- **Historial y calendario en el mismo endpoint**: `status=finished` vs
+  `status=upcoming`. Eso es mejor que el pipeline de Dota, donde el calendario
+  depende de `haglund.dev` (comunitario, sin SLA, el punto frágil de hoy).
+- `status` explícito quita el trabajo de deducir si una serie ya se jugó, y
+  `winner_team_id` evita reconstruir la serie partida por partida.
+- **Tope duro de 100 filas por página.** Pedir 500 o 1000 igual devuelve 100.
+  Paginación por `page[offset]`, verificada sin solapamiento.
+- Sin límite de tasa documentado. Se usan 400 ms entre peticiones (regla 5).
+- **El offset repite filas si entran partidas nuevas mientras se pagina.**
+  `bajarPartidas()` lleva un `Set` de ids vistos por eso; sin él el histórico
+  saldría con duplicados.
+
+**Por qué LoL NO usa Leaguepedia.** Se probó primero `lol.fandom.com` (API
+Cargo de MediaWiki, gratis y sin llave). Funciona y trae `Winner`, marcador y
+`BestOf`, pero: (1) los equipos vienen como **texto** (`"LØS"`, `"Vivo Keyd
+Stars"`), no como IDs estables, lo que revive el problema de mapeo de nombres
+de LaLiga; (2) **limita por tasa a la tercera llamada**; y (3) devolvió un
+`Winner` no nulo para un partido del 17 de agosto que todavía no se jugaba —
+riesgo de fuga temporal (regla 6) que quedó **sin aclarar** porque el límite
+de tasa cortó la comprobación. bo3.gg no tiene ninguno de los tres problemas.
+
+**Dota 2 sigue en OpenDota, a propósito.** bo3.gg también lo tiene, pero el
+Elo de Dota está calibrado sobre las 16.450 partidas de OpenDota y TI2026
+está en producción. Cambiarle la fuente por debajo a algo que corre rompe la
+regla 3. Migrarlo es una decisión aparte, para después del torneo, y solo si
+se gana el puesto contra el backtest.
 
 ### Dos bugs reales del pipeline en vivo, encontrados y corregidos (2026-08-14)
 
@@ -229,16 +291,81 @@ backtest — si no baja el Brier, se bota (regla 4).
 
 ## Orden de fases
 
+Las fases son **por juego**. Dota 2 va en la 4; CS2 arrancó Fase 0 el 15 de
+agosto de 2026; LoL no ha arrancado.
+
 ```
-Fase 0  bajar histórico de partidas profesionales y validarlo
-Fase 1  motor Elo + backtest        ← aquí se decide si el proyecto sigue
+Fase 0  bajar histórico y validarlo
+Fase 1  motor Elo + backtest        ← aquí se decide si ESE juego sigue
 Fase 2  ajustes (si alguno se gana el puesto contra el backtest)
-Fase 3  conectar en vivo (si hay tiempo antes de que termine TI2026)
-Fase 4  Discord (si hay tiempo)
+Fase 3  conectar en vivo
+Fase 4  avisos (Discord hoy, Telegram después)
+Fase 5  monetización              ← ver "Hacia dónde va esto"
 ```
 
 **No adelantar fases.** No escribir nada de "en vivo" antes de que el motor
-pase la prueba del backtest.
+pase la prueba del backtest, y nada de la Fase 5 antes de que el Brier le gane
+a la base ingenua de forma concluyente.
+
+## Cómo agregar un juego
+
+La arquitectura está pensada para que agregar Valorant, R6 Siege o MLBB sea
+configuración, no código nuevo. El motor (`motor/elo.mjs`, `motor/series.mjs`)
+es agnóstico del juego: Elo y la conversión Bo1/Bo3/Bo5 no saben de qué
+deporte se trata.
+
+Pasos, en orden, sin saltarse ninguno:
+
+1. **Confirmar que bo3.gg lo cubre.** Está en `DISCIPLINAS` de
+   `datos/juegos/bo3.mjs`. Si el juego no está ahí, hay que buscar fuente y
+   verificarla con llamadas reales antes de escribir nada.
+2. **Fase 0:** `node datos/juegos/bajar-historico.mjs <juego>`. Deja el
+   histórico en `datos/cache/historico-<juego>.json`.
+3. **Validar el histórico.** Duplicados, fechas coherentes, marcador que
+   cuadre con el ganador. Si no está limpio, el resto no vale nada.
+4. **Fase 1: calibrar K_FACTOR y ESCALA para ESE juego.** No se heredan los
+   de Dota. Un Bo3 de CS2 y un Bo3 de Dota no tienen la misma varianza, y los
+   coeficientes de Dota (K=24, escala=400) salieron de un barrido sobre datos
+   de Dota. Correr el barrido de nuevo, por juego.
+5. **Filtrar por `tier`.** En Dota, filtrar a `professional`/`premium` mejoró
+   el Brier de verdad (regla 4). bo3.gg trae `tier` (s/a/b/c): el mismo
+   experimento hay que repetirlo, no darlo por hecho.
+6. **Solo si el Brier le gana a la base ingenua**, conectar en vivo. Si no,
+   se bota el juego, no se "ajusta hasta que dé" (regla 4).
+
+Un juego nuevo **no hereda la aprobación de otro**. Que CS2 funcione no dice
+nada de si Valorant va a funcionar.
+
+## Hacia dónde va esto
+
+Esto es el destino, **no lo que hay hoy**. Nada de esta sección se escribe
+hasta que se cumpla la condición de arriba de cada punto.
+
+- **Avisos por Telegram (API de bot, a un canal).** Reemplaza o acompaña a
+  Discord. Discord fue la elección de arranque porque el webhook es una sola
+  petición sin registro; Telegram implica crear el bot, guardar el token en
+  `.env` y manejar el `chat_id` del canal. `salida/discord.mjs` ya está
+  partido en "armar el mensaje" (funciones puras) y "enviarlo" (una sola
+  función que toca la red), justamente para que cambiar de destino sea tocar
+  lo segundo y no lo primero.
+  **Condición:** que el sistema haya pasado las pruebas reales.
+
+- **Monetizar la información: análisis de partidas y prestaciones.**
+  Implica lo que hoy está prohibido — cuentas, cobro, multiusuario.
+  **Condición, y no es negociable:** que el Brier le gane a la base ingenua
+  con una muestra que lo haga concluyente. Al 15 de agosto de 2026 el sistema
+  va en **Brier 0.4183 con n=17**, y el intervalo de confianza todavía
+  contiene a la base ingenua: el resultado es compatible con "el motor sirve"
+  y con "no sirve". Cobrar en ese estado es vender algo que no se ha probado,
+  y además rompe las reglas 3 y 4 del propio proyecto.
+  Cuando llegue el momento, tres cosas que hay que resolver antes de escribir
+  código: (1) esto vive cerca de las apuestas y hay jurisdicciones que lo
+  regulan — averiguar cuál aplica; (2) mostrar el historial de aciertos
+  completo, incluidos los fallos, no solo los aciertos; (3) decidir qué se
+  vende exactamente — el número, la narrativa, o el acceso al panel.
+
+- **Más juegos:** Valorant, R6 Siege, MLBB, Deadlock. Ver "Cómo agregar un
+  juego". La fuente ya los cubre; falta el paso 4 de cada uno.
 
 ## Estilo de trabajo
 
