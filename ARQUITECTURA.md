@@ -100,6 +100,9 @@ Lo que ya está aplicado y **por qué**, para que no se desarme por accidente:
   `allowed_mentions: { parse: [] }`. Un equipo llamado `@everyone` haría que
   el bot pingue a todo el servidor en cada aviso, y ese nombre lo controla
   quien lo registró en la fuente, no nosotros.
+- **Toda petición externa pasa por `datos/reintentar.mjs`.** Reintenta 5xx,
+  429 y fallos de red; **no** reintenta 4xx, porque un 404 repetido sigue
+  siendo 404 y solo gasta presupuesto (regla 5).
 - **Supabase: lectura pública, escritura solo con `service_role`.** RLS
   activo en todas las tablas. Ojo con el gotcha ya documentado: RLS no basta,
   hay que dar el `GRANT` explícito porque Supabase no lo otorga en tablas
@@ -110,11 +113,17 @@ Lo que ya está aplicado y **por qué**, para que no se desarme por accidente:
 
 Lo que **no** está resuelto y hay que tener presente:
 
-- No hay límite de tasa propio ni reintentos con espera: si una fuente
-  empieza a responder 429, el ciclo falla y se reintenta a los 10 minutos.
+- **Los reintentos cubren tropiezos, no caídas largas.** `datos/reintentar.mjs`
+  aguanta segundos (500ms, 1s, 2s, tope 8s). El 2026-08-15 OpenDota estuvo
+  abajo ~40 minutos: contra eso no hay defensa, si la fuente no está no hay
+  dato. El ciclo falla, pero ahora avisa a Discord en vez de fallar en
+  silencio.
 - No hay validación de esquema de lo que devuelven las APIs. Si bo3.gg
   cambia un campo de nombre, se detecta cuando algo salga en blanco, no
   antes.
+- `haglund.dev` sigue siendo el único calendario de Dota y no tiene SLA.
+  bo3.gg ya lo cubriría, pero migrarlo con TI2026 en producción rompe la
+  regla 3. Es tarea para después del torneo.
 - El repo se llama `monitor-dota2` pero el proyecto es multijuego. Renombrar
   está pendiente.
 
