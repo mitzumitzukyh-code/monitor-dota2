@@ -25,3 +25,24 @@ export const ESCALA = 400;
 // promedio, casi exactamente la tasa real observada (~20.3%) -- buena señal
 // de que el ajuste está capturando la causa real y no sobreajustando ruido.
 export const DELTA_BO2 = 1.4;
+
+// --- Glicko-2 (motor/glicko2.mjs) ---
+// Valores de arranque del paper de Glickman (2001). NO calibrados todavía
+// contra el backtest: hay que hacerlo por juego, igual que K_FACTOR y ESCALA,
+// antes de que Glicko-2 pueda reemplazar a Elo (regla 4).
+
+// Desviación inicial: cuánta desconfianza se le tiene al rating de un equipo
+// que nunca jugó. 350 = "no sé nada de este equipo". Es lo que hace que las
+// probabilidades contra un debutante salgan cerca de 0.5 en vez de extremas.
+export const GLICKO_RD_INICIAL = 350;
+
+// Volatilidad inicial: qué tan errático se asume que es un equipo nuevo.
+export const GLICKO_VOL_INICIAL = 0.06;
+
+// TAU acota cuánto puede cambiar la volatilidad de una partida a la otra.
+// Glickman recomienda entre 0.3 y 1.2; valores chicos = sistema más estable,
+// grandes = reacciona más rápido a rachas. 0.5 es el punto medio habitual.
+// OJO: acá se aplica UNA partida por periodo de calificación (ver la cabecera
+// de motor/glicko2.mjs), y eso hace que la RD baje más rápido de lo previsto.
+// TAU es la perilla para compensarlo cuando se calibre.
+export const GLICKO_TAU = 0.5;
