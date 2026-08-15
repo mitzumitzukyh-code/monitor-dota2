@@ -76,6 +76,19 @@ export function esUtilizable(p) {
   if (!p.inicio) return false;
   if (!p.formato) return false;
   if (p.ganador !== p.equipoA && p.ganador !== p.equipoB) return false;
+
+  // El ganador declarado tiene que cuadrar con el marcador. En el histórico
+  // real de CS2 hay 43 filas (de 72.673, el 0,06%) donde no cuadra: marcador
+  // 2-0 y ganador el que perdió, entre otras. Se revisó buscando patrón --
+  // repartidas entre 2022 y 2026, entre formatos y entre tiers, con
+  // marcadores limpios -- así que no son walkovers ni resultados revertidos:
+  // es dato malo, o los ids vienen cambiados. En cualquiera de los dos casos
+  // la fila no es de fiar y meterla movería el Elo en la dirección contraria.
+  if (p.marcadorA != null && p.marcadorB != null && p.marcadorA !== p.marcadorB) {
+    const esperado = p.marcadorA > p.marcadorB ? p.equipoA : p.equipoB;
+    if (esperado !== p.ganador) return false;
+  }
+
   return true;
 }
 
