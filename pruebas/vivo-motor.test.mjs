@@ -43,6 +43,10 @@ test('predecirProximos: predice y guarda una serie real, con equipo nuevo (ratin
     ahora: 2000,
     fetchImplFixtures,
     fetchImplSupabase,
+    // Sin esto la prueba cae al fetch REAL de OpenDota: con la API caida
+    // (HTTP 521, 2026-08-15) fallaban tres pruebas por una razon ajena al
+    // codigo. Una prueba no puede depender de que un tercero este arriba.
+    fetchImplLiga: async () => respuestaFetch([]),
   });
 
   assert.equal(predicciones.length, 1);
@@ -76,6 +80,10 @@ test('predecirProximos: partido con matchType desconocido se reporta en sinForma
     ahora: 2000,
     fetchImplFixtures,
     fetchImplSupabase,
+    // Sin esto la prueba cae al fetch REAL de OpenDota: con la API caida
+    // (HTTP 521, 2026-08-15) fallaban tres pruebas por una razon ajena al
+    // codigo. Una prueba no puede depender de que un tercero este arriba.
+    fetchImplLiga: async () => respuestaFetch([]),
   });
 
   assert.equal(predicciones.length, 0);
@@ -105,6 +113,10 @@ test('predecirProximos: NO predice una serie que ya empezó (fuga temporal, regl
     ahora,
     fetchImplFixtures,
     fetchImplSupabase,
+    // Sin esto la prueba cae al fetch REAL de OpenDota: con la API caida
+    // (HTTP 521, 2026-08-15) fallaban tres pruebas por una razon ajena al
+    // codigo. Una prueba no puede depender de que un tercero este arriba.
+    fetchImplLiga: async () => respuestaFetch([]),
   });
 
   assert.equal(predicciones.length, 0, 'no debe predecir una serie ya empezada');
@@ -131,6 +143,10 @@ test('predecirProximos: NO sobreescribe una predicción que ya existe (se congel
     ahora,
     fetchImplFixtures,
     fetchImplSupabase,
+    // Sin esto la prueba cae al fetch REAL de OpenDota: con la API caida
+    // (HTTP 521, 2026-08-15) fallaban tres pruebas por una razon ajena al
+    // codigo. Una prueba no puede depender de que un tercero este arriba.
+    fetchImplLiga: async () => respuestaFetch([]),
   });
 
   assert.equal(predicciones.length, 0, 'no debe re-predecir una serie ya predicha');
@@ -189,6 +205,10 @@ test('predecirProximos: sí predice una serie futura que todavía no está predi
     ahora,
     fetchImplFixtures,
     fetchImplSupabase,
+    // Sin esto la prueba cae al fetch REAL de OpenDota: con la API caida
+    // (HTTP 521, 2026-08-15) fallaban tres pruebas por una razon ajena al
+    // codigo. Una prueba no puede depender de que un tercero este arriba.
+    fetchImplLiga: async () => respuestaFetch([]),
   });
 
   assert.equal(predicciones.length, 1);
@@ -201,6 +221,6 @@ test('predecirProximos: sin fixtures que calcen, no llama a Supabase', async () 
   };
   const fetchImplFixtures = async () => respuestaFetch([]);
 
-  const { predicciones } = await predecirProximos({ historico: [], fetchImplFixtures, fetchImplSupabase });
+  const { predicciones } = await predecirProximos({ historico: [], fetchImplFixtures, fetchImplSupabase, fetchImplLiga: async () => respuestaFetch([]) });
   assert.equal(predicciones.length, 0);
 });

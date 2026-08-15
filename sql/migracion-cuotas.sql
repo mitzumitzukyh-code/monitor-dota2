@@ -40,6 +40,9 @@ alter table eslo_cuotas enable row level security;
 -- Lectura pública, escritura solo con service_role: mismo criterio que las
 -- tablas dota_*. RLS no basta -- Supabase no otorga GRANT en tablas creadas
 -- desde el SQL Editor (gotcha ya documentado en CLAUDE.md).
+-- El drop previo es para que el archivo se pueda correr dos veces sin fallar:
+-- create policy no admite "if not exists" en Postgres.
+drop policy if exists "lectura publica eslo_cuotas" on eslo_cuotas;
 create policy "lectura publica eslo_cuotas" on eslo_cuotas for select using (true);
 
 grant select on eslo_cuotas to anon;

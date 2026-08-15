@@ -110,9 +110,22 @@ jobs:
       - name: Pruebas
         run: node --test "pruebas/**/*.test.mjs"
 
+      # 0. Capturar las cuotas de casa de apuestas. Va PRIMERO y con
+      #    `if: always()` por una razón concreta: bo3.gg borra la cuota en
+      #    cuanto la partida pasa (verificado: 0% de cuota en partidas de
+      #    2022-2025), así que es el único dato del ciclo que no se puede
+      #    recuperar en la corrida siguiente. Con `always()` sigue corriendo
+      #    aunque fallen las pruebas o cualquier paso anterior — no tiene
+      #    sentido perder cuotas porque OpenDota (que es de otro juego) se
+      #    haya caído.
+      - name: Capturar cuotas
+        if: always()
+        run: node datos/juegos/guardar-cuotas.mjs
+
       # 1. Predecir las series que todavía no empezaron. Es el paso que más
-      #    urge: si se pierde, la predicción no se recupera.
+      #    urge de los de Dota: si se pierde, la predicción no se recupera.
       - name: Predecir
+        if: always()
         run: node juez/vivo-motor.mjs
 
       # 2. Calificar lo que ya terminó. Si esto falla una vez no se pierde
