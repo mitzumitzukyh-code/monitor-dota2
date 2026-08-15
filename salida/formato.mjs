@@ -81,3 +81,36 @@ export function agruparPorDia(items, campoFecha = 'start_time', ahora = new Date
       items: lista.sort((a, b) => (a._hora24 ?? '').localeCompare(b._hora24 ?? '')),
     }));
 }
+
+// Un "día de juego" de TI no es un día de calendario en Venezuela: las series
+// arrancan a las 10 pm y siguen hasta las 6 am, así que una sola jornada cae
+// partida en dos fechas. Verificado con los datos reales de TI2026: dentro de
+// una jornada los huecos entre tandas son de 3 a 5 horas, y entre una jornada
+// y la siguiente son de ~21 horas. Cortar por hueco separa limpio; cortar por
+// fecha partiría cada noche en dos mensajes.
+export const HORAS_DE_HUECO = 8;
+
+export function bloquesDeJuego(items, campoFecha = 'start_time', horasDeHueco = HORAS_DE_HUECO) {
+  const conFecha = items
+    .map((it) => ({ it, ms: new Date(it[campoFecha]).getTime() }))
+    .filter((x) => Number.isFinite(x.ms))
+    .sort((a, b) => a.ms - b.ms);
+
+  const bloques = [];
+  let actual = null;
+  for (const { it, ms } of conFecha) {
+    if (actual && ms - actual.ultimoMs <= horasDeHueco * 3600 * 1000) {
+      actual.items.push(it);
+      actual.ultimoMs = ms;
+      continue;
+    }
+    actual = { items: [it], primerMs: ms, ultimoMs: ms };
+    bloques.push(actual);
+  }
+
+  return bloques.map((b) => ({
+    items: b.items,
+    inicio: new Date(b.primerMs).toISOString(),
+    ultimoInicio: new Date(b.ultimoMs).toISOString(),
+  }));
+}

@@ -9,12 +9,24 @@
 
 import { fileURLToPath } from 'node:url';
 import { seleccionar, parchear } from '../datos/supabase.mjs';
+import { partidasDeLaLiga, seriesDeLaLiga } from '../datos/liga.mjs';
 
-import { enVenezuela, hora12, cuandoEnPalabras, diaEnPalabras, agruparPorDia } from './formato.mjs';
+import { enVenezuela, hora12, cuandoEnPalabras, diaEnPalabras, agruparPorDia, bloquesDeJuego } from './formato.mjs';
+import { tablaDePosiciones, record } from '../juez/tabla.mjs';
 
-export { enVenezuela, hora12, cuandoEnPalabras, diaEnPalabras, agruparPorDia };
+export { enVenezuela, hora12, cuandoEnPalabras, diaEnPalabras, agruparPorDia, bloquesDeJuego };
 
 const BASE_INGENUA = { bo1: 0.5, bo2: 2 / 3, bo3: 0.5, bo5: 0.5 };
+
+const LEAGUE_ID_TI2026 = 19719;
+
+// Cuánto se espera desde el arranque de la última serie de una jornada antes
+// de dar la jornada por cerrada. No basta con "ya se calificaron todas": un
+// fixture puede publicarse tarde y sumarse a la misma tanda (real: la serie
+// de las 5:45 am del 15 apareció después de que las de la 1 am ya estaban).
+// Si se manda el resumen apenas se califica la última conocida, esa serie
+// tardía se queda fuera del resumen para siempre.
+const HORAS_PARA_CERRAR_JORNADA = 6;
 
 function pct(x) {
   return (Number(x) * 100).toFixed(1);
@@ -137,6 +149,72 @@ export function mensajeResultados(calificadas, nombre, metricas, ahora = new Dat
   return recortar(limpiarVacios(partes).join('\n'));
 }
 
+// Resumen de cierre de una jornada: en qué acertamos, en qué fallamos, y
+// cómo quedaron en la tabla los equipos que jugaron. Va DESPUÉS de los avisos
+// por tanda (no los reemplaza): esos llegan calientes, serie por serie; este
+// cierra el día de un vistazo.
+export function mensajeResumenDia(calificadas, nombre, tabla, ahora = new Date()) {
+  if (calificadas.length === 0) return null;
+
+  const aciertos = [];
+  const fallos = [];
+  for (const c of calificadas) {
+    const pa = Number(c.prob_gana_a);
+    const pb = Number(c.prob_gana_b);
+    const favA = pa >= pb;
+    const favorito = favA ? nombre(c.equipo_a) : nombre(c.equipo_b);
+    const probFav = Math.round((favA ? pa : pb) * 100);
+    const ganoA = c.resultado_real === 'ganaA';
+    const ganador = ganoA ? nombre(c.equipo_a) : nombre(c.equipo_b);
+    const perdedor = ganoA ? nombre(c.equipo_b) : nombre(c.equipo_a);
+
+    if ((favA ? 'ganaA' : 'ganaB') === c.resultado_real) {
+      aciertos.push(`**${ganador}** ${probFav}% · le ganó a ${perdedor}`);
+    } else {
+      fallos.push(`**${ganador}** le ganó a ${perdedor} · íbamos con ${favorito} ${probFav}%`);
+    }
+  }
+
+  // Los equipos de la jornada se marcan en la tabla; el resto va de contexto,
+  // porque una posición sin ver contra quién no dice nada.
+  const jugaron = new Set();
+  for (const c of calificadas) {
+    jugaron.add(c.equipo_a);
+    jugaron.add(c.equipo_b);
+  }
+
+  const partes = [`📋 **Resumen de la jornada** — ${diaEnPalabras(enVenezuela(calificadas[0].start_time).fecha, ahora)}`, ''];
+
+  partes.push(`**Acertamos ${aciertos.length} de ${calificadas.length}**`);
+  partes.push('');
+  if (aciertos.length) {
+    partes.push('✅ **Le atinamos**');
+    partes.push(...aciertos);
+    partes.push('');
+  }
+  if (fallos.length) {
+    partes.push('❌ **Nos equivocamos**');
+    partes.push(...fallos);
+    partes.push('');
+  }
+
+  if (tabla?.length) {
+    // Dentro de un bloque de código Discord no renderiza negrita, por eso la
+    // marca es un carácter (›) y no **.
+    partes.push('🏆 **Tabla del TI** _(› = jugó esta jornada)_');
+    partes.push('```');
+    for (const f of tabla) {
+      const nom = nombre(f.teamId);
+      const marca = jugaron.has(f.teamId) ? '›' : ' ';
+      partes.push(`${marca} ${String(f.posicion).padStart(2)}. ${nom.padEnd(16)} ${record(f)}`);
+    }
+    partes.push('```');
+    partes.push('_Récord de series ganadas–perdidas en TI2026, calculado de las partidas reales. Entre equipos con el mismo récord no inventamos desempate._');
+  }
+
+  return recortar(limpiarVacios(partes).join('\n'));
+}
+
 export async function enviar(contenido, { fetchImpl = fetch, webhook = process.env.DISCORD_WEBHOOK } = {}) {
   if (!webhook) {
     return { enviado: false, razon: 'falta DISCORD_WEBHOOK en .env' };
@@ -169,6 +247,25 @@ export async function marcarAvisado(seriesIds, columna, { fetchImpl } = {}) {
     { [columna]: new Date().toISOString() },
     { fetchImpl },
   );
+}
+
+// De todas las series (calificadas y pendientes), devuelve la jornada que ya
+// cerró y todavía no se resumió. Devuelve una sola: si hay varias atrasadas,
+// sale la más vieja primero y las siguientes en corridas posteriores, para no
+// disparar tres mensajes de golpe.
+export function jornadaParaResumir(todas, ahora = new Date()) {
+  for (const bloque of bloquesDeJuego(todas)) {
+    const todasCalificadas = bloque.items.every((s) => s.resultado_real);
+    if (!todasCalificadas) continue;
+
+    const asentada = ahora.getTime() - new Date(bloque.ultimoInicio).getTime() >= HORAS_PARA_CERRAR_JORNADA * 3600 * 1000;
+    if (!asentada) continue;
+
+    if (bloque.items.every((s) => s.avisado_resumen_en)) continue;
+
+    return bloque;
+  }
+  return null;
 }
 
 export function calcularMetricasSimple(calificadas) {
@@ -241,7 +338,42 @@ export async function avisar({ fetchImpl, fetchImplSupabase } = {}) {
     }
   }
 
-  return { enviados, nuevasPredichas: nuevasPredichas.length, nuevasCalificadas: nuevasCalificadas.length };
+  // Resumen de cierre de jornada. Va de último a propósito: si el mismo ciclo
+  // acaba de avisar la última serie del día, el resumen llega detrás y no
+  // antes.
+  const jornada = jornadaParaResumir([...calificadas, ...pendientes]);
+  if (jornada) {
+    // La tabla sale de las partidas reales del torneo, no de lo que
+    // predijimos: hay series de TI que el sistema nunca llegó a predecir y
+    // aun así cuentan para la posición. Una sola petición a OpenDota, dentro
+    // del presupuesto (regla 5).
+    let tabla = [];
+    try {
+      const partidasLiga = await partidasDeLaLiga(LEAGUE_ID_TI2026, { fetchImpl });
+      tabla = tablaDePosiciones(seriesDeLaLiga(partidasLiga));
+    } catch (e) {
+      // Sin tabla el resumen sigue valiendo: se manda con aciertos y fallos.
+      tabla = [];
+    }
+
+    const msgResumen = mensajeResumenDia(jornada.items, nombre, tabla);
+    if (msgResumen) {
+      const r = await enviar(msgResumen, { fetchImpl });
+      enviados.push({ tipo: 'resumen', cuantas: jornada.items.length, ...r });
+      if (r.enviado) {
+        await marcarAvisado(jornada.items.map((s) => s.series_id), 'avisado_resumen_en', {
+          fetchImpl: fetchImplSupabase,
+        });
+      }
+    }
+  }
+
+  return {
+    enviados,
+    nuevasPredichas: nuevasPredichas.length,
+    nuevasCalificadas: nuevasCalificadas.length,
+    jornadaResumida: jornada ? jornada.items.length : 0,
+  };
 }
 
 const esEjecutadoDirectamente = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
