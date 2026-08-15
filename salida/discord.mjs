@@ -222,7 +222,16 @@ export async function enviar(contenido, { fetchImpl = fetch, webhook = process.e
   const res = await fetchImpl(webhook, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: contenido }),
+    body: JSON.stringify({
+      content: contenido,
+      // Los nombres de equipo vienen de una API de terceros y se meten tal
+      // cual en el mensaje. Un equipo llamado "@everyone" haría que el bot
+      // pingue a todo el servidor en cada aviso, y el nombre lo controla
+      // quien lo registró en la fuente, no nosotros. Con parse vacío Discord
+      // ignora TODA mención (@everyone, @here, roles y usuarios) venga de
+      // donde venga: el mensaje se sigue viendo igual, pero no notifica.
+      allowed_mentions: { parse: [] },
+    }),
   });
   if (!res.ok) {
     return { enviado: false, razon: `Discord respondió ${res.status}: ${await res.text()}` };
