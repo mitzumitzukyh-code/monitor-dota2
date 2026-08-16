@@ -182,3 +182,45 @@ export async function nombresDeEquipos(ids, { fetchImpl = fetchConReintentos } =
   }
   return nombres;
 }
+
+// Partidas futuras CON nombre de equipo. El /matches no trae el nombre de los
+// equipos en el cuerpo (solo id); los trae en `bet_updates`, que puede faltar
+// (verificado: un partido con equipos TBD venía con bet_updates: null). Para
+// no pagar una petición por equipo cuando el nombre ya vino gratis, solo se
+// resuelven los que faltan con /teams/{id}.
+export async function proximasPartidasConNombres(juego, { fetchImpl = fetchConReintentos, limite = POR_PAGINA } = {}) {
+  const disciplinaId = DISCIPLINAS[juego];
+  if (!disciplinaId) throw new Error(`juego desconocido: ${juego}`);
+  const url = construirUrl({
+    disciplinaId,
+    estado: 'upcoming',
+    orden: 'start_date',
+    limite: Math.min(limite, POR_PAGINA),
+    offset: 0,
+  });
+  const datos = await pedir(url, fetchImpl);
+
+  const conNombre = [];
+  const idsSinNombre = new Set();
+  for (const cruda of datos.results ?? []) {
+    const nombreA = cruda.bet_updates?.team_1?.name ?? null;
+    const nombreB = cruda.bet_updates?.team_2?.name ?? null;
+    if (!nombreA) idsSinNombre.add(cruda.team1_id);
+    if (!nombreB) idsSinNombre.add(cruda.team2_id);
+    conNombre.push({ cruda, nombreA, nombreB });
+  }
+
+  const nombres = await nombresDeEquipos([...idsSinNombre], { fetchImpl });
+
+  return conNombre.map(({ cruda, nombreA, nombreB }) => ({
+    matchId: cruda.id,
+    tournamentId: cruda.tournament_id,
+    inicio: cruda.start_date ? Math.floor(new Date(cruda.start_date).getTime() / 1000) : null,
+    formato: formatoDesdeBoType(cruda.bo_type),
+    equipoA: cruda.team1_id,
+    equipoB: cruda.team2_id,
+    nombreA: nombreA ?? nombres.get(cruda.team1_id) ?? null,
+    nombreB: nombreB ?? nombres.get(cruda.team2_id) ?? null,
+    tier: cruda.tier ?? null,
+  }));
+}

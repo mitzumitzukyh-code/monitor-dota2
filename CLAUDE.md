@@ -121,7 +121,9 @@ Lo verificado con llamadas reales, no con documentación:
   `bo_type` (1/3/5), `start_date`, `tier` (s/a/b/c) y `status`.
 - **Historial y calendario en el mismo endpoint**: `status=finished` vs
   `status=upcoming`. Eso es mejor que el pipeline de Dota, donde el calendario
-  depende de `haglund.dev` (comunitario, sin SLA, el punto frágil de hoy).
+  dependía de `haglund.dev` (comunitario, sin SLA) — desde el 2026-08-16
+  bo3.gg es el respaldo automático de Dota también (ver "Calendario de
+  próximos partidos").
 - `status` explícito quita el trabajo de deducir si una serie ya se jugó, y
   `winner_team_id` evita reconstruir la serie partida por partida.
 - **Tope duro de 100 filas por página.** Pedir 500 o 1000 igual devuelve 100.
@@ -179,9 +181,21 @@ Verificado con una llamada real (2026-08-13): trae el `Team Spirit vs
 Aurora Gaming`, `Team Yandex vs Team Liquid` reales de la Ronda 2 de TI2026,
 con `startsAt`, nombres de equipo y `matchType` ("Bo3"). Sin SLA ni límite
 de tasa documentado — no golpear más de una vez cada 15-30 minutos (regla
-5, y porque ellos mismos cachean 3h del lado de Liquipedia). Si se cae, no
-hay fixtures hasta que vuelva: el pipeline de predicción debe fallar
-explícito, nunca inventar un cruce de equipos.
+5, y porque ellos mismos cachean 3h del lado de Liquipedia).
+
+**Respaldo automático en bo3.gg (2026-08-16).** haglund.dev se cayó con 500
+sostenido y el ciclo empezó a fallar (corridas 112+, aviso a Discord cada 10
+min). Arreglado en `datos/fixtures.mjs`: si haglund no responde, el ciclo usa
+el calendario de bo3.gg (`/matches?status=upcoming`, discipline dota2),
+filtrado al `tournament_id` de TI2026 (5134, verificado con llamadas reales:
+trae las series reales del Main Event 20-23 de agosto con equipos resueltos
+por nombre contra el mapeo de OpenDota). No cambia el motor ni el histórico:
+solo elige de dónde sale el calendario. Como cada fuente tiene su propio id
+para la MISMA serie, `juez/vivo-motor.mjs` ahora también descarta candidatas
+cuyo par de equipos ya tiene una serie guardada con fecha cercana (12h) —
+sin eso, una serie predicha con id de bo3.gg se re-predeciría con id de
+haglund al volver y el Brier sería mentira. El pipeline sigue sin inventar
+cruces: si ninguna fuente responde, falla explícito.
 
 ### OpenDota — verificado con llamadas reales (2026-08-13)
 

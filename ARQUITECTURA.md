@@ -121,9 +121,11 @@ Lo que **no** está resuelto y hay que tener presente:
 - No hay validación de esquema de lo que devuelven las APIs. Si bo3.gg
   cambia un campo de nombre, se detecta cuando algo salga en blanco, no
   antes.
-- `haglund.dev` sigue siendo el único calendario de Dota y no tiene SLA.
-  bo3.gg ya lo cubriría, pero migrarlo con TI2026 en producción rompe la
-  regla 3. Es tarea para después del torneo.
+- `haglund.dev` es el calendario primario de Dota, sin SLA. Desde el
+  2026-08-16 tiene respaldo automático en bo3.gg (`datos/fixtures.mjs`):
+  si haglund falla, el ciclo usa el calendario de bo3.gg (mismo torneo,
+  `status=upcoming` explícito). El histórico de Dota sigue en OpenDota —
+  migrar ESO es tarea para después del torneo.
 - El repo se llama `monitor-dota2` pero el proyecto es multijuego. Renombrar
   está pendiente.
 

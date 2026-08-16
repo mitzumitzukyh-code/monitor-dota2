@@ -67,6 +67,36 @@ export async function predecirProximos({
     }
   }
 
+  // Misma serie puede llegar con ids distintos: cada fuente (haglund.dev vs
+  // bo3.gg) tiene su propio id para el MISMO partido. Si una serie ya quedó
+  // predicha cuando haglund estaba caído (con id de bo3.gg) y haglund vuelve
+  // listándola con su id, sin esto se predeciría dos veces y el Brier sería
+  // mentira. Se busca por par de equipos + cercanía temporal: dos series del
+  // mismo par no se juegan el mismo día, así que 12h de ventana alcanza.
+  if (candidatas.length > 0) {
+    const seriesLiga = await seleccionar(
+      'dota_series',
+      `?select=series_id,equipo_a,equipo_b,start_time&league_id=eq.${leagueId}`,
+      { fetchImpl: fetchImplSupabase },
+    );
+    const MS_VENTANA_MISMA_SERIE = 12 * 3600 * 1000;
+    const yaExisteElPar = (f) =>
+      seriesLiga.some((s) => {
+        const mismoPar =
+          (s.equipo_a === f.equipoA && s.equipo_b === f.equipoB) ||
+          (s.equipo_a === f.equipoB && s.equipo_b === f.equipoA);
+        if (!mismoPar) return false;
+        const diff = Math.abs(new Date(s.start_time).getTime() - new Date(f.startsAt).getTime());
+        return diff <= MS_VENTANA_MISMA_SERIE;
+      });
+    for (let i = candidatas.length - 1; i >= 0; i--) {
+      if (yaExisteElPar(candidatas[i])) {
+        yaPredichas.push(candidatas[i]);
+        candidatas.splice(i, 1);
+      }
+    }
+  }
+
   if (candidatas.length === 0) {
     return { predicciones, sinFormato, yaEmpezaron, yaPredichas, agregadasDeLaLiga: 0 };
   }

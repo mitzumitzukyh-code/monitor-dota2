@@ -9,9 +9,9 @@ import { predecirProximos } from '../juez/vivo-motor.mjs';
 process.env.SUPABASE_URL = 'https://prueba.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'llave-de-prueba';
 
-function fixturePartido({ leagueName, startsAt, teamA, teamB, matchType = 'Bo3' }) {
+function fixturePartido({ id = 'x1', leagueName, startsAt, teamA, teamB, matchType = 'Bo3' }) {
   return {
-    id: 'x1',
+    id,
     leagueName,
     matchType,
     startsAt,
@@ -152,6 +152,69 @@ test('predecirProximos: NO sobreescribe una predicción que ya existe (se congel
   assert.equal(predicciones.length, 0, 'no debe re-predecir una serie ya predicha');
   assert.equal(yaPredichas.length, 1);
   assert.deepEqual(escrituras, [], 'no debe escribir nada');
+});
+
+// La misma serie llega con ids distintos según la fuente (haglund.dev vs
+// bo3.gg). Sin mirar el par de equipos + fecha, una serie predicha con id de
+// bo3.gg mientras haglund estaba caído se re-predeciría con el id de haglund
+// al volver -> Brier duplicado, auto-juicio mentira.
+test('predecirProximos: NO re-predice si el mismo par ya tiene serie con fecha cercana (id distinto)', async () => {
+  const ahora = new Date('2026-08-14T10:00:00Z').getTime() / 1000;
+  const fixturePartidos = [
+    fixturePartido({ id: 'haglund-1', leagueName: 'TI 2026 - Round 4', startsAt: '2026-08-15T02:00:00Z', teamA: 'Team Spirit', teamB: 'Aurora Gaming' }),
+  ];
+  const escrituras = [];
+  const fetchImplSupabase = async (url, opts) => {
+    if (opts?.body) escrituras.push(url);
+    // Ya existe la serie en dota_series, con id de bo3.gg y misma fecha.
+    if (url.includes('dota_series') && !opts?.body) {
+      return respuestaFetch([
+        { series_id: 'bo3-127227', equipo_a: 7119388, equipo_b: 9467224, start_time: '2026-08-15T02:10:00Z' },
+      ]);
+    }
+    return respuestaFetch([]);
+  };
+  const fetchImplFixtures = async () => respuestaFetch(fixturePartidos);
+
+  const { predicciones, yaPredichas } = await predecirProximos({
+    historico: [],
+    ahora,
+    fetchImplFixtures,
+    fetchImplSupabase,
+    fetchImplLiga: async () => respuestaFetch([]),
+  });
+
+  assert.equal(predicciones.length, 0, 'no debe predecir una serie que ya quedó con otro id');
+  assert.equal(yaPredichas.length, 1);
+  assert.deepEqual(escrituras, [], 'no debe escribir nada');
+});
+
+test('predecirProximos: sí predice una revancha del mismo par, días después (ventana temporal)', async () => {
+  const ahora = new Date('2026-08-14T10:00:00Z').getTime() / 1000;
+  const fixturePartidos = [
+    fixturePartido({ id: 'haglund-2', leagueName: 'TI 2026 - Playoffs', startsAt: '2026-08-20T05:00:00Z', teamA: 'Team Spirit', teamB: 'Aurora Gaming' }),
+  ];
+  const fetchImplSupabase = async (url, opts) => {
+    // La serie de grupos (mismo par) es del 15; la de playoffs del 20.
+    if (url.includes('dota_series') && !opts?.body) {
+      return respuestaFetch([
+        { series_id: 'grupos-1', equipo_a: 7119388, equipo_b: 9467224, start_time: '2026-08-15T02:00:00Z' },
+      ]);
+    }
+    return respuestaFetch([]);
+  };
+  const fetchImplFixtures = async () => respuestaFetch(fixturePartidos);
+
+  const { predicciones, yaPredichas } = await predecirProximos({
+    historico: [],
+    ahora,
+    fetchImplFixtures,
+    fetchImplSupabase,
+    fetchImplLiga: async () => respuestaFetch([]),
+  });
+
+  assert.equal(predicciones.length, 1, 'la revancha de playoffs es otra serie');
+  assert.equal(yaPredichas.length, 0);
 });
 
 test('predecirProximos: refresca los ratings con las partidas ya jugadas del torneo', async () => {
