@@ -113,7 +113,7 @@ function filaPartida(p) {
     <div class="trow">
       <div class="t-cell">
         <div class="ttile">${logo(p.def.corto, p.def.color, 18)}</div>
-        <div><div class="t-name">${esc(p.torneo ?? p.def.nombre)}</div><div class="t-sub">${esc(p.def.nombre)}${p.tier ? ' · TIER ' + String(p.tier).toUpperCase() : ''}</div></div>
+        <div title="${esc(p.torneo ?? p.def.nombre)}"><div class="t-name">${esc(p.torneo ?? p.def.nombre)}</div><div class="t-sub">${esc(p.def.nombre)}${p.tier ? ' · TIER ' + String(p.tier).toUpperCase() : ''}</div></div>
       </div>
       <div class="match">
         <span class="tm" style="background:${p.def.color}">${esc(String(p.nombreA).slice(0, 3).toUpperCase())}</span>
@@ -216,8 +216,9 @@ main{margin-left:232px;padding:22px 26px}
 .aviso{margin-top:16px;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.07);border-radius:12px;padding:14px 18px;font-size:13px;line-height:1.6;color:#fcd9a0}
 .aviso b{color:#fbbf24}
 
-.mid{display:grid;grid-template-columns:.95fr 1.15fr 1.15fr;gap:16px;margin-top:16px}
-@media(max-width:1200px){.mid{grid-template-columns:1fr}}
+.mid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.ancho{margin-top:16px}
+@media(max-width:1100px){.mid{grid-template-columns:1fr}}
 .card-h{display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--border)}
 .card-title{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .hdot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
@@ -241,8 +242,9 @@ main{margin-left:232px;padding:22px 26px}
 .trow:first-of-type{border-top:none}
 .t-cell{display:flex;align-items:center;gap:8px;min-width:0}
 .ttile{width:30px;height:30px;border-radius:8px;background:#101a26;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
-.t-name{font-size:12px;font-weight:700;line-height:1.25}
-.t-sub{font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+.t-name{font-size:12px;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-cell>div:last-child{min-width:0;overflow:hidden}
+.t-sub{font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .match{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800}
 .tm{width:26px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;flex:none}
 .match .w{color:#fff}.match .l{color:var(--dim)}.match .sep{color:var(--dim);font-weight:600}
@@ -321,12 +323,12 @@ footer{margin-top:20px;padding:16px 20px;border-top:1px solid var(--border);colo
     va por ${Math.max(0, ...juegos.map((j) => j.n))}. Sumar los cuatro juegos no cuenta: son motores calibrados por separado.
   </div>
 
-  <section class="mid">
-    <div class="card">
-      <div class="card-h"><span class="card-title">Por juego</span></div>
-      ${juegos.map(filaJuego).join('')}
-    </div>
+  <section class="card ancho">
+    <div class="card-h"><span class="card-title">Por juego</span></div>
+    ${juegos.map(filaJuego).join('')}
+  </section>
 
+  <section class="mid">
     ${tablaPartidas(
       'Acertadas',
       '#22c55e',
