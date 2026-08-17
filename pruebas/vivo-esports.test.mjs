@@ -174,7 +174,8 @@ test('calificarTerminadas: califica y calcula el Brier de lo que ya se jugó', a
   const r = await calificarTerminadas('cs2', { fetchImpl: bo3, fetchImplSupabase: fetchImpl });
 
   assert.equal(r.calificadas, 1);
-  const fila = escrituras[0].filas[0];
+  // Ahora se escribe con PATCH: el cuerpo NO lleva match_id (va en la query).
+  const fila = escrituras[0].filas;
   assert.equal(fila.resultado_real, 'ganaA');
   // Se predijo 0.75 y ganó A: (0.75 - 1)^2 = 0.0625. Verificable a mano.
   assert.equal(Number(fila.brier).toFixed(4), '0.0625');
@@ -358,4 +359,52 @@ test('calificarTerminadas: cada juego pide con SU disciplina', async () => {
       juego + ' deberia pedir con disciplina ' + disc + ', pidio: ' + url,
     );
   }
+});
+
+// El bug que se comio la primera calificacion real (2026-08-17): calificar
+// usaba upsert, y PostgREST arma un INSERT ... ON CONFLICT que valida los
+// NOT NULL ANTES de resolver el conflicto. Como solo se mandan las columnas
+// de calificacion, `juego` iba null y la base respondia 23502. Calificar NUNCA
+// pudo escribir, y no se noto hasta que termino la primera partida de verdad.
+test('calificarTerminadas: escribe con PATCH, no con upsert', async () => {
+  const bo3 = async () =>
+    respuesta({ results: [cruda({ id: 20, inicio: AHORA - 3600, estado: 'finished', ganador: 100, ma: 2, mb: 1 })] });
+
+  const metodos = [];
+  const fetchImpl = async (url, opciones) => {
+    if (opciones?.method) metodos.push({ metodo: opciones.method, cuerpo: JSON.parse(opciones.body) });
+    if (String(url).includes('eslo_predicciones') && !opciones?.method) {
+      return respuesta([{ match_id: 20, juego: 'cs2', equipo_a: 100, equipo_b: 200, prob_a: 0.6, resultado_real: null }]);
+    }
+    return respuesta([]);
+  };
+
+  await calificarTerminadas('cs2', { fetchImpl: bo3, fetchImplSupabase: fetchImpl });
+
+  assert.equal(metodos.length, 1);
+  assert.equal(metodos[0].metodo, 'PATCH', 'con POST/upsert la base rechaza por los NOT NULL');
+});
+
+// PATCH además protege la regla de no reescribir predicciones: sólo toca las
+// columnas que se le pasan.
+test('calificarTerminadas: no manda prob_a ni rating_a, así no puede pisarlos', async () => {
+  const bo3 = async () =>
+    respuesta({ results: [cruda({ id: 21, inicio: AHORA - 3600, estado: 'finished', ganador: 100, ma: 2, mb: 0 })] });
+
+  let cuerpo = null;
+  const fetchImpl = async (url, opciones) => {
+    if (opciones?.method === 'PATCH') { cuerpo = JSON.parse(opciones.body); return respuesta([]); }
+    if (String(url).includes('eslo_predicciones')) {
+      return respuesta([{ match_id: 21, juego: 'cs2', equipo_a: 100, equipo_b: 200, prob_a: 0.6, resultado_real: null }]);
+    }
+    return respuesta([]);
+  };
+
+  await calificarTerminadas('cs2', { fetchImpl: bo3, fetchImplSupabase: fetchImpl });
+
+  assert.ok(cuerpo, 'debería haber parcheado');
+  for (const prohibida of ['prob_a', 'prob_b', 'rating_a', 'rating_b', 'rd_a', 'rd_b', 'match_id']) {
+    assert.ok(!(prohibida in cuerpo), `no debe mandar ${prohibida}: la predicción es intocable`);
+  }
+  assert.equal(cuerpo.resultado_real, 'ganaA');
 });

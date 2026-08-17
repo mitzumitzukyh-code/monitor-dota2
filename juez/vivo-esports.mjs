@@ -15,7 +15,7 @@
 //      desde la última partida aplicada, no desde el principio.
 
 import { fileURLToPath } from 'node:url';
-import { seleccionar, upsert } from '../datos/supabase.mjs';
+import { seleccionar, upsert, parchear } from '../datos/supabase.mjs';
 import { DISCIPLINAS, normalizar, esUtilizable } from '../datos/juegos/bo3.mjs';
 import { fetchConReintentos } from '../datos/reintentar.mjs';
 import { probabilidadGanar, actualizar } from '../motor/glicko2.mjs';
@@ -306,7 +306,22 @@ export async function calificarTerminadas(juego, { fetchImpl = fetchConReintento
   }
 
   if (filas.length === 0) return { calificadas: 0 };
-  await upsert('eslo_predicciones', filas, { onConflict: 'match_id', fetchImpl: fetchImplSupabase });
+
+  // PATCH, no upsert. Con upsert, PostgREST arma un INSERT ... ON CONFLICT, y
+  // el INSERT valida los NOT NULL ANTES de resolver el conflicto: como acá
+  // sólo se mandan las columnas de calificación, `juego` iba en null y la
+  // base rechazaba con 23502. O sea que calificar NUNCA pudo escribir, y no
+  // se vio hasta que termino la primera partida de verdad.
+  //
+  // PATCH además es lo correcto semánticamente: se está ACTUALIZANDO una fila
+  // que ya existe. Y protege la regla de no reescribir predicciones -- toca
+  // sólo las columnas que se le pasan, así que no puede pisar prob_a ni el
+  // rating con que se predijo, ni aunque alguien meta esos campos por error.
+  for (const f of filas) {
+    const { match_id, ...cambios } = f;
+    await parchear('eslo_predicciones', `?match_id=eq.${match_id}`, cambios, { fetchImpl: fetchImplSupabase });
+  }
+
   return { calificadas: filas.length };
 }
 
