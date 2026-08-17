@@ -208,3 +208,45 @@ test('dota2 está configurado con elo, así que este script lo rechaza', async (
     /motor 'elo'/,
   );
 });
+
+// ---------------------------------------------------------------------------
+// El bug del tope de 1.000 filas de PostgREST.
+// Pedir la tabla de ratings entera devuelve sólo las primeras 1.000 filas, sin
+// avisar. Los equipos que no entran se tratan como si no tuvieran rating y la
+// predicción sale 0.500 exacto, con pinta de legítima. Pasó de verdad: 34 de
+// 51 predicciones salieron así. La defensa es pedir sólo los ids que juegan.
+// ---------------------------------------------------------------------------
+test('predecirProximas: pide los ratings acotados por id, no la tabla entera', async () => {
+  const bo3 = async () => respuesta({ results: [cruda({ id: 30, inicio: AHORA + 3600, a: 4321, b: 8765 })] });
+
+  const consultas = [];
+  const fetchImpl = async (url, opciones) => {
+    if (!opciones?.method || opciones.method === 'GET') consultas.push(String(url));
+    else return respuesta([]);
+    return respuesta([]);
+  };
+
+  await predecirProximas('cs2', { fetchImpl: bo3, fetchImplSupabase: fetchImpl, ahora: AHORA });
+
+  const deRatings = consultas.find((u) => u.includes('eslo_ratings'));
+  assert.ok(deRatings, 'debería consultar los ratings');
+  assert.match(deRatings, /team_id=in\./, 'sin acotar por id, PostgREST corta en 1.000 y no avisa');
+  assert.ok(deRatings.includes('4321') && deRatings.includes('8765'), 'debe pedir los dos equipos que juegan');
+});
+
+test('sincronizarRatings: también acota por id al traer ratings', async () => {
+  const bo3 = async () =>
+    respuesta({ results: [cruda({ id: 31, inicio: AHORA - 7200, estado: 'finished', ganador: 555, ma: 2, mb: 0, a: 555, b: 666 })] });
+
+  const consultas = [];
+  const fetchImpl = async (url, opciones) => {
+    if (!opciones?.method || opciones.method === 'GET') consultas.push(String(url));
+    return respuesta([]);
+  };
+
+  await sincronizarRatings('cs2', { fetchImpl: bo3, fetchImplSupabase: fetchImpl });
+
+  const deRatings = consultas.find((u) => u.includes('eslo_ratings'));
+  assert.match(deRatings, /team_id=in\./);
+  assert.ok(deRatings.includes('555') && deRatings.includes('666'));
+});

@@ -82,18 +82,27 @@ async function partidasTerminadasDesde(juego, desdeIso, { fetchImpl }) {
 export async function sincronizarRatings(juego, { fetchImpl = fetchConReintentos, fetchImplSupabase } = {}) {
   const cfg = configDe(juego);
 
-  const [filasEstado, filasRatings] = await Promise.all([
-    seleccionar('eslo_estado', `?select=*&juego=eq.${juego}`, { fetchImpl: fetchImplSupabase }),
-    seleccionar('eslo_ratings', `?select=*&juego=eq.${juego}`, { fetchImpl: fetchImplSupabase }),
-  ]);
-
+  const filasEstado = await seleccionar('eslo_estado', `?select=*&juego=eq.${juego}`, {
+    fetchImpl: fetchImplSupabase,
+  });
   const estado = filasEstado[0] ?? null;
+
+  // Primero se sabe QUÉ partidas hay que aplicar, y recién ahí se piden los
+  // ratings de esos equipos. Pedir la tabla entera devolvería sólo las
+  // primeras 1.000 filas (tope de PostgREST, silencioso) y los equipos que no
+  // entraran arrancarían desde cero, corrompiendo su rating.
+  const nuevas = await partidasTerminadasDesde(juego, estado?.ultimo_inicio ?? null, { fetchImpl });
+  if (nuevas.length === 0) return { aplicadas: 0, equipos: 0 };
+
+  const equipos = [...new Set(nuevas.flatMap((m) => [m.equipoA, m.equipoB]))];
+  const filasRatings = await seleccionar(
+    'eslo_ratings',
+    `?select=*&juego=eq.${juego}&team_id=in.(${equipos.join(',')})`,
+    { fetchImpl: fetchImplSupabase },
+  );
   const porEquipo = new Map(
     filasRatings.map((f) => [f.team_id, { rating: Number(f.rating), rd: Number(f.rd), vol: Number(f.vol), partidas: f.partidas }]),
   );
-
-  const nuevas = await partidasTerminadasDesde(juego, estado?.ultimo_inicio ?? null, { fetchImpl });
-  if (nuevas.length === 0) return { aplicadas: 0, equipos: porEquipo.size };
 
   const inicial = estadoInicialDe(cfg);
   let ultima = null;
@@ -164,9 +173,18 @@ export async function predecirProximas(
   if (noEmpezadas.length === 0) return { predichas: 0, yaEmpezaron, yaPredichas: 0 };
 
   const ids = noEmpezadas.map((p) => p.matchId).join(',');
+  // Los ratings se piden SÓLO de los equipos que juegan, nunca la tabla
+  // entera. PostgREST corta en 1.000 filas por defecto y no avisa: pedir
+  // "todos" devolvía los primeros 1.000 de 4.031, y los equipos que no
+  // entraban se trataban como si no tuvieran rating. Eso produjo 34
+  // predicciones de 0.500 exacto que parecían legítimas. Acotando por id el
+  // tope no se toca nunca.
+  const equipos = [...new Set(noEmpezadas.flatMap((p) => [p.equipoA, p.equipoB]))];
   const [existentes, filasRatings] = await Promise.all([
     seleccionar('eslo_predicciones', `?select=match_id&match_id=in.(${ids})`, { fetchImpl: fetchImplSupabase }),
-    seleccionar('eslo_ratings', `?select=*&juego=eq.${juego}`, { fetchImpl: fetchImplSupabase }),
+    seleccionar('eslo_ratings', `?select=*&juego=eq.${juego}&team_id=in.(${equipos.join(',')})`, {
+      fetchImpl: fetchImplSupabase,
+    }),
   ]);
 
   // Garantía 2: lo ya predicho no se toca.

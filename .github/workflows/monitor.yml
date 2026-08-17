@@ -122,6 +122,13 @@ jobs:
         if: always()
         run: node datos/juegos/guardar-cuotas.mjs
 
+      # 0.5 Ciclo de CS2 (Glicko-2 calibrado, Fase 1 cerrada el 2026-08-15).
+      #     Independiente del de Dota a propósito: usa bo3.gg, no OpenDota, así
+      #     que una caída de uno no arrastra al otro.
+      - name: Ciclo CS2
+        if: always()
+        run: node juez/vivo-esports.mjs cs2
+
       # 1. Predecir las series que todavía no empezaron. Es el paso que más
       #    urge de los de Dota: si se pierde, la predicción no se recupera.
       - name: Predecir
