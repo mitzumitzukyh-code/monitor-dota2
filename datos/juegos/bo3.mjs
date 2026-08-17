@@ -172,14 +172,26 @@ export async function proximasPartidas(juego, { fetchImpl = fetchConReintentos, 
 
 // Nombres de equipo. Se resuelven aparte y se cachean: cambian lentísimo y
 // pedirlos en cada corrida sería gastar por gusto (regla 5).
+// OJO: `/teams/{id}` devuelve 404 en bo3.gg (verificado 2026-08-17). El que
+// funciona es el listado con filtro `in`, que además trae todos los pedidos en
+// UNA petición en vez de una por equipo. La versión anterior de esta función
+// usaba el endpoint roto -- nunca llegó a usarse en producción.
 export async function nombresDeEquipos(ids, { fetchImpl = fetchConReintentos } = {}) {
   const nombres = new Map();
-  for (const id of [...new Set(ids)].filter(Boolean)) {
-    const datos = await pedir(`${BASE}/teams/${id}`, fetchImpl);
-    const t = datos.result ?? datos;
-    if (t?.name) nombres.set(id, t.name);
-    await espera(MS_ENTRE_PETICIONES);
+  const unicos = [...new Set(ids)].filter(Boolean);
+
+  for (let i = 0; i < unicos.length; i += POR_PAGINA) {
+    const lote = unicos.slice(i, i + POR_PAGINA);
+    const datos = await pedir(
+      `${BASE}/teams?page[limit]=${POR_PAGINA}&filter[teams.id][in]=${lote.join(',')}`,
+      fetchImpl,
+    );
+    for (const t of datos.results ?? []) {
+      if (t?.id && t?.name) nombres.set(t.id, t.name);
+    }
+    if (i + POR_PAGINA < unicos.length) await espera(MS_ENTRE_PETICIONES);
   }
+
   return nombres;
 }
 

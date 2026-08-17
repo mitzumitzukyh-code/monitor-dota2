@@ -80,10 +80,20 @@ test('proximosPartidosDesdeBo3gg: filtra a TI2026 por tournament_id y resuelve n
     bo3ggMatch({ id: 127230, startDate: '2026-08-21T02:00:00.000+00:00', team1: null, team2: null, conBetUpdates: false }),
   ];
 
+  // OJO: se simula `/teams?filter[teams.id][in]=`, NO `/teams/{id}`.
+  // `/teams/{id}` devuelve 404 en bo3.gg (verificado con llamada real el
+  // 2026-08-17). Esta prueba lo simulaba como si funcionara, así que pasaba
+  // en verde mientras el código habría reventado en producción la primera vez
+  // que un partido viniera sin bet_updates.
   const fetchImpl = async (url) => {
-    if (url.includes('/teams/')) {
-      const id = Number(url.split('/teams/')[1]);
-      return { ok: true, status: 200, json: async () => ({ result: { name: id === 16721 ? 'Team Liquid' : 'Team Yandex' } }) };
+    if (String(url).includes('/teams?')) {
+      const ids = String(url).split('[in]=')[1].split(',').map(Number);
+      const porId = { 16721: 'Team Liquid', 20951: 'Team Yandex' };
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ results: ids.filter((id) => porId[id]).map((id) => ({ id, name: porId[id] })) }),
+      };
     }
     return respuestaBo3gg(matches);
   };

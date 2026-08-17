@@ -229,6 +229,11 @@ export async function predecirProximas(
       equipo_b: p.equipoB,
       inicio_programado: new Date(p.inicio * 1000).toISOString(),
       formato: p.formato,
+      // El tier se guarda para poder filtrar QUÉ se avisa: CS2 mueve ~34
+      // partidas al día contando todos los tiers, y anunciarlas todas es
+      // spam inservible. Sin esta columna habría que volver a pedirle a la
+      // API algo que ya tuvimos en la mano.
+      tier: p.tier,
       motor: cfg.motor,
       prob_a: probA,
       prob_b: 1 - probA,
