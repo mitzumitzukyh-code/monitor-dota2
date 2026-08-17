@@ -51,6 +51,37 @@ export async function seleccionar(tabla, query = '', { fetchImpl = fetchConReint
     );
   }
 
+  // Que haya "order" no basta: tiene que ser un orden TOTAL. Ordenar por una
+  // columna con valores repetidos (eslo_cuotas.capturado_en, por ejemplo, que
+  // comparte timestamp entre las ~100 filas de una misma captura) deja el
+  // orden indefinido dentro del empate, y con offset eso repite unas filas y
+  // se salta otras. Pasó de verdad: ordenando sólo por capturado_en salían 37
+  // duplicadas de 7.040; agregando match_id como desempate, cero.
+  //
+  // Para poder detectarlo hay que comparar filas, y para que esa comparación
+  // signifique algo las columnas del "order" tienen que venir en el "select".
+  // Si no, dos filas distintas de la tabla se ven iguales en el resultado y la
+  // detección da un falso positivo -- pasó con
+  // `select=match_id&order=match_id,capturado_en`: sin capturado_en en la
+  // proyección, las 100 capturas de una partida son indistinguibles.
+  const columnasOrden = (query.match(/[?&]order=([^&]+)/)?.[1] ?? '')
+    .split(',')
+    .map((c) => decodeURIComponent(c).split('.')[0].trim())
+    .filter(Boolean);
+  const seleccion = decodeURIComponent(query.match(/[?&]select=([^&]+)/)?.[1] ?? '*');
+  const traeTodo = seleccion.includes('*');
+  const faltantes = traeTodo ? [] : columnasOrden.filter((c) => !seleccion.split(',').map((s) => s.trim()).includes(c));
+
+  if (faltantes.length > 0) {
+    throw new Error(
+      `Supabase seleccionar(${tabla}): hay más de ${TOPE_POSTGREST} filas y el "order" usa ` +
+        `${faltantes.join(', ')}, que no está en el "select". Sin esas columnas no se puede comprobar ` +
+        `que la paginación no repita filas. Agregarlas al select, o usar select=*.`,
+    );
+  }
+
+  // Recién acá se pagina: si la consulta no permite comprobar el resultado,
+  // se falla ANTES de gastar peticiones.
   const todo = [...primera];
   for (let offset = TOPE_POSTGREST; ; offset += TOPE_POSTGREST) {
     const separador = query.includes('?') ? '&' : '?';
@@ -60,16 +91,6 @@ export async function seleccionar(tabla, query = '', { fetchImpl = fetchConReint
     if (pagina.length < TOPE_POSTGREST) break;
   }
 
-  // Que haya "order" no basta: tiene que ser un orden TOTAL. Ordenar por una
-  // columna con valores repetidos (eslo_cuotas.capturado_en, por ejemplo, que
-  // comparte timestamp entre las ~100 filas de una misma captura) deja el
-  // orden indefinido dentro del empate, y con offset eso repite unas filas y
-  // se salta otras. Pasó de verdad: ordenando sólo por capturado_en salían 37
-  // duplicadas de 7.040; agregando match_id como desempate, cero.
-  //
-  // No se puede saber de antemano si un orden es único, pero sí se puede
-  // detectar el síntoma: filas repetidas en el resultado. Se avisa fuerte en
-  // vez de devolver datos silenciosamente mal.
   const vistas = new Set();
   let repetidas = 0;
   for (const fila of todo) {

@@ -102,3 +102,28 @@ test('un order único pagina limpio y no se queja', async () => {
   assert.equal(r.length, 1500);
   assert.equal(new Set(r.map((x) => x.id)).size, 1500);
 });
+
+// Falso positivo real de la guarda anterior: `select=match_id` con
+// `order=match_id,capturado_en`. Las filas son distintas en la tabla, pero sin
+// capturado_en en la proyección se ven idénticas y la detección se disparaba
+// sobre una consulta legítima.
+test('exige que las columnas del order vengan en el select', async () => {
+  const fetchImpl = async () => respuesta(filas(1000));
+  await assert.rejects(
+    () => seleccionar('eslo_cuotas', '?select=match_id&order=match_id.asc,capturado_en.asc', { fetchImpl }),
+    (e) => {
+      assert.match(e.message, /capturado_en/);
+      assert.match(e.message, /no está en el "select"/);
+      return true;
+    },
+  );
+});
+
+test('con select=* no exige nada: ya trae todas las columnas', async () => {
+  const fetchImpl = async (url) => {
+    const offset = Number(String(url).match(/offset=(\d+)/)?.[1] ?? 0);
+    return respuesta(filas(Math.max(0, Math.min(1000, 1200 - offset)), offset));
+  };
+  const r = await seleccionar('eslo_cuotas', '?select=*&order=capturado_en.asc,match_id.asc', { fetchImpl });
+  assert.equal(r.length, 1200);
+});
