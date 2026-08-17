@@ -303,6 +303,54 @@ extremas. El proyecto de LaLiga maneja esto con suavizado bayesiano
 hacia 0.5 en proporción a la poca experiencia es testeable contra el
 backtest — si no baja el Brier, se bota (regla 4).
 
+### Elo vs Glicko-2 en los tres juegos — tabla única (2026-08-17)
+
+Misma metodología para los tres: barrido sobre el 80% viejo, veredicto sobre
+el 20% reciente que el barrido nunca vio, y test **pareado** (los dos motores
+predicen la misma partida) para la significancia. Nivel de comparación: la
+partida, que es donde los dos motores actualizan.
+
+| | n | Elo calibrado | Glicko-2 calibrado | t (pareado) | veredicto |
+|---|---|---|---|---|---|
+| **CS2** | 12.447 | 0.22273 | **0.22057** | −4.31 | **Glicko-2 gana** |
+| **Dota 2** | 2.318 | 0.23074 | 0.22921 | −1.89 | empate |
+| **LoL** | 2.444 | **0.21259** | 0.21490 | +1.47 | empate |
+
+Base ingenua en los tres: 0.25000.
+
+**Sólo en CS2 hay un ganador.** En Dota y LoL el intervalo contiene el cero,
+así que ninguno le gana al otro — y por la regla 4, lo nuevo que no se gana el
+puesto no entra: **Dota se queda en Elo**. Está cerca (t = −1.89, casi al
+borde), pero "casi" no es haberlo ganado.
+
+Nota: en Dota el barrido eligió **K=24, escala=400**, exactamente los valores
+que ya estaban en producción desde el 13 de agosto. La calibración original
+era correcta.
+
+LoL es el juego que mejor se predice (0.213), después CS2 (0.221) y de último
+Dota (0.229).
+
+#### Error de método corregido, y qué números invalidó
+
+Hasta el 2026-08-17 la evaluación del holdout se corría pasándole **sólo** el
+20% de prueba, con los ratings en blanco. Eso reconstruía todo desde cero: los
+equipos llegaban al holdout casi sin historial, muy lejos de lo que pasa en
+producción, donde el rating trae encima todo el pasado.
+
+No era fuga temporal (nunca se miró el futuro) y no cambió **ninguna
+conclusión**, porque los tests de significancia siempre fueron continuos. Pero
+los Brier absolutos que se reportaron antes estaban subestimados:
+
+| | reportado antes | real |
+|---|---|---|
+| CS2 · Glicko-2 | 0.22905 | 0.22057 |
+| LoL · Elo | 0.21326 | 0.21259 |
+
+`puntuarDesde` en `juez/calibrar-juego.mjs` separa ahora lo que se aplica de
+lo que se puntúa. La señal que delató el error fue que el agregado y el
+pareado daban signos distintos en Dota; si los dos hubieran estado mal igual,
+no se habría notado.
+
 ### Fase 1 de CS2 — cerrada (2026-08-15). Glicko-2 se ganó el puesto
 
 Barrido con **separación cronológica 80/20**: se calibró con las 58.103

@@ -25,7 +25,14 @@ const RATING_INICIAL = 1500;
 // es el inicial y la predicción no dice nada del motor.
 const MIN_PREVIAS = 5;
 
-function pasadaElo(partidas, { k, escala }) {
+// `puntuarDesde` separa lo que se APLICA de lo que se PUNTÚA: todas las
+// partidas mueven el rating, pero sólo las posteriores a esa fecha entran en
+// la nota. Sin esto, evaluar el 20% de prueba pasándole sólo ese 20% dejaba
+// los ratings en blanco: los equipos llegaban casi sin historial y el número
+// no representaba lo que pasa en producción, donde el rating trae encima todo
+// el pasado. No era fuga (nunca se miró el futuro), pero sí una medición
+// distinta de la que se estaba describiendo.
+function pasadaElo(partidas, { k, escala }, puntuarDesde = -Infinity) {
   const rating = new Map();
   const previas = new Map();
   let suma = 0;
@@ -40,7 +47,7 @@ function pasadaElo(partidas, { k, escala }) {
     const rb = rating.get(b) ?? RATING_INICIAL;
     const p = probElo(ra, rb, escala);
 
-    if ((previas.get(a) ?? 0) >= MIN_PREVIAS && (previas.get(b) ?? 0) >= MIN_PREVIAS) {
+    if (m.inicio >= puntuarDesde && (previas.get(a) ?? 0) >= MIN_PREVIAS && (previas.get(b) ?? 0) >= MIN_PREVIAS) {
       suma += (p - (ganoA ? 1 : 0)) ** 2;
       if ((p >= 0.5) === ganoA) aciertos++;
       n++;
@@ -56,7 +63,7 @@ function pasadaElo(partidas, { k, escala }) {
   return { brier: suma / n, acierto: aciertos / n, n };
 }
 
-function pasadaGlicko(partidas, { tau, rdInicial }) {
+function pasadaGlicko(partidas, { tau, rdInicial }, puntuarDesde = -Infinity) {
   const estado = new Map();
   const previas = new Map();
   const inicial = { rating: RATING_INICIAL, rd: rdInicial, vol: 0.06 };
@@ -72,7 +79,7 @@ function pasadaGlicko(partidas, { tau, rdInicial }) {
     const eb = estado.get(b) ?? inicial;
     const p = probGlicko(ea, eb);
 
-    if ((previas.get(a) ?? 0) >= MIN_PREVIAS && (previas.get(b) ?? 0) >= MIN_PREVIAS) {
+    if (m.inicio >= puntuarDesde && (previas.get(a) ?? 0) >= MIN_PREVIAS && (previas.get(b) ?? 0) >= MIN_PREVIAS) {
       suma += (p - (ganoA ? 1 : 0)) ** 2;
       if ((p >= 0.5) === ganoA) aciertos++;
       n++;
@@ -92,8 +99,32 @@ function pasadaGlicko(partidas, { tau, rdInicial }) {
 }
 
 const juego = process.argv[2] ?? 'cs2';
-const partidas = JSON.parse(
-  await readFile(new URL(`../datos/cache/historico-${juego}.json`, import.meta.url), 'utf8'),
+
+// Dota no viene de bo3.gg: su histórico es el de OpenDota, con otros nombres
+// de campo (radiant_team_id / dire_team_id / radiant_win). Se normaliza a la
+// misma forma para que la comparación entre motores sea exactamente la misma
+// que se le corrió a CS2 y a LoL -- si la metodología cambiara entre juegos,
+// los resultados no serían comparables.
+//
+// OJO: acá se compara a nivel de PARTIDA, igual que en los otros juegos,
+// porque es donde los dos motores actualizan. La unidad de predicción de Dota
+// en producción es la SERIE, derivada con motor/series.mjs; ese paso es el
+// mismo para los dos motores, así que no cambia cuál gana.
+const ES_DOTA = juego === 'dota2';
+const ruta = ES_DOTA ? '../datos/historico.json' : `../datos/cache/historico-${juego}.json`;
+const crudas = JSON.parse(await readFile(new URL(ruta, import.meta.url), 'utf8'));
+
+const partidas = (
+  ES_DOTA
+    ? crudas
+        .filter((p) => p.radiant_team_id && p.dire_team_id && typeof p.radiant_win === 'boolean')
+        .map((p) => ({
+          inicio: p.start_time,
+          equipoA: p.radiant_team_id,
+          equipoB: p.dire_team_id,
+          ganador: p.radiant_win ? p.radiant_team_id : p.dire_team_id,
+        }))
+    : crudas
 ).sort((a, b) => a.inicio - b.inicio);
 
 // Corte cronológico 80/20. El 20% más reciente NO se toca hasta el final.
@@ -137,9 +168,9 @@ for (const r of resG.slice(0, 5)) {
 // --- el veredicto, sobre datos que el barrido NUNCA vio ---
 const mejorElo = resElo[0];
 const mejorG = resG[0];
-const finalElo = pasadaElo(prueba, mejorElo);
-const finalG = pasadaGlicko(prueba, mejorG);
-const finalEloDota = pasadaElo(prueba, { k: 24, escala: 400 });
+const finalElo = pasadaElo(partidas, mejorElo, corte);
+const finalG = pasadaGlicko(partidas, mejorG, corte);
+const finalEloDota = pasadaElo(partidas, { k: 24, escala: 400 }, corte);
 
 console.log('\n' + '='.repeat(66));
 console.log('VEREDICTO · sobre el 20% reciente, que el barrido nunca vio');
