@@ -250,3 +250,77 @@ test('sincronizarRatings: también acota por id al traer ratings', async () => {
   assert.match(deRatings, /team_id=in\./);
   assert.ok(deRatings.includes('555') && deRatings.includes('666'));
 });
+
+// ---------------------------------------------------------------------------
+// Bugs encontrados en la revisión con datos reales (2026-08-17)
+// ---------------------------------------------------------------------------
+
+test('calificarTerminadas: pide las partidas por ID, no las 100 más recientes', async () => {
+  // Con datos reales, las 100 terminadas más recientes de CS2 cubren 3 días.
+  // Una predicción de hace 4 días no se calificaba nunca, y taponaba la cola.
+  let urlPedida = null;
+  const bo3 = async (url) => {
+    urlPedida = String(url);
+    return respuesta({ results: [] });
+  };
+  const { fetchImpl } = supabaseFalso({
+    eslo_predicciones: [
+      { match_id: 777, juego: 'cs2', equipo_a: 1, equipo_b: 2, prob_a: 0.6, resultado_real: null },
+      { match_id: 888, juego: 'cs2', equipo_a: 3, equipo_b: 4, prob_a: 0.4, resultado_real: null },
+    ],
+  });
+
+  await calificarTerminadas('cs2', { fetchImpl: bo3, fetchImplSupabase: fetchImpl });
+
+  assert.match(urlPedida, /filter\[matches\.id\]\[in\]=/);
+  assert.ok(urlPedida.includes('777') && urlPedida.includes('888'));
+});
+
+test('calificarTerminadas: ignora una partida devuelta que todavía no terminó', async () => {
+  const bo3 = async () =>
+    respuesta({ results: [cruda({ id: 777, inicio: AHORA, estado: 'upcoming', ganador: null })] });
+  const { fetchImpl, escrituras } = supabaseFalso({
+    eslo_predicciones: [{ match_id: 777, juego: 'cs2', equipo_a: 100, equipo_b: 200, prob_a: 0.6, resultado_real: null }],
+  });
+
+  const r = await calificarTerminadas('cs2', { fetchImpl: bo3, fetchImplSupabase: fetchImpl });
+  assert.equal(r.calificadas, 0);
+  assert.equal(escrituras.length, 0);
+});
+
+test('sincronizarRatings: NO pierde partidas que arrancan a la misma hora exacta', async () => {
+  // 19 grupos simultáneos entre las 100 más recientes de CS2, el mayor de 5.
+  // Con `gt` sobre start_date, las que empataban con el borde se perdían.
+  const t = AHORA - 7200;
+  const bo3 = async () =>
+    respuesta({
+      results: [
+        cruda({ id: 50, inicio: t, estado: 'finished', ganador: 10, ma: 2, mb: 0, a: 10, b: 11 }),
+        cruda({ id: 51, inicio: t, estado: 'finished', ganador: 12, ma: 2, mb: 1, a: 12, b: 13 }),
+        cruda({ id: 52, inicio: t, estado: 'finished', ganador: 14, ma: 2, mb: 0, a: 14, b: 15 }),
+      ],
+    });
+  // Ya se aplicó la 50, que arranca a la MISMA hora que la 51 y la 52.
+  const { fetchImpl, escrituras } = supabaseFalso({
+    eslo_estado: [{ juego: 'cs2', ultimo_inicio: new Date(t * 1000).toISOString(), ultimo_match_id: 50 }],
+  });
+
+  const r = await sincronizarRatings('cs2', { fetchImpl: bo3, fetchImplSupabase: fetchImpl });
+
+  assert.equal(r.aplicadas, 2, 'la 51 y la 52 deben aplicarse; la 50 no, que ya estaba');
+  const ratings = escrituras.find((e) => e.tabla === 'eslo_ratings').filas.map((f) => f.team_id).sort((a, b) => a - b);
+  assert.deepEqual(ratings, [12, 13, 14, 15], 'no debe volver a tocar a los de la partida 50');
+});
+
+test('sincronizarRatings: no reaplica la última partida ya aplicada', async () => {
+  const t = AHORA - 7200;
+  const bo3 = async () =>
+    respuesta({ results: [cruda({ id: 60, inicio: t, estado: 'finished', ganador: 10, ma: 2, mb: 0, a: 10, b: 11 })] });
+  const { fetchImpl, escrituras } = supabaseFalso({
+    eslo_estado: [{ juego: 'cs2', ultimo_inicio: new Date(t * 1000).toISOString(), ultimo_match_id: 60 }],
+  });
+
+  const r = await sincronizarRatings('cs2', { fetchImpl: bo3, fetchImplSupabase: fetchImpl });
+  assert.equal(r.aplicadas, 0, 'aplicarla dos veces corrompería el rating');
+  assert.equal(escrituras.length, 0);
+});

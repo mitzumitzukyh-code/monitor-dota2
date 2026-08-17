@@ -55,7 +55,12 @@ async function partidasTerminadasDesde(juego, desdeIso, { fetchImpl }) {
   // termine igual y siga poniéndose al día en la siguiente, en vez de
   // pasarse de la ventana de 10 minutos del cron.
   for (let pagina = 0; pagina < 30; pagina++) {
-    const filtroFecha = desdeIso ? `&filter[matches.start_date][gt]=${encodeURIComponent(desdeIso)}` : '';
+    // `gte`, no `gt`. Con `gt` se perdían las partidas que arrancan a la MISMA
+    // hora exacta que la última aplicada, y eso no es raro: en CS2 hay 19
+    // grupos de partidas simultáneas entre las 100 más recientes, el mayor de
+    // 5. Quedaban fuera para siempre. El duplicado que introduce `gte` se
+    // descarta después, en sincronizarRatings, comparando (inicio, matchId).
+    const filtroFecha = desdeIso ? `&filter[matches.start_date][gte]=${encodeURIComponent(desdeIso)}` : '';
     const url =
       `${BASE}/matches?page[limit]=${POR_PAGINA}&page[offset]=${offset}&sort=start_date` +
       `&filter[matches.discipline_id][eq]=${disciplinaId}&filter[matches.status][eq]=finished${filtroFecha}`;
@@ -76,7 +81,11 @@ async function partidasTerminadasDesde(juego, desdeIso, { fetchImpl }) {
     await espera(400);
   }
 
-  return partidas.sort((a, b) => a.inicio - b.inicio);
+  // El desempate por matchId no es cosmético: es lo que hace que "hasta dónde
+  // apliqué" sea una posición determinista cuando varias partidas comparten
+  // hora exacta. Sin él, dos corridas podrían ordenar distinto el mismo grupo
+  // y saltarse alguna.
+  return partidas.sort((a, b) => a.inicio - b.inicio || a.matchId - b.matchId);
 }
 
 export async function sincronizarRatings(juego, { fetchImpl = fetchConReintentos, fetchImplSupabase } = {}) {
@@ -91,7 +100,19 @@ export async function sincronizarRatings(juego, { fetchImpl = fetchConReintentos
   // ratings de esos equipos. Pedir la tabla entera devolvería sólo las
   // primeras 1.000 filas (tope de PostgREST, silencioso) y los equipos que no
   // entraran arrancarían desde cero, corrompiendo su rating.
-  const nuevas = await partidasTerminadasDesde(juego, estado?.ultimo_inicio ?? null, { fetchImpl });
+  const traidas = await partidasTerminadasDesde(juego, estado?.ultimo_inicio ?? null, { fetchImpl });
+
+  // Con `gte` vuelven las partidas del borde, incluida la última ya aplicada.
+  // Se descartan por posición (inicio, matchId), que es el mismo criterio con
+  // el que se ordenaron: así no se pierde ninguna de las simultáneas ni se
+  // aplica dos veces la misma.
+  const corteInicio = estado?.ultimo_inicio ? Math.floor(new Date(estado.ultimo_inicio).getTime() / 1000) : null;
+  const corteId = estado?.ultimo_match_id ?? null;
+  const nuevas =
+    corteInicio === null
+      ? traidas
+      : traidas.filter((m) => m.inicio > corteInicio || (m.inicio === corteInicio && m.matchId > corteId));
+
   if (nuevas.length === 0) return { aplicadas: 0, equipos: 0 };
 
   const equipos = [...new Set(nuevas.flatMap((m) => [m.equipoA, m.equipoB]))];
@@ -232,12 +253,23 @@ export async function calificarTerminadas(juego, { fetchImpl = fetchConReintento
   );
   if (pendientes.length === 0) return { calificadas: 0 };
 
-  const disciplinaId = DISCIPLINAS[juego];
-  const url =
-    `${BASE}/matches?page[limit]=${POR_PAGINA}&page[offset]=0&sort=-start_date` +
-    `&filter[matches.discipline_id][eq]=${disciplinaId}&filter[matches.status][eq]=finished`;
+  // Se piden EXACTAMENTE las partidas pendientes, por id.
+  //
+  // Antes se traían las 100 terminadas más recientes y se cruzaban. Con datos
+  // reales eso cubre apenas 3 días de CS2 (~34 partidas/día): una predicción
+  // cuya partida terminó hace 4 días no se calificaba NUNCA. Y como la cola de
+  // pendientes se ordena por fecha ascendente, esas viejas taponaban el frente
+  // y bloqueaban también a las nuevas. El fallo se agravaba solo.
+  const ids = pendientes.map((p) => p.match_id);
+  const url = `${BASE}/matches?page[limit]=${POR_PAGINA}&filter[matches.id][in]=${ids.join(',')}`;
   const datos = await pedir(url, fetchImpl);
-  const terminadas = new Map((datos.results ?? []).map(normalizar).filter(esUtilizable).map((p) => [p.matchId, p]));
+  const terminadas = new Map(
+    (datos.results ?? [])
+      .filter((m) => m.status === 'finished')
+      .map(normalizar)
+      .filter(esUtilizable)
+      .map((p) => [p.matchId, p]),
+  );
 
   const ahora = new Date().toISOString();
   const filas = [];
