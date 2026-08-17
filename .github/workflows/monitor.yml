@@ -228,4 +228,10 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           DISCORD_WEBHOOK_ERRORES: ${{ secrets.DISCORD_WEBHOOK_ERRORES }}
           MENSAJE_COMMIT: ${{ github.event.head_commit.message }}
-        run: node salida/errores.mjs "El ciclo falló" "Revisar los pasos en rojo del enlace de abajo."
+        run: |
+          # Decir CUÁL job murió, no "el ciclo": con tres jobs, "falló algo" no
+          # orienta. `ciclo` es el que recoge datos y el que de verdad importa;
+          # `publicar` sólo deja el panel viejo.
+          node salida/errores.mjs \
+            "ciclo=${{ needs.ciclo.result }} · publicar=${{ needs.publicar.result }}" \
+            "Revisar los pasos en rojo del enlace de abajo."

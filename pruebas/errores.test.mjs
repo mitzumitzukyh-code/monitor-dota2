@@ -111,3 +111,32 @@ test('el aviso de error tampoco pinga: pasa por enviar()', async () => {
   await avisarError({ paso: 'x' }, { fetchImpl: fetchFalso, webhook: 'https://discord.test/e' });
   assert.deepEqual(cuerpo.allowed_mentions, { parse: [] });
 });
+
+// Los mensajes de commit de este repo tienen 20-30 lineas. Meterlos enteros
+// dejaba avisos ilegibles: el "que fallo" quedaba enterrado bajo el commit.
+test('del mensaje de commit sólo usa la primera línea', () => {
+  const m = mensajeError({
+    paso: 'ciclo=failure',
+    commit: 'abc1234567',
+    mensajeCommit: 'Arregla el ciclo\n\nQUE PASO\nUna explicacion larguisima\nde muchas lineas\nque no cabe.',
+    cuando: CUANDO,
+  });
+
+  assert.match(m, /Arregla el ciclo/);
+  assert.doesNotMatch(m, /QUE PASO/, 'el cuerpo del commit está en el enlace, no acá');
+  assert.doesNotMatch(m, /muchas lineas/);
+  assert.ok(m.length < 600, `el aviso mide ${m.length}, debería ser breve`);
+});
+
+test('un título de commit larguísimo se recorta', () => {
+  const m = mensajeError({ commit: 'abc1234', mensajeCommit: 'x'.repeat(200), cuando: CUANDO });
+  const linea = m.split('\n').find((l) => l.startsWith('**Commit:**'));
+  assert.ok(linea.length < 110, `la línea mide ${linea.length}`);
+  assert.match(linea, /…/);
+});
+
+test('sin mensaje de commit muestra sólo el hash corto', () => {
+  const m = mensajeError({ commit: 'abc1234567890', cuando: CUANDO });
+  assert.match(m, /\*\*Commit:\*\* `abc1234`/);
+  assert.doesNotMatch(m, /— *$/m);
+});

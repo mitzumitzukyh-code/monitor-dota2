@@ -47,8 +47,13 @@ export function mensajeError({
   if (actor) lineas.push(`**Quién lo disparó:** ${actor}`);
   if (commit) {
     const corto = String(commit).slice(0, 7);
-    const texto = mensajeCommit ? `\`${corto}\` — ${mensajeCommit}` : `\`${corto}\``;
-    lineas.push(`**Commit:** ${texto}`);
+    // SÓLO la primera línea del mensaje de commit. En la práctica los mensajes
+    // de este repo tienen 20-30 líneas de explicación, y meterlas enteras dejó
+    // avisos ilegibles: el "qué falló" quedaba enterrado bajo el commit.
+    // El título es lo que identifica el cambio; el cuerpo está en el enlace.
+    const titulo = String(mensajeCommit ?? '').split('\n')[0].trim();
+    const recortado = titulo.length > 72 ? titulo.slice(0, 72) + '…' : titulo;
+    lineas.push(`**Commit:** ${recortado ? `\`${corto}\` — ${recortado}` : `\`${corto}\``}`);
   }
 
   if (detalle) {
