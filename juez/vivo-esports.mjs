@@ -1,0 +1,274 @@
+// Fase 3 multijuego: sincronizar ratings, predecir lo que viene, calificar lo
+// que terminó. Sirve para cualquier juego que esté en COEFICIENTES.
+//
+//   node --env-file=.env juez/vivo-esports.mjs cs2
+//
+// LAS TRES GARANTÍAS, que son el motivo de la mitad del código de acá:
+//
+//   1. Cero fuga temporal (regla 6). Se predice SÓLO lo que no ha empezado, y
+//      con ratings construidos SÓLO con partidas anteriores. El orden de este
+//      archivo importa: primero se sincroniza con lo ya jugado, después se
+//      predice lo que viene. Nunca al revés.
+//   2. Una predicción no se reescribe jamás. Si se reescribe, el Brier deja de
+//      corresponder a lo que se predijo. Es un bug ya vivido en Dota.
+//   3. No se pide lo que ya está guardado (regla 5). La sincronización arranca
+//      desde la última partida aplicada, no desde el principio.
+
+import { fileURLToPath } from 'node:url';
+import { seleccionar, upsert } from '../datos/supabase.mjs';
+import { DISCIPLINAS, normalizar, esUtilizable } from '../datos/juegos/bo3.mjs';
+import { fetchConReintentos } from '../datos/reintentar.mjs';
+import { probabilidadGanar, actualizar } from '../motor/glicko2.mjs';
+import { COEFICIENTES } from '../config.mjs';
+
+const BASE = 'https://api.bo3.gg/api/v1';
+const POR_PAGINA = 100;
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function pedir(url, fetchImpl) {
+  const res = await fetchImpl(url, { headers: { 'User-Agent': 'monitor-esports/0.1 (proyecto personal)' } });
+  if (!res.ok) throw new Error(`bo3.gg respondió ${res.status}`);
+  return res.json();
+}
+
+function configDe(juego) {
+  const cfg = COEFICIENTES[juego];
+  if (!cfg) throw new Error(`${juego} no tiene coeficientes calibrados en config.mjs. Correr Fase 1 antes.`);
+  if (cfg.motor !== 'glicko2' || !cfg.glicko) {
+    throw new Error(`${juego} está configurado con motor '${cfg.motor}'. Este script sólo maneja glicko2.`);
+  }
+  return cfg;
+}
+
+const estadoInicialDe = (cfg) => ({ rating: 1500, rd: cfg.glicko.rdInicial, vol: cfg.glicko.volInicial });
+
+// --- 1. sincronizar ratings con lo ya jugado --------------------------------
+
+// Trae las partidas terminadas DESPUÉS de una fecha, en orden cronológico.
+async function partidasTerminadasDesde(juego, desdeIso, { fetchImpl }) {
+  const disciplinaId = DISCIPLINAS[juego];
+  const partidas = [];
+  const vistos = new Set();
+  let offset = 0;
+
+  // Tope de páginas: si la base está muy atrasada conviene que la corrida
+  // termine igual y siga poniéndose al día en la siguiente, en vez de
+  // pasarse de la ventana de 10 minutos del cron.
+  for (let pagina = 0; pagina < 30; pagina++) {
+    const filtroFecha = desdeIso ? `&filter[matches.start_date][gt]=${encodeURIComponent(desdeIso)}` : '';
+    const url =
+      `${BASE}/matches?page[limit]=${POR_PAGINA}&page[offset]=${offset}&sort=start_date` +
+      `&filter[matches.discipline_id][eq]=${disciplinaId}&filter[matches.status][eq]=finished${filtroFecha}`;
+
+    const datos = await pedir(url, fetchImpl);
+    const lote = datos.results ?? [];
+    if (lote.length === 0) break;
+
+    for (const cruda of lote) {
+      if (vistos.has(cruda.id)) continue;
+      vistos.add(cruda.id);
+      const p = normalizar(cruda);
+      if (esUtilizable(p)) partidas.push(p);
+    }
+
+    offset += POR_PAGINA;
+    if (lote.length < POR_PAGINA) break;
+    await espera(400);
+  }
+
+  return partidas.sort((a, b) => a.inicio - b.inicio);
+}
+
+export async function sincronizarRatings(juego, { fetchImpl = fetchConReintentos, fetchImplSupabase } = {}) {
+  const cfg = configDe(juego);
+
+  const [filasEstado, filasRatings] = await Promise.all([
+    seleccionar('eslo_estado', `?select=*&juego=eq.${juego}`, { fetchImpl: fetchImplSupabase }),
+    seleccionar('eslo_ratings', `?select=*&juego=eq.${juego}`, { fetchImpl: fetchImplSupabase }),
+  ]);
+
+  const estado = filasEstado[0] ?? null;
+  const porEquipo = new Map(
+    filasRatings.map((f) => [f.team_id, { rating: Number(f.rating), rd: Number(f.rd), vol: Number(f.vol), partidas: f.partidas }]),
+  );
+
+  const nuevas = await partidasTerminadasDesde(juego, estado?.ultimo_inicio ?? null, { fetchImpl });
+  if (nuevas.length === 0) return { aplicadas: 0, equipos: porEquipo.size };
+
+  const inicial = estadoInicialDe(cfg);
+  let ultima = null;
+
+  for (const m of nuevas) {
+    const a = porEquipo.get(m.equipoA) ?? { ...inicial, partidas: 0 };
+    const b = porEquipo.get(m.equipoB) ?? { ...inicial, partidas: 0 };
+    const ganoA = m.ganador === m.equipoA;
+
+    // Los dos se actualizan contra el estado PREVIO del rival.
+    const nuevoA = actualizar(a, b, ganoA ? 1 : 0, { tau: cfg.glicko.tau });
+    const nuevoB = actualizar(b, a, ganoA ? 0 : 1, { tau: cfg.glicko.tau });
+
+    porEquipo.set(m.equipoA, { ...nuevoA, partidas: a.partidas + 1 });
+    porEquipo.set(m.equipoB, { ...nuevoB, partidas: b.partidas + 1 });
+    ultima = m;
+  }
+
+  const ahora = new Date().toISOString();
+  const tocados = new Set(nuevas.flatMap((m) => [m.equipoA, m.equipoB]));
+  await upsert(
+    'eslo_ratings',
+    [...tocados].map((id) => {
+      const e = porEquipo.get(id);
+      return { juego, team_id: id, rating: e.rating, rd: e.rd, vol: e.vol, partidas: e.partidas, actualizado_en: ahora };
+    }),
+    { onConflict: 'juego,team_id', fetchImpl: fetchImplSupabase },
+  );
+
+  await upsert(
+    'eslo_estado',
+    [
+      {
+        juego,
+        ultimo_inicio: new Date(ultima.inicio * 1000).toISOString(),
+        ultimo_match_id: ultima.matchId,
+        partidas_aplicadas: (estado?.partidas_aplicadas ?? 0) + nuevas.length,
+        actualizado_en: ahora,
+      },
+    ],
+    { onConflict: 'juego', fetchImpl: fetchImplSupabase },
+  );
+
+  return { aplicadas: nuevas.length, equipos: porEquipo.size, hasta: ultima.inicio };
+}
+
+// --- 2. predecir lo que viene ------------------------------------------------
+
+export async function predecirProximas(
+  juego,
+  { fetchImpl = fetchConReintentos, fetchImplSupabase, ahora = Date.now() / 1000 } = {},
+) {
+  const cfg = configDe(juego);
+  const disciplinaId = DISCIPLINAS[juego];
+
+  const url =
+    `${BASE}/matches?page[limit]=${POR_PAGINA}&page[offset]=0&sort=start_date` +
+    `&filter[matches.discipline_id][eq]=${disciplinaId}&filter[matches.status][eq]=upcoming`;
+
+  const datos = await pedir(url, fetchImpl);
+  const candidatas = (datos.results ?? [])
+    .map(normalizar)
+    .filter((p) => p.equipoA && p.equipoB && p.inicio && p.formato);
+
+  // Regla 6: nada que ya haya empezado. El feed lista partidas en curso.
+  const noEmpezadas = candidatas.filter((p) => p.inicio > ahora);
+  const yaEmpezaron = candidatas.length - noEmpezadas.length;
+  if (noEmpezadas.length === 0) return { predichas: 0, yaEmpezaron, yaPredichas: 0 };
+
+  const ids = noEmpezadas.map((p) => p.matchId).join(',');
+  const [existentes, filasRatings] = await Promise.all([
+    seleccionar('eslo_predicciones', `?select=match_id&match_id=in.(${ids})`, { fetchImpl: fetchImplSupabase }),
+    seleccionar('eslo_ratings', `?select=*&juego=eq.${juego}`, { fetchImpl: fetchImplSupabase }),
+  ]);
+
+  // Garantía 2: lo ya predicho no se toca.
+  const yaEstan = new Set(existentes.map((e) => e.match_id));
+  const nuevas = noEmpezadas.filter((p) => !yaEstan.has(p.matchId));
+  if (nuevas.length === 0) return { predichas: 0, yaEmpezaron, yaPredichas: yaEstan.size };
+
+  const inicial = estadoInicialDe(cfg);
+  const porEquipo = new Map(
+    filasRatings.map((f) => [f.team_id, { rating: Number(f.rating), rd: Number(f.rd), vol: Number(f.vol) }]),
+  );
+
+  const filas = nuevas.map((p) => {
+    const ea = porEquipo.get(p.equipoA) ?? inicial;
+    const eb = porEquipo.get(p.equipoB) ?? inicial;
+    const probA = probabilidadGanar(ea, eb);
+    return {
+      match_id: p.matchId,
+      juego,
+      equipo_a: p.equipoA,
+      equipo_b: p.equipoB,
+      inicio_programado: new Date(p.inicio * 1000).toISOString(),
+      formato: p.formato,
+      motor: cfg.motor,
+      prob_a: probA,
+      prob_b: 1 - probA,
+      rating_a: ea.rating,
+      rd_a: ea.rd,
+      rating_b: eb.rating,
+      rd_b: eb.rd,
+    };
+  });
+
+  await upsert('eslo_predicciones', filas, { onConflict: 'match_id', fetchImpl: fetchImplSupabase });
+  return { predichas: filas.length, yaEmpezaron, yaPredichas: yaEstan.size };
+}
+
+// --- 3. calificar lo que terminó ---------------------------------------------
+
+export async function calificarTerminadas(juego, { fetchImpl = fetchConReintentos, fetchImplSupabase } = {}) {
+  const pendientes = await seleccionar(
+    'eslo_predicciones',
+    `?select=*&juego=eq.${juego}&resultado_real=is.null&order=inicio_programado.asc&limit=100`,
+    { fetchImpl: fetchImplSupabase },
+  );
+  if (pendientes.length === 0) return { calificadas: 0 };
+
+  const disciplinaId = DISCIPLINAS[juego];
+  const url =
+    `${BASE}/matches?page[limit]=${POR_PAGINA}&page[offset]=0&sort=-start_date` +
+    `&filter[matches.discipline_id][eq]=${disciplinaId}&filter[matches.status][eq]=finished`;
+  const datos = await pedir(url, fetchImpl);
+  const terminadas = new Map((datos.results ?? []).map(normalizar).filter(esUtilizable).map((p) => [p.matchId, p]));
+
+  const ahora = new Date().toISOString();
+  const filas = [];
+  for (const pred of pendientes) {
+    const real = terminadas.get(pred.match_id);
+    if (!real) continue;
+
+    const ganoA = real.ganador === pred.equipo_a;
+    const probA = Number(pred.prob_a);
+    filas.push({
+      match_id: pred.match_id,
+      resultado_real: ganoA ? 'ganaA' : 'ganaB',
+      marcador_a: real.marcadorA,
+      marcador_b: real.marcadorB,
+      brier: (probA - (ganoA ? 1 : 0)) ** 2,
+      calificada_en: ahora,
+    });
+  }
+
+  if (filas.length === 0) return { calificadas: 0 };
+  await upsert('eslo_predicciones', filas, { onConflict: 'match_id', fetchImpl: fetchImplSupabase });
+  return { calificadas: filas.length };
+}
+
+// --- ciclo -------------------------------------------------------------------
+
+export async function ciclo(juego, opciones = {}) {
+  // El orden NO es negociable: sincronizar con lo jugado ANTES de predecir, o
+  // se predice con ratings viejos. Calificar al final, con lo que ya terminó.
+  const sinc = await sincronizarRatings(juego, opciones);
+  const pred = await predecirProximas(juego, opciones);
+  const cal = await calificarTerminadas(juego, opciones);
+  return { sinc, pred, cal };
+}
+
+const esEjecutadoDirectamente = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (esEjecutadoDirectamente) {
+  const juegos = process.argv.slice(2).length ? process.argv.slice(2) : ['cs2'];
+  for (const juego of juegos) {
+    try {
+      const r = await ciclo(juego);
+      console.log(
+        `${juego}: ${r.sinc.aplicadas} partidas aplicadas (${r.sinc.equipos} equipos) · ` +
+          `${r.pred.predichas} predichas (${r.pred.yaPredichas} ya estaban, ${r.pred.yaEmpezaron} ya empezaron) · ` +
+          `${r.cal.calificadas} calificadas`,
+      );
+    } catch (e) {
+      console.error(`${juego}: ${e.message}`);
+      process.exitCode = 1;
+    }
+  }
+}
