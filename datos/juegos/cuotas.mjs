@@ -59,11 +59,13 @@ export function extraerCuota(m) {
   const idDos = bu.team_2.team_id;
   if (idUno == null || idDos == null) return null;
 
-  let coeffA, coeffB;
+  let coeffA, coeffB, mismoOrden;
   if (idUno === m.team1_id && idDos === m.team2_id) {
+    mismoOrden = true;
     coeffA = bu.team_1.coeff;
     coeffB = bu.team_2.coeff;
   } else if (idUno === m.team2_id && idDos === m.team1_id) {
+    mismoOrden = false;
     coeffA = bu.team_2.coeff;
     coeffB = bu.team_1.coeff;
   } else {
@@ -72,6 +74,19 @@ export function extraerCuota(m) {
 
   const probs = probabilidadesImplicitas(coeffA, coeffB);
   if (!probs) return null;
+
+  // `max_coeff` es la MEJOR cuota entre casas, no la de este proveedor. Es
+  // mejor vara para medirse: `coeff` viene de 1xbit, una casa de cripto y por
+  // tanto blanda -- ganarle prueba poco. Ganarle al mejor precio del mercado
+  // sí significa algo.
+  //
+  // OJO: tomar el máximo de LOS DOS lados puede dar una suma de implícitas
+  // MENOR que 1 (arbitraje teórico entre casas), y ahí el margen sale
+  // negativo. No es un error: es que ninguna casa sola ofrece ese par de
+  // precios. La normalización funciona igual.
+  const maxA = mismoOrden ? bu.team_1.max_coeff : bu.team_2.max_coeff;
+  const maxB = mismoOrden ? bu.team_2.max_coeff : bu.team_1.max_coeff;
+  const probsMax = probabilidadesImplicitas(maxA, maxB);
 
   return {
     matchId: m.id,
@@ -83,6 +98,13 @@ export function extraerCuota(m) {
     probA: probs.probA,
     probB: probs.probB,
     margen: probs.margen,
+    // Null cuando la fuente no trae max_coeff: preferible un hueco explícito
+    // a copiar `coeff` y hacer creer que se midió contra el mercado.
+    maxCoeffA: probsMax ? Number(maxA) : null,
+    maxCoeffB: probsMax ? Number(maxB) : null,
+    probMaxA: probsMax ? probsMax.probA : null,
+    probMaxB: probsMax ? probsMax.probB : null,
+    margenMax: probsMax ? probsMax.margen : null,
     inicioProgramado: m.start_date ? new Date(m.start_date).toISOString() : null,
     proveedorId: bu.bet_provider_id ?? null,
   };

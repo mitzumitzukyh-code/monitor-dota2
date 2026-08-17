@@ -96,3 +96,67 @@ test('enviar() desactiva TODA mención: un equipo llamado @everyone no pinga', a
   // El texto NO se altera: se sigue leyendo igual, solo que no notifica.
   assert.match(cuerpo.content, /@everyone/);
 });
+
+// --- max_coeff: la mejor cuota entre casas ---------------------------------
+
+const CON_MAX = {
+  id: 1,
+  discipline_id: 1,
+  team1_id: 10,
+  team2_id: 20,
+  start_date: '2026-08-18T12:00:00.000+00:00',
+  bet_updates: {
+    team_1: { name: 'A', coeff: 1.9, max_coeff: 2.168, team_id: 10 },
+    team_2: { name: 'B', coeff: 1.84, max_coeff: 1.95, team_id: 20 },
+  },
+};
+
+test('extraerCuota() guarda la mejor cuota del mercado aparte de la del proveedor', () => {
+  const c = extraerCuota(CON_MAX);
+  assert.equal(c.coeffA, 1.9);
+  assert.equal(c.maxCoeffA, 2.168, 'la mejor del mercado, no la de 1xbit');
+  assert.equal(c.maxCoeffB, 1.95);
+  assert.equal((c.probMaxA + c.probMaxB).toFixed(6), '1.000000');
+});
+
+// El máximo de los dos lados puede sumar menos de 1: ninguna casa sola ofrece
+// ese par de precios. No es un error, y el margen sale negativo.
+test('extraerCuota() admite margen negativo en la mejor cuota (arbitraje teórico)', () => {
+  const arbitraje = {
+    ...CON_MAX,
+    bet_updates: {
+      team_1: { coeff: 1.9, max_coeff: 2.2, team_id: 10 },
+      team_2: { coeff: 1.84, max_coeff: 2.2, team_id: 20 },
+    },
+  };
+  const c = extraerCuota(arbitraje);
+  assert.ok(c.margenMax < 0, `deberia ser negativo, fue ${c.margenMax}`);
+  assert.equal((c.probMaxA + c.probMaxB).toFixed(6), '1.000000');
+});
+
+test('extraerCuota() cruza max_coeff por team_id, igual que coeff', () => {
+  const invertida = {
+    ...CON_MAX,
+    bet_updates: {
+      team_1: { coeff: 1.84, max_coeff: 1.95, team_id: 20 },
+      team_2: { coeff: 1.9, max_coeff: 2.168, team_id: 10 },
+    },
+  };
+  const c = extraerCuota(invertida);
+  assert.equal(c.maxCoeffA, 2.168, 'la mejor cuota del equipo 10 sigue siendo la del equipo 10');
+  assert.equal(c.coeffA, 1.9);
+});
+
+// Sin max_coeff se guarda null, no se copia coeff: hacer creer que se midió
+// contra el mercado cuando no se pudo seria peor que no tener el dato.
+test('extraerCuota() deja null si la fuente no trae max_coeff', () => {
+  const sinMax = {
+    ...CON_MAX,
+    bet_updates: { team_1: { coeff: 1.9, team_id: 10 }, team_2: { coeff: 1.84, team_id: 20 } },
+  };
+  const c = extraerCuota(sinMax);
+  assert.equal(c.coeffA, 1.9, 'la cuota del proveedor sigue estando');
+  assert.equal(c.maxCoeffA, null);
+  assert.equal(c.probMaxA, null);
+  assert.equal(c.margenMax, null);
+});

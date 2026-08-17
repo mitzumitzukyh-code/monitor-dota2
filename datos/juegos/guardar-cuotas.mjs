@@ -29,6 +29,11 @@ export async function guardarCuotas(juegos, { fetchImpl, fetchImplSupabase } = {
     prob_a: c.probA,
     prob_b: c.probB,
     margen: c.margen,
+    max_coeff_a: c.maxCoeffA,
+    max_coeff_b: c.maxCoeffB,
+    prob_max_a: c.probMaxA,
+    prob_max_b: c.probMaxB,
+    margen_max: c.margenMax,
     inicio_programado: c.inicioProgramado,
     proveedor_id: c.proveedorId,
   }));
