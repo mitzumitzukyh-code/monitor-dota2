@@ -105,3 +105,25 @@ test('sólo se avisan los tiers que importan', () => {
   assert.ok(!TIERS_QUE_SE_AVISAN.has('c'));
   assert.ok(!TIERS_QUE_SE_AVISAN.has('d'));
 });
+
+// ---------------------------------------------------------------------------
+// Ventana de anticipación. LoL tenía 55 partidas de tier s/a pendientes a la
+// vez y el mensaje se truncaba (1.887 caracteres, con aviso de recorte).
+// ---------------------------------------------------------------------------
+test('un mensaje con 24 h de partidas cabe en el límite de Discord', () => {
+  const muchas = Array.from({ length: 12 }, (_, i) =>
+    pred({ match_id: i, inicio_programado: `2026-08-17T${String(12 + (i % 10)).padStart(2, '0')}:00:00Z` }),
+  );
+  const m = mensajePredicciones(muchas, nombre, 'lol', AHORA);
+  assert.ok(m.length < 1900, `el mensaje mide ${m.length}`);
+  assert.doesNotMatch(m, /recortado/);
+});
+
+test('con demasiadas partidas el mensaje avisa que se recortó, no corta a la mitad', () => {
+  const demasiadas = Array.from({ length: 90 }, (_, i) =>
+    pred({ match_id: i, equipo_a: 1, equipo_b: 2 }),
+  );
+  const m = mensajePredicciones(demasiadas, nombre, 'lol', AHORA);
+  assert.ok(m.length <= 1900);
+  assert.match(m, /recortado/, 'mejor un aviso claro que un renglón cortado por la mitad');
+});

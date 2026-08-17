@@ -77,6 +77,25 @@ export const COEFICIENTES = {
     escala: 200,
     glicko: { tau: 1.2, rdInicial: 200, volInicial: 0.06 },
   },
+  lol: {
+    // EMPATE TECNICO entre Elo y Glicko-2, medido sobre el 20% reciente que
+    // el barrido nunca vio: Elo 0.21326 contra Glicko-2 0.21365. Elo queda
+    // nominalmente adelante por 0.00039, pero el pareado da t = 1.47 con el
+    // intervalo conteniendo el cero -- o sea, ninguno le gana al otro.
+    //
+    // Se elige glicko2 porque, empatados en nota, es el que ya esta cableado
+    // en juez/vivo-esports.mjs y el unico que expresa incertidumbre, que es
+    // lo que los avisos de Discord traducen a palabras. NO se elige porque
+    // haya ganado: no gano.
+    //
+    // OJO, esto es lo contrario que en CS2, donde Glicko-2 SI le gana a Elo
+    // de forma concluyente (t = -4.31). Es la regla en accion: un juego no
+    // hereda la conclusion de otro.
+    motor: 'glicko2',
+    kFactor: 32,
+    escala: 200,
+    glicko: { tau: 0.2, rdInicial: 150, volInicial: 0.06 },
+  },
 };
 
 // El barrido dejó ver algo que conviene tener escrito: en Elo lo que manda es

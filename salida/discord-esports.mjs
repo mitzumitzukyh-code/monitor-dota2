@@ -19,6 +19,13 @@ import { agruparPorDia } from './formato.mjs';
 // anuncia.
 export const TIERS_QUE_SE_AVISAN = new Set(['s', 'a']);
 
+// Cuánto hacia adelante se anuncia. Discord corta a 2.000 caracteres, y LoL
+// tiene 55 partidas de tier s/a pendientes a la vez: en un solo mensaje se
+// truncaban (1.887 caracteres y con el aviso de recorte). Anunciar lo de las
+// próximas 24 h no es sólo por el límite -- es lo que de verdad sirve leer.
+// Lo de pasado mañana se anuncia mañana, en su propio mensaje.
+export const HORAS_DE_ANTICIPACION = 24;
+
 const NOMBRE_JUEGO = { cs2: 'CS2', lol: 'LoL', valorant: 'Valorant', dota2: 'Dota 2' };
 
 function limpiarVacios(lineas) {
@@ -161,13 +168,18 @@ export async function avisar(juego = 'cs2', { fetchImpl, fetchImplSupabase } = {
 
   // Sólo se anuncia lo que todavía no empezó: avisar de una partida en curso
   // no le sirve a nadie y encima invita a pensar que se predijo tarde.
-  const nuevasPredichas = todas.filter(
-    (p) => !p.avisado_prediccion_en && !p.resultado_real && deTier(p) && new Date(p.inicio_programado).getTime() > ahoraMs,
-  );
+  const limite = ahoraMs + HORAS_DE_ANTICIPACION * 3600 * 1000;
+  const nuevasPredichas = todas.filter((p) => {
+    if (p.avisado_prediccion_en || p.resultado_real || !deTier(p)) return false;
+    const arranca = new Date(p.inicio_programado).getTime();
+    // Ni lo que ya empezó (avisarlo no le sirve a nadie y hace pensar que se
+    // predijo tarde) ni lo que falta mucho: eso se avisa cuando se acerque.
+    return arranca > ahoraMs && arranca <= limite;
+  });
   const nuevasCalificadas = todas.filter((p) => p.resultado_real && !p.avisado_resultado_en && deTier(p));
 
   const idsEquipos = [...nuevasPredichas, ...nuevasCalificadas].flatMap((p) => [p.equipo_a, p.equipo_b]);
-  const nombres = idsEquipos.length ? await nombresDeEquipos(idsEquipos, { fetchImpl }) : new Map();
+  const nombres = idsEquipos.length ? await nombresDeEquipos(idsEquipos, { juego, fetchImpl }) : new Map();
   const nombre = (id) => nombres.get(id) ?? `#${id}`;
 
   const enviados = [];

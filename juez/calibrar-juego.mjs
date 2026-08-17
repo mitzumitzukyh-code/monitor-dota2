@@ -1,4 +1,4 @@
-// Fase 1 de CS2: calibrar los coeficientes de los dos motores y decidir cuál
+// Fase 1 de un juego: calibrar los coeficientes de los dos motores y decidir cuál
 // se queda (regla 4).
 //
 // POR QUÉ HAY SEPARACIÓN ENTRENAMIENTO / PRUEBA
@@ -12,7 +12,8 @@
 // Acá se parte el histórico por fecha: se calibra con lo viejo y se reporta
 // con lo nuevo, que el barrido nunca vio. Es la única cifra que vale.
 //
-//   node juez/calibrar-cs2.mjs
+//   node juez/calibrar-juego.mjs cs2
+//   node juez/calibrar-juego.mjs lol
 
 import { readFile } from 'node:fs/promises';
 import { probabilidadGanar as probElo } from '../motor/elo.mjs';
@@ -90,8 +91,9 @@ function pasadaGlicko(partidas, { tau, rdInicial }) {
   return { brier: suma / n, acierto: aciertos / n, n };
 }
 
+const juego = process.argv[2] ?? 'cs2';
 const partidas = JSON.parse(
-  await readFile(new URL('../datos/cache/historico-cs2.json', import.meta.url), 'utf8'),
+  await readFile(new URL(`../datos/cache/historico-${juego}.json`, import.meta.url), 'utf8'),
 ).sort((a, b) => a.inicio - b.inicio);
 
 // Corte cronológico 80/20. El 20% más reciente NO se toca hasta el final.
@@ -100,7 +102,7 @@ const entrenamiento = partidas.filter((p) => p.inicio < corte);
 const prueba = partidas.filter((p) => p.inicio >= corte);
 
 const fecha = (t) => new Date(t * 1000).toISOString().slice(0, 10);
-console.log(`CS2 · ${partidas.length} partidas`);
+console.log(`${juego.toUpperCase()} · ${partidas.length} partidas`);
 console.log(`  entrenamiento: ${entrenamiento.length}  (${fecha(partidas[0].inicio)} → ${fecha(corte)})`);
 console.log(`  prueba:        ${prueba.length}  (${fecha(corte)} → ${fecha(partidas[partidas.length - 1].inicio)})\n`);
 

@@ -176,14 +176,24 @@ export async function proximasPartidas(juego, { fetchImpl = fetchConReintentos, 
 // funciona es el listado con filtro `in`, que además trae todos los pedidos en
 // UNA petición en vez de una por equipo. La versión anterior de esta función
 // usaba el endpoint roto -- nunca llegó a usarse en producción.
-export async function nombresDeEquipos(ids, { fetchImpl = fetchConReintentos } = {}) {
+//
+// EL FILTRO DE DISCIPLINA NO ES OPCIONAL. Sin él, `/teams` asume CS2
+// (discipline_id 1) y devuelve VACÍO para cualquier otro juego -- no da error,
+// devuelve cero resultados. Verificado: los ids de LoL 17800 y 17142 salen
+// vacíos sin el filtro y resuelven a "Natus Vincere" y "Team Heretics" con él.
+// Los avisos de CS2 funcionaban por casualidad, porque CS2 es el default.
+export async function nombresDeEquipos(ids, { juego = 'cs2', fetchImpl = fetchConReintentos } = {}) {
+  const disciplinaId = DISCIPLINAS[juego];
+  if (!disciplinaId) throw new Error(`juego desconocido: ${juego}`);
+
   const nombres = new Map();
   const unicos = [...new Set(ids)].filter(Boolean);
 
   for (let i = 0; i < unicos.length; i += POR_PAGINA) {
     const lote = unicos.slice(i, i + POR_PAGINA);
     const datos = await pedir(
-      `${BASE}/teams?page[limit]=${POR_PAGINA}&filter[teams.id][in]=${lote.join(',')}`,
+      `${BASE}/teams?page[limit]=${POR_PAGINA}&filter[teams.discipline_id][eq]=${disciplinaId}` +
+        `&filter[teams.id][in]=${lote.join(',')}`,
       fetchImpl,
     );
     for (const t of datos.results ?? []) {
@@ -222,7 +232,7 @@ export async function proximasPartidasConNombres(juego, { fetchImpl = fetchConRe
     conNombre.push({ cruda, nombreA, nombreB });
   }
 
-  const nombres = await nombresDeEquipos([...idsSinNombre], { fetchImpl });
+  const nombres = await nombresDeEquipos([...idsSinNombre], { juego, fetchImpl });
 
   return conNombre.map(({ cruda, nombreA, nombreB }) => ({
     matchId: cruda.id,
