@@ -233,6 +233,7 @@ export async function predecirProximas(
       // partidas al día contando todos los tiers, y anunciarlas todas es
       // spam inservible. Sin esta columna habría que volver a pedirle a la
       // API algo que ya tuvimos en la mano.
+      torneo_id: p.torneoId,
       tier: p.tier,
       motor: cfg.motor,
       prob_a: probA,

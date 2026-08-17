@@ -25,7 +25,7 @@
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { seleccionar } from '../../datos/supabase.mjs';
-import { nombresDeEquipos } from '../../datos/juegos/bo3.mjs';
+import { nombresDeEquipos, nombresDeTorneos } from '../../datos/juegos/bo3.mjs';
 import { enVenezuela, hora12 } from '../formato.mjs';
 
 // Mismo criterio que salida/resumen-global.mjs: los Brier de Dota y los de
@@ -113,7 +113,7 @@ function filaPartida(p) {
     <div class="trow">
       <div class="t-cell">
         <div class="ttile">${logo(p.def.corto, p.def.color, 18)}</div>
-        <div><div class="t-name">${esc(p.def.nombre)}</div><div class="t-sub">${esc(p.tier ? 'TIER ' + String(p.tier).toUpperCase() : p.formato ?? '')}</div></div>
+        <div><div class="t-name">${esc(p.torneo ?? p.def.nombre)}</div><div class="t-sub">${esc(p.def.nombre)}${p.tier ? ' · TIER ' + String(p.tier).toUpperCase() : ''}</div></div>
       </div>
       <div class="match">
         <span class="tm" style="background:${p.def.color}">${esc(String(p.nombreA).slice(0, 3).toUpperCase())}</span>
@@ -413,6 +413,7 @@ export async function reunirDatos({ fetchImpl, fetchImplSupabase } = {}) {
           resultadoReal: p.resultado_real,
           acerto: (favA ? 'ganaA' : 'ganaB') === p.resultado_real,
           formato: s.formato,
+          torneo: s.league_name ?? null,
           tier: null,
           cuota: null,
         });
@@ -449,6 +450,7 @@ export async function reunirDatos({ fetchImpl, fetchImplSupabase } = {}) {
         resultadoReal: p.resultado_real,
         acerto: favA === (p.resultado_real === 'ganaA'),
         formato: p.formato,
+        torneoId: p.torneo_id,
         tier: p.tier,
         // La mejor del mercado si está; si no, la del proveedor.
         cuota: c ? Number(c.max_coeff_a ?? c.coeff_a) : null,
@@ -470,6 +472,12 @@ export async function reunirDatos({ fetchImpl, fetchImplSupabase } = {}) {
       p.nombreA = nombres.get(p.equipoA) ?? `#${p.equipoA}`;
       p.nombreB = nombres.get(p.equipoB) ?? `#${p.equipoB}`;
     }
+
+    // El torneo se resuelve por id, en una petición por juego. Se guarda el id
+    // y no el nombre para no congelarlo ni duplicarlo (ver
+    // sql/migracion-torneo.sql).
+    const torneos = await nombresDeTorneos(suyas.map((p) => p.torneoId), { juego: def.clave, fetchImpl });
+    for (const p of suyas) p.torneo = torneos.get(p.torneoId) ?? null;
   }
 
   recientes.sort((a, b) => new Date(b.inicio) - new Date(a.inicio));

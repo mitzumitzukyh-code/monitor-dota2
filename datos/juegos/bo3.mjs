@@ -205,6 +205,39 @@ export async function nombresDeEquipos(ids, { juego = 'cs2', fetchImpl = fetchCo
   return nombres;
 }
 
+// Nombres de torneo. MISMA trampa que nombresDeEquipos: el endpoint está
+// acotado por disciplina. Verificado el 2026-08-17 -- pidiendo
+// [5958 (CS2), 5134 (Dota)] sin el filtro devuelve UNO SOLO, el de CS2, y el
+// otro desaparece sin error ni aviso.
+//
+// Van cuatro veces que esta API muerde con lo mismo: /teams, /matches como
+// listado, /matches por id, y ahora /tournaments. Regla para la próxima: en
+// bo3.gg, TODO endpoint lleva filtro de disciplina, aunque preguntes por
+// clave primaria.
+export async function nombresDeTorneos(ids, { juego = 'cs2', fetchImpl = fetchConReintentos } = {}) {
+  const disciplinaId = DISCIPLINAS[juego];
+  if (!disciplinaId) throw new Error(`juego desconocido: ${juego}`);
+
+  const nombres = new Map();
+  const unicos = [...new Set(ids)].filter(Boolean);
+
+  for (let i = 0; i < unicos.length; i += POR_PAGINA) {
+    const lote = unicos.slice(i, i + POR_PAGINA);
+    const datos = await pedir(
+      `${BASE}/tournaments?page[limit]=${POR_PAGINA}&filter[tournaments.discipline_id][eq]=${disciplinaId}` +
+        `&filter[tournaments.id][in]=${lote.join(',')}`,
+      fetchImpl,
+    );
+    for (const t of datos.results ?? []) {
+      const nombre = t?.name ?? t?.slug;
+      if (t?.id && nombre) nombres.set(t.id, nombre);
+    }
+    if (i + POR_PAGINA < unicos.length) await espera(MS_ENTRE_PETICIONES);
+  }
+
+  return nombres;
+}
+
 // Partidas futuras CON nombre de equipo. El /matches no trae el nombre de los
 // equipos en el cuerpo (solo id); los trae en `bet_updates`, que puede faltar
 // (verificado: un partido con equipos TBD venía con bet_updates: null). Para
