@@ -168,6 +168,13 @@ jobs:
         if: always()
         run: node salida/web/generar.mjs
 
+      # Resumen diario de los tres juegos. Se protege solo: lleva marcado en
+      # eslo_estado si ya salió hoy (día de Venezuela), así que correr cada 10
+      # minutos no lo repite.
+      - name: Resumen diario de los tres juegos
+        if: always()
+        run: node salida/resumen-global.mjs
+
       # Aviso de fallo. Sin esto, una corrida rota se descubre por casualidad
       # días después: GitHub manda correo, pero se pierde entre el resto.
       # Va a Discord, que es donde el dueño ya mira.
