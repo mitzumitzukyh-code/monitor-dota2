@@ -165,7 +165,7 @@ export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerz
   // La grilla se arma de las series REALES del torneo, no de las predichas:
   // hay series de TI que el sistema nunca llegó a predecir y aun así cuentan
   // para la posición.
-  const g = grillaDePosiciones(seriesLiga, nombre, { destacados });
+  const g = grillaDePosiciones(seriesLiga, nombre, { destacados, pendientes });
   const grilla = {
     ...g,
     derecha: `${seriesLiga.length} ${seriesLiga.length === 1 ? 'SERIE' : 'SERIES'} JUGADAS EN TI2026`,

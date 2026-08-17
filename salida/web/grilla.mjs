@@ -139,8 +139,37 @@ export function grillaSuiza(series, nombre, { destacados = new Set() } = {}) {
 // datos reales -- se dibuja de las series posteriores a INICIO_MAIN_EVENT
 // agrupándolas por ronda cronológica. Cuando arranquen los cruces reales hay
 // que mirarlo y corregir, no darlo por bueno.
-export function grillaLlave(series, nombre) {
-  const playoff = series.filter((s) => s.startTime >= INICIO_MAIN_EVENT).sort((a, b) => a.startTime - b.startTime);
+export function grillaLlave(series, nombre, { pendientes = [] } = {}) {
+  const jugadas = series
+    .filter((s) => s.startTime >= INICIO_MAIN_EVENT)
+    .map((s) => ({
+      inicio: s.startTime,
+      equipoA: s.equipoA,
+      equipoB: s.equipoB,
+      victoriasA: s.victoriasA,
+      victoriasB: s.victoriasB,
+      jugada: true,
+    }));
+
+  // Las que todavía no se juegan importan MÁS que las jugadas: el 20 de
+  // agosto, cuando arranca el Main Event, no habrá ni una serie terminada y
+  // la llave saldría vacía justo el día que interesa. Verificado contra el
+  // calendario real: los 4 cruces de la primera ronda ya están publicados.
+  const porJugar = pendientes
+    .filter((p) => {
+      const t = Math.floor(new Date(p.start_time).getTime() / 1000);
+      return Number.isFinite(t) && t >= INICIO_MAIN_EVENT;
+    })
+    .map((p) => ({
+      inicio: Math.floor(new Date(p.start_time).getTime() / 1000),
+      equipoA: p.equipo_a,
+      equipoB: p.equipo_b,
+      probA: p.prob_gana_a == null ? null : Number(p.prob_gana_a),
+      probB: p.prob_gana_b == null ? null : Number(p.prob_gana_b),
+      jugada: false,
+    }));
+
+  const playoff = [...jugadas, ...porJugar].sort((a, b) => a.inicio - b.inicio);
 
   if (playoff.length === 0) {
     return `
@@ -154,7 +183,7 @@ export function grillaLlave(series, nombre) {
   // puede hacer sin etiqueta de ronda en la fuente.
   const porDia = new Map();
   for (const s of playoff) {
-    const dia = new Date(s.startTime * 1000).toISOString().slice(0, 10);
+    const dia = new Date(s.inicio * 1000).toISOString().slice(0, 10);
     if (!porDia.has(dia)) porDia.set(dia, []);
     porDia.get(dia).push(s);
   }
@@ -163,19 +192,30 @@ export function grillaLlave(series, nombre) {
     .map(([dia, lista], i) => {
       const cruces = lista
         .map((s) => {
-          const ganoA = s.victoriasA > s.victoriasB;
-          const linea = (id, gano, v) => `
+          // En una serie ya jugada el ganador va resaltado y se muestra el
+          // marcador. En una por jugar no hay ganador todavía: se muestra la
+          // probabilidad, y NO se resalta a nadie -- pintar al favorito como
+          // si ya hubiera ganado es exactamente lo que no se debe hacer.
+          const ganoA = s.jugada ? s.victoriasA > s.victoriasB : null;
+          const linea = (id, gano, derecha) => `
             <div style="display:flex; justify-content:space-between; gap:8px; padding:6px 10px; ${
-              gano ? 'color:#f3f2f2; font-weight:600;' : 'color:#8a8481;'
+              gano === true ? 'color:#f3f2f2; font-weight:600;' : gano === false ? 'color:#8a8481;' : 'color:#d8d5d4;'
             }">
               <span style="font-size:12px;">${esc(nombre(id))}</span>
-              <span style="font-family:'IBM Plex Mono',monospace; font-size:12px;">${v}</span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:12px;">${esc(derecha)}</span>
             </div>`;
+
+          const pct = (p) => (p == null ? '—' : `${Math.round(p * 100)}%`);
+          const derA = s.jugada ? String(s.victoriasA) : pct(s.probA);
+          const derB = s.jugada ? String(s.victoriasB) : pct(s.probB);
+
           return `
-          <div style="border:1px solid rgba(243,242,242,0.22); border-radius:8px; overflow:hidden; margin-bottom:12px;">
-            ${linea(s.equipoA, ganoA, s.victoriasA)}
+          <div style="border:1px solid rgba(243,242,242,${s.jugada ? '0.22' : '0.14'}); border-radius:8px; overflow:hidden; margin-bottom:12px; ${
+            s.jugada ? '' : 'border-style:dashed;'
+          }">
+            ${linea(s.equipoA, s.jugada ? ganoA : null, derA)}
             <div style="height:1px; background:rgba(243,242,242,0.12);"></div>
-            ${linea(s.equipoB, !ganoA, s.victoriasB)}
+            ${linea(s.equipoB, s.jugada ? !ganoA : null, derB)}
           </div>`;
         })
         .join('');
@@ -201,8 +241,20 @@ export function grillaLlave(series, nombre) {
 
 // Decide qué dibujar. Mientras no haya ni una serie de playoff, manda el suizo.
 export function grillaDePosiciones(series, nombre, opciones = {}) {
-  const hayPlayoff = series.some((s) => s.startTime >= INICIO_MAIN_EVENT);
-  return hayPlayoff
-    ? { titulo: 'LLAVE DEL MAIN EVENT', html: grillaLlave(series, nombre) }
+  const { pendientes = [] } = opciones;
+
+  // El cambio de vista mira TAMBIÉN lo pendiente, no sólo lo jugado. Si sólo
+  // mirara lo jugado, el 20 de agosto —cuando el Main Event ya arrancó pero
+  // ninguna serie terminó— el panel seguiría mostrando el suizo, que a esa
+  // altura ya no dice nada. Verificado contra el calendario real: los 4
+  // cruces del 20 están publicados desde días antes.
+  const hayPlayoffJugado = series.some((s) => s.startTime >= INICIO_MAIN_EVENT);
+  const hayPlayoffPorJugar = pendientes.some((p) => {
+    const t = Math.floor(new Date(p.start_time).getTime() / 1000);
+    return Number.isFinite(t) && t >= INICIO_MAIN_EVENT;
+  });
+
+  return hayPlayoffJugado || hayPlayoffPorJugar
+    ? { titulo: 'LLAVE DEL MAIN EVENT', html: grillaLlave(series, nombre, { pendientes }) }
     : { titulo: 'GRILLA DEL SUIZO', html: grillaSuiza(series, nombre, opciones) };
 }
