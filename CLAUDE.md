@@ -439,13 +439,41 @@ Esto es el destino, **no lo que hay hoy**. Nada de esta sección se escribe
 hasta que se cumpla la condición de arriba de cada punto.
 
 - **Avisos por Telegram (API de bot, a un canal).** Reemplaza o acompaña a
-  Discord. Discord fue la elección de arranque porque el webhook es una sola
-  petición sin registro; Telegram implica crear el bot, guardar el token en
-  `.env` y manejar el `chat_id` del canal. `salida/discord.mjs` ya está
-  partido en "armar el mensaje" (funciones puras) y "enviarlo" (una sola
-  función que toca la red), justamente para que cambiar de destino sea tocar
-  lo segundo y no lo primero.
+  Discord.
   **Condición:** que el sistema haya pasado las pruebas reales.
+
+  **Cómo funciona** (verificado contra la documentación oficial, 2026-08-17):
+  el token sale de `@BotFather` y se envía con
+  `POST https://api.telegram.org/bot<TOKEN>/sendMessage`, con `chat_id`
+  (el `@nombre` del canal público, o un número negativo si es privado) y
+  `text`.
+
+  Dos ventajas concretas sobre Discord:
+  - **Un token, muchos destinos.** Hoy hacen falta dos secretos
+    (`DISCORD_WEBHOOK` y `DISCORD_WEBHOOK_ERRORES`) porque cada canal necesita
+    su URL. Con Telegram es un token y varios `chat_id`; agregar un canal por
+    juego no cuesta un secreto nuevo.
+  - **Límite de 4.096 caracteres**, no 2.000. La ventana de 24 h que se puso
+    en `discord-esports.mjs` existe porque el mensaje de LoL se truncaba; en
+    Telegram no habría hecho falta.
+
+  **El costo real NO es reescribir `enviar()`.** Eso se dijo antes y era
+  incompleto. Las funciones que arman el mensaje son puras y no cambian, pero
+  el **formato sí**: Discord usa `**negrita**`; Telegram MarkdownV2 usa
+  `*negrita*` y obliga a escapar `_ * [ ] ( ) ~ > # + - = | { } . !`. Los
+  mensajes actuales están llenos de puntos, guiones y paréntesis
+  (`2–0`, `0.4183`, `(le dábamos 70%)`), y los nombres de equipo vienen de
+  terceros, así que pueden traer cualquier cosa. Sin escapar, Telegram
+  responde 400.
+  **Camino más corto: `parse_mode: "HTML"`**, que sólo obliga a escapar
+  `<`, `>` y `&` — exactamente lo que `esc()` del panel web ya hace.
+
+  **Para cobrar: Telegram Stars.** Suscripciones con renovación automática;
+  Telegram cobra y gestiona el acceso, así que no hay que escribir nada de
+  pagos. Ojo con dónde queda el dinero: si la suscripción es **al canal**, las
+  Stars van al balance del canal; si es **vía bot**, al balance del bot.
+  (Enviar más de 30 mensajes por segundo cuesta 0,1 Stars cada uno con
+  `allow_paid_broadcast` — con el volumen actual, irrelevante.)
 
 - **Monetizar la información: análisis de partidas y prestaciones.**
   Implica lo que hoy está prohibido — cuentas, cobro, multiusuario.
