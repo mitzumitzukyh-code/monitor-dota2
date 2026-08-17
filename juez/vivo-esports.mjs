@@ -251,6 +251,9 @@ export async function predecirProximas(
 // --- 3. calificar lo que terminó ---------------------------------------------
 
 export async function calificarTerminadas(juego, { fetchImpl = fetchConReintentos, fetchImplSupabase } = {}) {
+  const disciplinaId = DISCIPLINAS[juego];
+  if (!disciplinaId) throw new Error(`juego desconocido: ${juego}`);
+
   const pendientes = await seleccionar(
     'eslo_predicciones',
     `?select=*&juego=eq.${juego}&resultado_real=is.null&order=inicio_programado.asc&limit=100`,
@@ -265,8 +268,16 @@ export async function calificarTerminadas(juego, { fetchImpl = fetchConReintento
   // cuya partida terminó hace 4 días no se calificaba NUNCA. Y como la cola de
   // pendientes se ordena por fecha ascendente, esas viejas taponaban el frente
   // y bloqueaban también a las nuevas. El fallo se agravaba solo.
+  // EL FILTRO DE DISCIPLINA NO ES OPCIONAL, ni siquiera pidiendo por id.
+  // `/matches?filter[matches.id][in]=` está acotado a CS2 por defecto: pedir
+  // un id de LoL sin él devuelve CERO resultados, sin error. Sin esto las
+  // predicciones de LoL no se calificaban NUNCA -- 87 de 139 no volvían.
+  // Es el mismo comportamiento de `/teams`, ya documentado: en esta API, el
+  // default de disciplina se aplica aunque preguntes por clave primaria.
   const ids = pendientes.map((p) => p.match_id);
-  const url = `${BASE}/matches?page[limit]=${POR_PAGINA}&filter[matches.id][in]=${ids.join(',')}`;
+  const url =
+    `${BASE}/matches?page[limit]=${POR_PAGINA}&filter[matches.discipline_id][eq]=${disciplinaId}` +
+    `&filter[matches.id][in]=${ids.join(',')}`;
   const datos = await pedir(url, fetchImpl);
   const terminadas = new Map(
     (datos.results ?? [])

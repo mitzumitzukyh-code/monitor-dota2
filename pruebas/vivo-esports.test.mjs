@@ -324,3 +324,38 @@ test('sincronizarRatings: no reaplica la última partida ya aplicada', async () 
   assert.equal(r.aplicadas, 0, 'aplicarla dos veces corrompería el rating');
   assert.equal(escrituras.length, 0);
 });
+
+// El bug mas caro de la revision del 2026-08-17: `/matches` esta acotado a CS2
+// por defecto INCLUSO pidiendo por id. Un id de LoL sin el filtro devuelve
+// cero resultados, sin error. Las 87 predicciones de LoL no se habrian
+// calificado nunca.
+test('calificarTerminadas: pide con filtro de DISCIPLINA, o LoL nunca se califica', async () => {
+  let urlPedida = null;
+  const bo3 = async (url) => {
+    urlPedida = String(url);
+    return respuesta({ results: [] });
+  };
+  const { fetchImpl } = supabaseFalso({
+    eslo_predicciones: [{ match_id: 555, juego: 'lol', equipo_a: 1, equipo_b: 2, prob_a: 0.6, resultado_real: null }],
+  });
+
+  await calificarTerminadas('lol', { fetchImpl: bo3, fetchImplSupabase: fetchImpl });
+
+  assert.match(urlPedida, /filter\[matches\.discipline_id\]\[eq\]=3/, 'LoL es discipline_id 3');
+  assert.match(urlPedida, /filter\[matches\.id\]\[in\]=555/);
+});
+
+test('calificarTerminadas: cada juego pide con SU disciplina', async () => {
+  for (const [juego, disc] of [['cs2', 1], ['lol', 3]]) {
+    let url = null;
+    const bo3 = async (u) => ((url = String(u)), respuesta({ results: [] }));
+    const { fetchImpl } = supabaseFalso({
+      eslo_predicciones: [{ match_id: 1, juego, equipo_a: 1, equipo_b: 2, prob_a: 0.5, resultado_real: null }],
+    });
+    await calificarTerminadas(juego, { fetchImpl: bo3, fetchImplSupabase: fetchImpl });
+    assert.ok(
+      url.includes('filter[matches.discipline_id][eq]=' + disc),
+      juego + ' deberia pedir con disciplina ' + disc + ', pidio: ' + url,
+    );
+  }
+});
