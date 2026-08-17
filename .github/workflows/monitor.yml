@@ -133,17 +133,17 @@ jobs:
       # 0.5 Ciclo de CS2 (Glicko-2 calibrado, Fase 1 cerrada el 2026-08-15).
       #     Independiente del de Dota a propósito: usa bo3.gg, no OpenDota, así
       #     que una caída de uno no arrastra al otro.
-      - name: Ciclo CS2 y LoL
+      - name: Ciclo CS2, LoL y Valorant
         if: always()
-        run: node juez/vivo-esports.mjs cs2 lol
+        run: node juez/vivo-esports.mjs cs2 lol valorant
 
       # Avisos de CS2. Va después del ciclo para que anuncie lo que ese mismo
       # paso acaba de predecir o calificar. Sólo tiers s y a: CS2 mueve ~34
       # partidas al día contando todos, y de las 51 predichas hoy sólo 8 eran
       # tier s -- el resto sería ruido.
-      - name: Avisar CS2 y LoL por Discord
+      - name: Avisar CS2, LoL y Valorant por Discord
         if: always()
-        run: node salida/discord-esports.mjs cs2 lol
+        run: node salida/discord-esports.mjs cs2 lol valorant
 
       # 1. Predecir las series que todavía no empezaron. Es el paso que más
       #    urge de los de Dota: si se pierde, la predicción no se recupera.

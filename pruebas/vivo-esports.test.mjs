@@ -198,7 +198,8 @@ test('calificarTerminadas: no toca una predicción cuya partida aún no terminó
 // ---------------------------------------------------------------------------
 test('un juego sin coeficientes calibrados falla explícito, no en silencio', async () => {
   await assert.rejects(
-    () => predecirProximas('valorant', { fetchImpl: async () => respuesta({ results: [] }) }),
+    // r6siege esta en DISCIPLINAS pero NO en COEFICIENTES: no paso Fase 1.
+    () => predecirProximas('r6siege', { fetchImpl: async () => respuesta({ results: [] }) }),
     /no tiene coeficientes calibrados/,
   );
 });

@@ -96,6 +96,21 @@ export const COEFICIENTES = {
     escala: 200,
     glicko: { tau: 0.2, rdInicial: 150, volInicial: 0.06 },
   },
+  valorant: {
+    // EMPATE, y el más parejo de los cuatro: dif 0.000317, t = 0.24, IC95
+    // [-0.002316, +0.002951]. Elo queda nominalmente adelante por 0.00032,
+    // que es ruido puro.
+    //
+    // Igual que en LoL, se elige glicko2 por estar ya cableado y por expresar
+    // incertidumbre, NO porque haya ganado. No ganó.
+    //
+    // Contra la base ingenua sí gana: 0.23178 contra 0.25000, un -7.3%. Eso es
+    // lo que le da el pase a Fase 3 (regla 4), no el duelo entre motores.
+    motor: 'glicko2',
+    kFactor: 40,
+    escala: 300,
+    glicko: { tau: 1.2, rdInicial: 150, volInicial: 0.06 },
+  },
 };
 
 // El barrido dejó ver algo que conviene tener escrito: en Elo lo que manda es

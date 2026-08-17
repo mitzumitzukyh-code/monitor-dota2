@@ -29,10 +29,16 @@ const BASE_DOTA = { bo1: 0.5, bo2: 2 / 3, bo3: 0.5, bo5: 0.5 };
 // CS2 y LoL predicen a una sola cara: la base de un 50-50 es (0.5-1)² = 0.25.
 const BASE_ESLO = 0.25;
 
-// Debajo de esta cantidad de partidas calificadas, cualquier número es ruido.
-// No es un umbral estadístico fino: es el punto por debajo del cual mostrar un
-// Brier sin advertencia sería engañar.
-const MINIMO_PARA_OPINAR = 30;
+// Cuántas partidas calificadas hace falta EN UN JUEGO para que su número
+// signifique algo. Sale del cálculo real hecho el 2026-08-15 sobre el tamaño
+// de efecto observado: con la diferencia que se ve contra la base ingenua,
+// hacen falta ~275 para que el intervalo de confianza deje de contener a la
+// base.
+//
+// Es POR JUEGO, no en total. Sumar los cuatro y decir "ya llegamos" sería el
+// truco más fácil de hacerse trampa: 30 partidas repartidas entre cuatro
+// juegos no son 30 de nada.
+const MINIMO_POR_JUEGO = 275;
 
 function fila(nombre, predichas, calificadas) {
   const n = calificadas.length;
@@ -74,19 +80,27 @@ export function mensajeResumenGlobal(filas, { ahora = new Date() } = {}) {
     );
   });
 
-  const partes = ['📊 **Cómo vamos** — los tres juegos', '', '```', cab, ...cuerpo, '```'];
+  const partes = [`📊 **Cómo vamos** — ${filas.length} juegos`, '', '```', cab, ...cuerpo, '```'];
 
   // La advertencia no es adorno: con muestras chicas el número parece decir
-  // algo y no dice nada. Va SIEMPRE que la muestra no alcance, y va arriba de
-  // cualquier lectura optimista.
-  if (totalCalificadas < MINIMO_PARA_OPINAR) {
+  // algo y no dice nada. Va SIEMPRE que ningún juego llegue solo al mínimo, y
+  // va ARRIBA de cualquier lectura optimista.
+  const maduros = conDatos.filter((f) => f.n >= MINIMO_POR_JUEGO);
+
+  if (maduros.length === 0) {
+    const mejor = conDatos.reduce((m, f) => (f.n > (m?.n ?? -1) ? f : m), null);
+    const falta = mejor ? MINIMO_POR_JUEGO - mejor.n : MINIMO_POR_JUEGO;
     partes.push(
-      `⚠️ Con **${totalCalificadas} partidas calificadas** en total, estos números todavía **no dicen nada**. ` +
-        `Hacen falta cientos para saber si el motor sirve.`,
+      `⚠️ **Ningún juego tiene muestra suficiente todavía.** ` +
+        `El que más lleva es **${mejor?.nombre ?? '—'}** con **${mejor?.n ?? 0}**, y le faltan **${falta}** ` +
+        `para que su número signifique algo. Total acumulado: ${totalCalificadas}.`,
     );
   } else {
-    const mejores = conDatos.filter((f) => f.vsBase < 0).length;
-    partes.push(`${mejores} de ${conDatos.length} juegos van mejor que su base ingenua.`);
+    const mejores = maduros.filter((f) => f.vsBase < 0).length;
+    partes.push(
+      `${mejores} de ${maduros.length} juegos **con muestra suficiente** van mejor que su base ingenua.` +
+        (maduros.length < conDatos.length ? ' Los demás siguen sin muestra.' : ''),
+    );
   }
 
   partes.push('');
@@ -131,14 +145,18 @@ export async function reunirFilas({ fetchImplSupabase } = {}) {
         (Number(p.prob_gana_a) >= Number(p.prob_gana_b) ? 'ganaA' : 'ganaB') === p.resultado_real,
     }));
 
-  const cs2 = deEslo('cs2');
-  const lol = deEslo('lol');
+  // Los juegos de bo3.gg salen de esta lista: agregar uno nuevo es una línea,
+  // no tocar la función.
+  const deBo3 = [
+    ['CS2', 'cs2'],
+    ['LoL', 'lol'],
+    ['Valorant', 'valorant'],
+  ].map(([nombre, juego]) => {
+    const d = deEslo(juego);
+    return fila(nombre, d.predichas, d.calificadas);
+  });
 
-  return [
-    fila('CS2', cs2.predichas, cs2.calificadas),
-    fila('LoL', lol.predichas, lol.calificadas),
-    fila('Dota 2', dotaPred.length, dotaCalificadas),
-  ];
+  return [...deBo3, fila('Dota 2', dotaPred.length, dotaCalificadas)];
 }
 
 export async function enviarResumenGlobal({ fetchImpl, fetchImplSupabase } = {}) {

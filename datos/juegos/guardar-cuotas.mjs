@@ -45,7 +45,7 @@ export async function guardarCuotas(juegos, { fetchImpl, fetchImplSupabase } = {
 const esEjecutadoDirectamente = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (esEjecutadoDirectamente) {
   const pedidos = process.argv.slice(2);
-  const juegos = pedidos.length ? pedidos : ['cs2', 'lol', 'dota2'];
+  const juegos = pedidos.length ? pedidos : ['cs2', 'lol', 'valorant', 'dota2'];
 
   const desconocidos = juegos.filter((j) => !DISCIPLINAS[j]);
   if (desconocidos.length) {

@@ -51,18 +51,30 @@ test('el porcentaje vs base invierte la lectura ingenua de los Brier crudos', ()
   assert.ok(dota < cs2, 'pero contra su base, Dota va mejor');
 });
 
-test('con muestra chica avisa que los números no dicen nada', () => {
+test('con muestra chica avisa, y dice cuánto falta', () => {
   const m = mensajeResumenGlobal([
     { nombre: 'CS2', predichas: 60, n: 4, brier: 0.2, base: 0.25, vsBase: -0.2, aciertos: 3 },
   ]);
-  assert.match(m, /no dicen nada/);
-  assert.match(m, /4 partidas calificadas/);
+  assert.match(m, /Ningún juego tiene muestra suficiente/);
+  assert.match(m, /CS2/);
+  assert.match(m, /271/, 'le faltan 275 - 4');
+});
+
+// El truco mas facil de hacerse trampa: sumar los cuatro juegos y decir que
+// ya hay muestra. 30 partidas repartidas entre cuatro no son 30 de nada.
+test('NO da por buena la muestra sumando juegos distintos', () => {
+  const m = mensajeResumenGlobal([
+    { nombre: 'CS2', predichas: 200, n: 100, brier: 0.22, base: 0.25, vsBase: -0.12, aciertos: 60 },
+    { nombre: 'LoL', predichas: 200, n: 100, brier: 0.22, base: 0.25, vsBase: -0.12, aciertos: 60 },
+    { nombre: 'Valorant', predichas: 200, n: 100, brier: 0.22, base: 0.25, vsBase: -0.12, aciertos: 60 },
+  ]);
+  assert.match(m, /Ningún juego tiene muestra suficiente/, '300 en total pero 100 por juego: no alcanza');
 });
 
 test('con muestra suficiente cambia el aviso por un resumen', () => {
   const m = mensajeResumenGlobal([
-    { nombre: 'CS2', predichas: 200, n: 120, brier: 0.22, base: 0.25, vsBase: -0.12, aciertos: 80 },
-    { nombre: 'LoL', predichas: 200, n: 100, brier: 0.27, base: 0.25, vsBase: 0.08, aciertos: 50 },
+    { nombre: 'CS2', predichas: 600, n: 300, brier: 0.22, base: 0.25, vsBase: -0.12, aciertos: 190 },
+    { nombre: 'LoL', predichas: 600, n: 300, brier: 0.27, base: 0.25, vsBase: 0.08, aciertos: 150 },
   ]);
   assert.doesNotMatch(m, /no dicen nada/);
   assert.match(m, /1 de 2 juegos/);

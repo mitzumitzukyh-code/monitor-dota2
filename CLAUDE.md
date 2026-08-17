@@ -314,10 +314,17 @@ partida, que es donde los dos motores actualizan.
 | **CS2** | 12.447 | 0.22273 | **0.22057** | −4.31 | **Glicko-2 gana** |
 | **Dota 2** | 2.318 | 0.23074 | 0.22921 | −1.89 | empate |
 | **LoL** | 2.444 | **0.21259** | 0.21490 | +1.47 | empate |
+| **Valorant** | 2.350 | **0.23178** | 0.23209 | +0.24 | empate |
 
-Base ingenua en los tres: 0.25000.
+Base ingenua: 0.25000 para CS2, LoL y Valorant (una sola clase). Dota puntúa
+sobre tres clases, así que la suya es 0.50 — **sus Brier no son comparables
+con los otros tres**, ver `salida/resumen-global.mjs`.
 
-**Sólo en CS2 hay un ganador.** En Dota y LoL el intervalo contiene el cero,
+Contra su propia base, de mejor a peor: LoL −15%, CS2 −11.8%, Valorant −7.3%,
+Dota −7.7%.
+
+**Sólo en CS2 hay un ganador.** En Dota, LoL y Valorant el intervalo contiene
+el cero,
 así que ninguno le gana al otro — y por la regla 4, lo nuevo que no se gana el
 puesto no entra: **Dota se queda en Elo**. Está cerca (t = −1.89, casi al
 borde), pero "casi" no es haberlo ganado.
