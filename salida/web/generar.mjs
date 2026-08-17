@@ -423,7 +423,7 @@ export function construirFicha({ serie, nombre, p, marcadores, ratingA, ratingB,
 
   const contenido = `  <div style="display: flex; align-items: stretch; justify-content: space-between; flex-wrap: wrap; border-bottom: 2px solid rgba(243,242,242,0.45); padding: 0 24px;">
     <div style="display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 14px 0;">
-      <a href="index.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em;">← PANEL</a>
+      <a href="dota.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em;">← PANEL DE DOTA</a>
       <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9b9797;">FICHA DE SERIE · ${esc(serie.formato.toUpperCase())} · ${esc(fechaYHora(serie.start_time))} VET</span>
       ${calificada ? '' : `<span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.12em; padding: 3px 8px; background: #ff563c; color: #171615;">SIN JUGAR</span>`}
     </div>
@@ -568,8 +568,16 @@ async function main() {
     }
   }
 
+  // El panel principal (index.html) lo genera salida/web/dashboard.mjs, que es
+  // multijuego. Este archivo se quedó con lo que sigue siendo suyo: las FICHAS
+  // por serie de Dota, que necesitan reconstruir los ratings al momento de la
+  // predicción y no tienen equivalente en los otros juegos.
+  //
+  // El panel viejo se guarda como dota.html: sigue teniendo cosas que el
+  // dashboard nuevo no muestra (fuerzas Elo de los 16, grilla del suizo, llave
+  // del Main Event) y las fichas enlazan a él.
   const html = construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn, seriesLiga, destacados });
-  const destino = new URL('./index.html', import.meta.url);
+  const destino = new URL('./dota.html', import.meta.url);
   await writeFile(destino, html);
 
   // Una ficha por serie, calificada o pendiente. Los ratings se reconstruyen

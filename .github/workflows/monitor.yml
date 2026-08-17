@@ -164,9 +164,16 @@ jobs:
         run: node salida/discord.mjs
 
       # 4. Regenerar el panel y publicarlo en GitHub Pages.
-      - name: Generar el panel
+      # Dos panels: dashboard.mjs hace el principal (index.html, multijuego,
+      # diseno nuevo) y generar.mjs las fichas por serie de Dota mas su panel
+      # de detalle (dota.html), que tiene la grilla del suizo y la llave.
+      - name: Generar el panel de Dota y las fichas
         if: always()
         run: node salida/web/generar.mjs
+
+      - name: Generar el panel principal
+        if: always()
+        run: node salida/web/dashboard.mjs
 
       # Resumen diario de los tres juegos. Se protege solo: lleva marcado en
       # eslo_estado si ya salió hoy (día de Venezuela), así que correr cada 10

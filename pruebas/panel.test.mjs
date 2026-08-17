@@ -126,7 +126,9 @@ test('construirFicha: los marcadores de la ficha son consistentes con la predicc
   assert.ok(html.includes('2–1'), 'debe mostrar el marcador real');
   assert.ok(html.includes('◇ FALLO'), 'el favorito era Falcons y perdió -> fallo');
   assert.ok(html.includes('1.5379'), 'debe mostrar el brier de la serie');
-  assert.ok(html.includes('href="index.html"'), 'debe tener vuelta al panel');
+  // index.html paso a ser el dashboard multijuego (salida/web/dashboard.mjs);
+  // el panel de detalle de Dota, al que vuelven las fichas, es dota.html.
+  assert.ok(html.includes('href="dota.html"'), 'debe volver al panel de Dota');
   assert.ok(html.startsWith('<!DOCTYPE html>'));
 });
 
