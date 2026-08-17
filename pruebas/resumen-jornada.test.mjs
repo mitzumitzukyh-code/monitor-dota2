@@ -94,9 +94,28 @@ test('mensajeResumenDia() pinta la tabla y marca solo a los que jugaron', () => 
   const msg = mensajeResumenDia(calificadas, nombre, tabla);
 
   assert.match(msg, /Tabla del TI/);
-  assert.match(msg, /›\s+\d+\.\s+Team Spirit/); // jugó: marcado
-  // Sin marca: la línea arranca con espacios, nunca con ›.
-  assert.match(msg, /\n {2,}\d+\. +Iron Wing/);
+  // Formato agrupado por récord: "1-0 │ Team Spirit›, Iron Wing".
+  assert.match(msg, /1-0\s*│/, 'los equipos van agrupados por su récord');
+  assert.match(msg, /Team Spirit›/, 'el que jugó esta jornada lleva la marca ›');
+  assert.match(msg, /Iron Wing(?!›)/, 'el que no jugó va sin marca');
+});
+
+test('mensajeResumenDia() agrupa por récord y queda más corto que una fila por equipo', () => {
+  const calificadas = [
+    { series_id: 'a', start_time: NOCHE_1_A, equipo_a: 1, equipo_b: 2, prob_gana_a: 0.7, prob_gana_b: 0.3, resultado_real: 'ganaA', victorias_a: 2, victorias_b: 0 },
+  ];
+  // Cuatro equipos empatados en 1-0 tienen que salir en UN renglón, no cuatro.
+  const tabla = tablaDePosiciones([
+    { equipoA: 1, equipoB: 5, victoriasA: 2, victoriasB: 0 },
+    { equipoA: 2, equipoB: 6, victoriasA: 2, victoriasB: 0 },
+    { equipoA: 3, equipoB: 7, victoriasA: 2, victoriasB: 0 },
+    { equipoA: 4, equipoB: 8, victoriasA: 2, victoriasB: 0 },
+  ]);
+  const msg = mensajeResumenDia(calificadas, nombre, tabla);
+
+  const renglones = msg.split('\n').filter((l) => /^\d-\d\s*│/.test(l));
+  assert.equal(renglones.length, 2, 'un renglón para los 1-0 y otro para los 0-1');
+  assert.match(renglones[0], /,/, 'los empatados van juntos, separados por coma');
 });
 
 test('mensajeResumenDia() sin series devuelve null', () => {

@@ -199,14 +199,24 @@ export function mensajeResumenDia(calificadas, nombre, tabla, ahora = new Date()
   }
 
   if (tabla?.length) {
-    // Dentro de un bloque de código Discord no renderiza negrita, por eso la
-    // marca es un carácter (›) y no **.
+    // Agrupado por récord, que es como se lee un suizo de verdad: lo que
+    // importa no es "quién es 7mo" sino "quiénes van 3-1". Además queda mucho
+    // más corto que una fila por equipo (373 caracteres contra 581 con 16
+    // equipos), y en Discord el espacio se acaba rápido.
+    //
+    // La marca es un carácter (›) y no **: dentro de un bloque de código
+    // Discord no renderiza negrita.
+    const cubos = new Map();
+    for (const f of tabla) {
+      const clave = record(f);
+      if (!cubos.has(clave)) cubos.set(clave, []);
+      cubos.get(clave).push(nombre(f.teamId) + (jugaron.has(f.teamId) ? '›' : ''));
+    }
+
     partes.push('🏆 **Tabla del TI** _(› = jugó esta jornada)_');
     partes.push('```');
-    for (const f of tabla) {
-      const nom = nombre(f.teamId);
-      const marca = jugaron.has(f.teamId) ? '›' : ' ';
-      partes.push(`${marca} ${String(f.posicion).padStart(2)}. ${nom.padEnd(16)} ${record(f)}`);
+    for (const [rec, equipos] of cubos) {
+      partes.push(`${rec.padEnd(5)}│ ${equipos.join(', ')}`);
     }
     partes.push('```');
     partes.push('_Récord de series ganadas–perdidas en TI2026, calculado de las partidas reales. Entre equipos con el mismo récord no inventamos desempate._');

@@ -167,18 +167,21 @@ jobs:
       # `if: failure()` sólo se dispara si algo anterior falló de verdad, y
       # `continue-on-error` evita que un problema avisando tape el problema
       # real en el resumen de la corrida.
+      # Antes esto era un curl con un mensaje de dos líneas. Ahora usa
+      # salida/errores.mjs, que arma el aviso con QUÉ paso falló, QUIÉN
+      # disparó la corrida, de qué commit salió y a qué hora de Venezuela.
+      # Sin eso, cada aviso obligaba a abrir GitHub para entender lo mínimo.
+      #
+      # Va a DISCORD_WEBHOOK_ERRORES si está puesto; si no, al webhook normal.
+      # `continue-on-error` evita que un problema avisando tape el problema
+      # real en el resumen de la corrida.
       - name: Avisar si el ciclo falló
         if: failure()
         continue-on-error: true
-        run: |
-          curl -sS -X POST "$DISCORD_WEBHOOK" \
-            -H 'Content-Type: application/json' \
-            --data @- <<JSON
-          {
-            "content": "⚠️ **El ciclo falló** — corrida \`${GITHUB_RUN_NUMBER}\`\nRevisar: <https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}>",
-            "allowed_mentions": { "parse": [] }
-          }
-          JSON
+        env:
+          DISCORD_WEBHOOK_ERRORES: ${{ secrets.DISCORD_WEBHOOK_ERRORES }}
+          MENSAJE_COMMIT: ${{ github.event.head_commit.message }}
+        run: node salida/errores.mjs "${{ job.status }} en la corrida" "Revisar los pasos en rojo del enlace de abajo."
 
       - name: Preparar Pages
         if: always()

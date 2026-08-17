@@ -126,8 +126,11 @@ Lo que **no** está resuelto y hay que tener presente:
   si haglund falla, el ciclo usa el calendario de bo3.gg (mismo torneo,
   `status=upcoming` explícito). El histórico de Dota sigue en OpenDota —
   migrar ESO es tarea para después del torneo.
-- El repo se llama `monitor-dota2` pero el proyecto es multijuego. Renombrar
-  está pendiente.
+- El repo se renombró de `monitor-dota2` a `monitor-esports` el 2026-08-17.
+  GitHub redirige el nombre viejo, así que nada se rompe, pero si encuentras
+  una referencia a `monitor-dota2` conviene actualizarla. **La carpeta local
+  sigue llamándose `D:\monitor-dota2`**: renombrarla rompería las tareas
+  programadas y los `.cmd` de `scripts/`, así que se dejó.
 
 ## Convenciones
 

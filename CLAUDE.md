@@ -6,8 +6,7 @@ Sistema que monitorea partidas profesionales de deportes electrónicos,
 calcula la probabilidad de victoria de cada equipo en una serie, se pone nota
 a sí mismo contra los resultados reales, y avisa por Discord.
 
-Arrancó siendo solo Dota 2 (de ahí el nombre del repo, `monitor-dota2`, que
-todavía no se ha renombrado). Desde el 15 de agosto de 2026 es **multijuego**:
+Arrancó siendo solo Dota 2. Desde el 15 de agosto de 2026 es **multijuego**:
 Dota 2, CS2 y League of Legends, con la puerta abierta a Valorant, R6 Siege,
 MLBB y Deadlock sin escribir un adaptador nuevo. Ver "Cómo agregar un juego".
 
@@ -464,6 +463,31 @@ hasta que se cumpla la condición de arriba de cada punto.
 
 - **Más juegos:** Valorant, R6 Siege, MLBB, Deadlock. Ver "Cómo agregar un
   juego". La fuente ya los cubre; falta el paso 4 de cada uno.
+
+- **Migrar Dota 2 de OpenDota + haglund.dev a bo3.gg.**
+  **Condición: que TI2026 haya terminado (23 de agosto).** Hacerlo antes
+  rompe la regla 3 — es cambiarle la fuente por debajo a algo que está en
+  producción, con predicciones que no se pueden rehacer si se pierden.
+
+  Por qué vale la pena: `haglund.dev` es el único calendario de Dota, es un
+  proyecto comunitario sin SLA, y es el punto más frágil del pipeline. bo3.gg
+  ya cubre Dota (`discipline_id: 4`) con historial y calendario en el mismo
+  endpoint, `status` explícito y `winner_team_id` directo.
+
+  Los cuatro pasos, en orden:
+  1. `node datos/juegos/bajar-historico.mjs dota2` y validarlo (duplicados,
+     fechas futuras, ganador coherente con el marcador).
+  2. `node juez/calibrar-juego.mjs dota2` contra ESE histórico. Los
+     coeficientes actuales (K=24, escala=400) salieron del histórico de
+     OpenDota; con otra fuente hay que recalibrar, no heredar.
+  3. Comparar el Brier nuevo contra el de la fuente vieja. Si empeora, no se
+     migra: la fragilidad de haglund.dev es un problema de disponibilidad, no
+     una excusa para predecir peor.
+  4. Recién ahí, apuntar el ciclo de Dota a `juez/vivo-esports.mjs` (que ya
+     es multijuego) y retirar `datos/fixtures.mjs`.
+
+  **Lo que NO hay que hacer:** migrar y calibrar en el mismo paso. Si el
+  Brier cambia, no se sabría si fue por la fuente o por los coeficientes.
 
 ## Estilo de trabajo
 
