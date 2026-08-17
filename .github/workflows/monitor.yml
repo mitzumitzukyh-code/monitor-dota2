@@ -129,6 +129,14 @@ jobs:
         if: always()
         run: node juez/vivo-esports.mjs cs2
 
+      # Avisos de CS2. Va después del ciclo para que anuncie lo que ese mismo
+      # paso acaba de predecir o calificar. Sólo tiers s y a: CS2 mueve ~34
+      # partidas al día contando todos, y de las 51 predichas hoy sólo 8 eran
+      # tier s -- el resto sería ruido.
+      - name: Avisar CS2 por Discord
+        if: always()
+        run: node salida/discord-esports.mjs cs2
+
       # 1. Predecir las series que todavía no empezaron. Es el paso que más
       #    urge de los de Dota: si se pierde, la predicción no se recupera.
       - name: Predecir
