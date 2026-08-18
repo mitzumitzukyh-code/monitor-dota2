@@ -18,11 +18,17 @@
 // Todo eso aparece solo cuando haya con qué. Nada de recuadros en cero
 // fingiendo ser un dato.
 //
-// Los logos van como cuadros de color con las iniciales, no como imágenes de
-// Wikipedia: el panel se publica en GitHub Pages y una imagen externa que
-// falla deja huecos. El mock ya preveía ese fallback; acá se usa directo.
+// Los logos oficiales van INCRUSTADOS como data URI, no enlazados. Las URLs
+// del mock (Wikipedia Special:FilePath) estaban rotas: dos 404, una 429 y la
+// que respondía 200 devolvía HTML en vez de una imagen (verificado el
+// 2026-08-18). Los SVG buenos salieron de Wikimedia Commons y pesan entre
+// 900 B y 7 KB, menos que la petición de red que se ahorran.
+//
+// Si algún archivo de logos/ falta, se cae al cuadro de color con iniciales:
+// un logo ausente no puede tumbar el panel.
 
 import { writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { seleccionar } from '../../datos/supabase.mjs';
 import { nombresDeEquipos, nombresDeTorneos } from '../../datos/juegos/bo3.mjs';
@@ -42,6 +48,26 @@ const JUEGOS = [
   { clave: 'cs2', nombre: 'Counter-Strike 2', corto: 'CS2', color: '#f59e0b' },
 ];
 
+
+// Los logos oficiales se INCRUSTAN como data URI al generar, no se enlazan.
+// Las URLs del mock (Wikipedia Special:FilePath) devolvian 404 en dos casos y
+// 429 en otro, verificado el 2026-08-18: enlazarlas dejaria huecos justo
+// cuando Wikimedia limite por tasa. Incrustados, el panel no depende de nadie
+// al abrirse y funciona sin conexion.
+//
+// Son SVG de Wikimedia Commons, entre 900 B y 7 KB: pesan menos que una
+// peticion de red.
+const LOGOS = new Map();
+for (const clave of ['dota2', 'lol', 'valorant', 'cs2']) {
+  try {
+    const svg = readFileSync(new URL(`./logos/${clave}.svg`, import.meta.url), 'utf8');
+    LOGOS.set(clave, 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64'));
+  } catch {
+    // Sin el archivo se cae al cuadro de color con iniciales. Un logo que
+    // falta no puede tumbar el panel.
+  }
+}
+
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -56,7 +82,11 @@ function fechaCorta(iso) {
 
 // --- piezas ------------------------------------------------------------------
 
-function logo(corto, color, tam = 26) {
+function logo(corto, color, tam = 26, clave = null) {
+  const src = clave ? LOGOS.get(clave) : null;
+  if (src) {
+    return `<img class="lg" width="${tam}" height="${tam}" src="${src}" alt="${esc(corto)}">`;
+  }
   return `<span class="ph" style="width:${tam}px;height:${tam}px;background:${color}1f;color:${color};border-color:${color}59">${esc(corto)}</span>`;
 }
 
@@ -78,7 +108,7 @@ function filaJuego(j) {
   if (n === 0) {
     return `
       <div class="stat-row">
-        <div class="tile">${logo(def.corto, def.color)}</div>
+        <div class="tile">${logo(def.corto, def.color, 26, def.clave)}</div>
         <div class="stat-name">${esc(def.nombre)}</div>
         <div><div class="pct dim">—</div><div class="frac">${predichas} predichas · 0 calificadas</div></div>
         <div class="spark"><span class="delta dim">sin datos</span></div>
@@ -87,7 +117,7 @@ function filaJuego(j) {
   const tasa = aciertos / n;
   return `
     <div class="stat-row">
-      <div class="tile">${logo(def.corto, def.color)}</div>
+      <div class="tile">${logo(def.corto, def.color, 26, def.clave)}</div>
       <div class="stat-name">${esc(def.nombre)}</div>
       <div>
         <div class="pct">${pct1(tasa)}%</div>
@@ -112,7 +142,7 @@ function filaPartida(p) {
   return `
     <div class="trow">
       <div class="t-cell">
-        <div class="ttile">${logo(p.def.corto, p.def.color, 18)}</div>
+        <div class="ttile">${logo(p.def.corto, p.def.color, 18, p.def.clave)}</div>
         <div title="${esc(p.torneo ?? p.def.nombre)}"><div class="t-name">${esc(p.torneo ?? p.def.nombre)}</div><div class="t-sub">${esc(p.def.nombre)}${p.tier ? ' · TIER ' + String(p.tier).toUpperCase() : ''}</div></div>
       </div>
       <div class="match">
@@ -157,7 +187,7 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
     .map(
       (j) => `
       <div class="game-btn" style="border-color:${j.def.color}59">
-        <span class="gwrap">${logo(j.def.corto, j.def.color, 22)}</span>
+        <span class="gwrap">${logo(j.def.corto, j.def.color, 22, j.def.clave)}</span>
         <span>${esc(j.def.nombre)}</span>
         <span class="gcount">${j.n || '—'}</span>
       </div>`,
@@ -183,6 +213,10 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
 body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1c2733;border-radius:4px}
 
+/* Placa clara detras del logo: varios SVG oficiales estan pensados para
+   fondo blanco y algunos son casi negros (CS2 usa #1E202F), asi que sobre el
+   panel oscuro desaparecian. */
+.lg{border-radius:6px;object-fit:contain;background:#e9edf3;padding:3px;flex:none}
 .ph{display:inline-flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid;font-size:8px;font-weight:800;letter-spacing:.02em;flex:none}
 
 #sidebar{position:fixed;inset:0 auto 0 0;width:232px;background:var(--side);border-right:1px solid var(--border);padding:20px 14px;display:flex;flex-direction:column;gap:6px;z-index:50}
@@ -272,7 +306,7 @@ footer{margin-top:20px;padding:16px 20px;border-top:1px solid var(--border);colo
 
   <div class="side-label">DETALLE</div>
   <a class="game-btn" href="dota.html" style="border-color:#ef444459;text-decoration:none">
-    <span class="gwrap">${logo("D2", "#ef4444", 22)}</span>
+    <span class="gwrap">${logo("D2", "#ef4444", 22, "dota2")}</span>
     <span>PANEL DE DOTA</span>
   </a>
 
