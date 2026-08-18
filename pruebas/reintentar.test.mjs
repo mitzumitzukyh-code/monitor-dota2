@@ -106,3 +106,34 @@ test('la espera tiene tope', async () => {
   await f('https://ejemplo.test');
   assert.deepEqual(esperas, [1000, 2000, 4000, 4000, 4000]);
 });
+
+// El fallo real de la corrida #195 (2026-08-18): OpenDota devolvió 522 con
+// `retry-after: 120`. El tope sólo acotaba el exponencial, así que cada
+// reintento durmió los 2 minutos completos y el paso se colgó 5 minutos.
+test('si el servidor pide más que el tope, se rinde en vez de esperar', async () => {
+  const { esperas, dormir } = espia();
+  let llamadas = 0;
+  const f = conReintentos(
+    async () => (llamadas++, { status: 522, headers: new Map([['retry-after', '120']]) }),
+    { dormir, intentos: 3, esperaMaxima: 8000 },
+  );
+
+  const r = await f('https://ejemplo.test');
+  assert.equal(r.status, 522, 'devuelve la respuesta para que quien llama arme su mensaje');
+  assert.equal(llamadas, 1, 'no reintenta: esperar 2 min se come la ventana del cron');
+  assert.deepEqual(esperas, [], 'y sobre todo, no duerme');
+});
+
+test('un Retry-After por debajo del tope se sigue respetando tal cual', async () => {
+  const { esperas, dormir } = espia();
+  const codigos = [429, 200];
+  let i = 0;
+  const f = conReintentos(
+    async () =>
+      i === 0 ? (i++, { status: 429, headers: new Map([['retry-after', '5']]) }) : respuesta(200),
+    { dormir, esperaMaxima: 8000 },
+  );
+
+  assert.equal((await f('https://ejemplo.test')).status, 200);
+  assert.deepEqual(esperas, [5000]);
+});

@@ -78,6 +78,37 @@ export function conReintentos(
       // más de lo que dura su propia ventana.
       const exponencial = Math.min(esperaBase * 2 ** (intento - 1), esperaMaxima);
       const pedida = respuesta ? esperaPedidaPorElServidor(respuesta.headers) : null;
+
+      // Si el servidor pide esperar MÁS que el tope, no se espera ni se
+      // reintenta antes de tiempo: se devuelve la respuesta y se deja el
+      // problema para la corrida siguiente.
+      //
+      // POR QUÉ (fallo real, corrida #195 del 2026-08-18): OpenDota devolvió
+      // 522 con `retry-after: 120`. El tope sólo acotaba el exponencial, así
+      // que los dos reintentos durmieron 2 minutos cada uno: `vivo-notas` se
+      // colgó 5 minutos exactos y `generar` otros 5. Diez minutos = la
+      // ventana entera del cron, y GitHub descarta las corridas programadas
+      // que le caen encima a una en curso -- se perdieron dos ciclos por una
+      // caída de un tercero que igual iba a fallar.
+      //
+      // Reintentar antes de lo que pidió el servidor tampoco sirve: en un 429
+      // es la forma de ganarse un bloqueo (regla 5). Rendirse rápido es lo
+      // correcto: el ciclo vuelve a intentar en 10 minutos por sí solo, y
+      // calificar y generar el panel se recuperan solos en la corrida
+      // siguiente (predecir no, pero predecir no llega hasta acá con 522).
+      if (pedida !== null && pedida > esperaMaxima) {
+        if (alReintentar) {
+          alReintentar({
+            intento,
+            de: intentos,
+            espera: 0,
+            razon: `${ultimoError} — el servidor pide ${Math.round(pedida / 1000)}s, más que el tope de ${Math.round(esperaMaxima / 1000)}s: se deja para la corrida siguiente`,
+            url,
+          });
+        }
+        return respuesta;
+      }
+
       const espera = pedida ?? exponencial;
 
       if (alReintentar) alReintentar({ intento, de: intentos, espera, razon: ultimoError, url });
