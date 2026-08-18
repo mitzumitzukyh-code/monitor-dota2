@@ -182,6 +182,36 @@ export async function proximasPartidas(juego, { fetchImpl = fetchConReintentos, 
 // devuelve cero resultados. Verificado: los ids de LoL 17800 y 17142 salen
 // vacíos sin el filtro y resuelven a "Natus Vincere" y "Team Heretics" con él.
 // Los avisos de CS2 funcionaban por casualidad, porque CS2 es el default.
+// Nombre Y logo de cada equipo. bo3.gg trae `image_url` (webp de ~23 KB en
+// su CDN) y no se estaba usando: las tablas mostraban las tres primeras
+// letras del nombre, que para "PCI" o "JUS" no dice nada.
+//
+// Los logos de equipo se ENLAZAN, no se incrustan como los de los juegos: son
+// decenas por render y cambian seguido, asi que incrustarlos pesaria medio
+// mega. Si el CDN falla, el navegador muestra el `alt` con el nombre.
+export async function datosDeEquipos(ids, { juego = 'cs2', fetchImpl = fetchConReintentos } = {}) {
+  const disciplinaId = DISCIPLINAS[juego];
+  if (!disciplinaId) throw new Error(`juego desconocido: ${juego}`);
+
+  const porId = new Map();
+  const unicos = [...new Set(ids)].filter(Boolean);
+
+  for (let i = 0; i < unicos.length; i += POR_PAGINA) {
+    const lote = unicos.slice(i, i + POR_PAGINA);
+    const datos = await pedir(
+      `${BASE}/teams?page[limit]=${POR_PAGINA}&filter[teams.discipline_id][eq]=${disciplinaId}` +
+        `&filter[teams.id][in]=${lote.join(',')}`,
+      fetchImpl,
+    );
+    for (const t of datos.results ?? []) {
+      if (t?.id && t?.name) porId.set(t.id, { nombre: t.name, logo: t.image_url ?? null });
+    }
+    if (i + POR_PAGINA < unicos.length) await espera(MS_ENTRE_PETICIONES);
+  }
+
+  return porId;
+}
+
 export async function nombresDeEquipos(ids, { juego = 'cs2', fetchImpl = fetchConReintentos } = {}) {
   const disciplinaId = DISCIPLINAS[juego];
   if (!disciplinaId) throw new Error(`juego desconocido: ${juego}`);

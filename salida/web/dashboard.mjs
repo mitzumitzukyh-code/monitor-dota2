@@ -31,7 +31,7 @@ import { writeFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { seleccionar } from '../../datos/supabase.mjs';
-import { nombresDeEquipos, nombresDeTorneos } from '../../datos/juegos/bo3.mjs';
+import { datosDeEquipos, nombresDeTorneos } from '../../datos/juegos/bo3.mjs';
 import { enVenezuela, hora12 } from '../formato.mjs';
 
 // Mismo criterio que salida/resumen-global.mjs: los Brier de Dota y los de
@@ -108,7 +108,7 @@ function filaJuego(j) {
   if (n === 0) {
     return `
       <div class="stat-row">
-        <div class="tile">${logo(def.corto, def.color, 26, def.clave)}</div>
+        <div class="tile">${logo(def.corto, def.color, 38, def.clave)}</div>
         <div class="stat-name">${esc(def.nombre)}</div>
         <div><div class="pct dim">—</div><div class="frac">${predichas} predichas · 0 calificadas</div></div>
         <div class="spark"><span class="delta dim">sin datos</span></div>
@@ -117,7 +117,7 @@ function filaJuego(j) {
   const tasa = aciertos / n;
   return `
     <div class="stat-row">
-      <div class="tile">${logo(def.corto, def.color, 26, def.clave)}</div>
+      <div class="tile">${logo(def.corto, def.color, 38, def.clave)}</div>
       <div class="stat-name">${esc(def.nombre)}</div>
       <div>
         <div class="pct">${pct1(tasa)}%</div>
@@ -131,6 +131,18 @@ function filaJuego(j) {
     </div>`;
 }
 
+
+// Escudo del equipo: el logo real si bo3.gg lo trae, y si no las iniciales.
+// Antes SIEMPRE eran las tres primeras letras del nombre, que para "PCI" o
+// "JUS" no dice absolutamente nada.
+function escudo(nombre, logo, color) {
+  const abrev = String(nombre ?? '?').slice(0, 3).toUpperCase();
+  if (logo) {
+    return `<img class="tmlogo" src="${esc(logo)}" width="26" height="26" alt="${esc(abrev)}" title="${esc(nombre)}" loading="lazy">`;
+  }
+  return `<span class="tm" style="background:${color}" title="${esc(nombre)}">${esc(abrev)}</span>`;
+}
+
 function filaPartida(p) {
   const ganoA = p.resultadoReal === 'ganaA';
   const marcador =
@@ -142,13 +154,13 @@ function filaPartida(p) {
   return `
     <div class="trow">
       <div class="t-cell">
-        <div class="ttile">${logo(p.def.corto, p.def.color, 18, p.def.clave)}</div>
+        <div class="ttile">${logo(p.def.corto, p.def.color, 26, p.def.clave)}</div>
         <div title="${esc(p.torneo ?? p.def.nombre)}"><div class="t-name">${esc(p.torneo ?? p.def.nombre)}</div><div class="t-sub">${esc(p.def.nombre)}${p.tier ? ' · TIER ' + String(p.tier).toUpperCase() : ''}</div></div>
       </div>
       <div class="match">
-        <span class="tm" style="background:${p.def.color}">${esc(String(p.nombreA).slice(0, 3).toUpperCase())}</span>
+        ${escudo(p.nombreA, p.logoA, p.def.color)}
         ${marcador}
-        <span class="tm" style="background:${p.def.color}99">${esc(String(p.nombreB).slice(0, 3).toUpperCase())}</span>
+        ${escudo(p.nombreB, p.logoB, p.def.color + '99')}
       </div>
       <span class="fecha">${esc(fechaCorta(p.inicio))}</span>
       <span><span class="badge ${p.acerto ? 'b-green' : 'b-red'}">${esc(cuota)}</span></span>
@@ -187,7 +199,7 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
     .map(
       (j) => `
       <div class="game-btn" style="border-color:${j.def.color}59">
-        <span class="gwrap">${logo(j.def.corto, j.def.color, 22, j.def.clave)}</span>
+        <span class="gwrap">${logo(j.def.corto, j.def.color, 28, j.def.clave)}</span>
         <span>${esc(j.def.nombre)}</span>
         <span class="gcount">${j.n || '—'}</span>
       </div>`,
@@ -225,7 +237,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .brand b{font-size:16px;font-weight:800;display:block;line-height:1.1}
 .brand span{font-size:9px;font-weight:700;letter-spacing:.35em;color:var(--blue)}
 .side-label{font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--dim);padding:16px 8px 8px;border-top:1px solid var(--border);margin-top:12px}
-.game-btn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:10px;background:#0a121b;border:1px solid;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--text);margin-bottom:8px}
+.game-btn{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:10px;background:#0a121b;border:1px solid;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--text);margin-bottom:8px}
 .gcount{margin-left:auto;color:var(--dim);font-weight:700}
 .side-note{margin-top:auto;font-size:11px;color:var(--dim);line-height:1.6;border-top:1px solid var(--border);padding-top:14px}
 
@@ -257,9 +269,9 @@ main{margin-left:232px;padding:22px 26px}
 .card-title{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .hdot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
 .hdot svg{width:13px;height:13px}
-.stat-row{display:grid;grid-template-columns:44px 1fr 1fr 130px;gap:14px;align-items:center;padding:15px 20px;border-top:1px solid var(--border)}
+.stat-row{display:grid;grid-template-columns:52px 1fr 1fr 130px;gap:14px;align-items:center;padding:15px 20px;border-top:1px solid var(--border)}
 .stat-row:first-of-type{border-top:none}
-.tile{width:44px;height:44px;border-radius:10px;background:#101a26;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
+.tile{width:52px;height:52px;border-radius:10px;background:#101a26;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
 .stat-name{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;line-height:1.3}
 .pct{font-size:17px;font-weight:800}
 .pct.dim{color:var(--dim)}
@@ -275,12 +287,19 @@ main{margin-left:232px;padding:22px 26px}
 .trow{padding:12px 20px;border-top:1px solid var(--border)}
 .trow:first-of-type{border-top:none}
 .t-cell{display:flex;align-items:center;gap:8px;min-width:0}
-.ttile{width:30px;height:30px;border-radius:8px;background:#101a26;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
+.ttile{width:38px;height:38px;border-radius:8px;background:#101a26;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
 .t-name{font-size:12px;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .t-cell>div:last-child{min-width:0;overflow:hidden}
 .t-sub{font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.match{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800}
-.tm{width:26px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;flex:none}
+.match{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800}
+.tm{width:30px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex:none}
+/* Logo de equipo: se enlaza al CDN de bo3.gg. Si falla, el navegador muestra
+   el alt con las iniciales.
+   Placa OSCURA, al reves que la de los juegos: los escudos de esports estan
+   pensados para fondo oscuro y muchos son blancos -- sobre la placa clara
+   desaparecian. Los logos de JUEGO son al reves (CS2 es casi negro), por eso
+   cada uno lleva la suya. */
+.tmlogo{width:26px;height:26px;border-radius:6px;object-fit:contain;background:#151f2b;border:1px solid var(--border);padding:2px;flex:none;font-size:8px;color:var(--mut)}
 .match .w{color:#fff}.match .l{color:var(--dim)}.match .sep{color:var(--dim);font-weight:600}
 .fecha{font-size:11px;color:var(--mut)}
 .badge{display:inline-block;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:800}
@@ -306,7 +325,7 @@ footer{margin-top:20px;padding:16px 20px;border-top:1px solid var(--border);colo
 
   <div class="side-label">DETALLE</div>
   <a class="game-btn" href="dota.html" style="border-color:#ef444459;text-decoration:none">
-    <span class="gwrap">${logo("D2", "#ef4444", 22, "dota2")}</span>
+    <span class="gwrap">${logo("D2", "#ef4444", 28, "dota2")}</span>
     <span>PANEL DE DOTA</span>
   </a>
 
@@ -500,13 +519,17 @@ export async function reunirDatos({ fetchImpl, fetchImplSupabase } = {}) {
     if (def.clave === 'dota2') continue;
     const suyas = recientes.filter((p) => p.juego === def.clave);
     if (suyas.length === 0) continue;
-    const nombres = await nombresDeEquipos(suyas.flatMap((p) => [p.equipoA, p.equipoB]), {
+    const equipos = await datosDeEquipos(suyas.flatMap((p) => [p.equipoA, p.equipoB]), {
       juego: def.clave,
       fetchImpl,
     });
     for (const p of suyas) {
-      p.nombreA = nombres.get(p.equipoA) ?? `#${p.equipoA}`;
-      p.nombreB = nombres.get(p.equipoB) ?? `#${p.equipoB}`;
+      const a = equipos.get(p.equipoA);
+      const b = equipos.get(p.equipoB);
+      p.nombreA = a?.nombre ?? `#${p.equipoA}`;
+      p.nombreB = b?.nombre ?? `#${p.equipoB}`;
+      p.logoA = a?.logo ?? null;
+      p.logoB = b?.logo ?? null;
     }
 
     // El torneo se resuelve por id, en una petición por juego. Se guarda el id
