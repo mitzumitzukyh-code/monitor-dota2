@@ -16,9 +16,7 @@
 // fase -- no hay forma de deducir "esto es playoff" de los datos mismos.
 export const INICIO_MAIN_EVENT = Date.UTC(2026, 7, 20) / 1000;
 
-function esc(s) {
-  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-}
+import { esc } from './estilo.mjs';
 
 // Camino de cada equipo: sus series en orden cronológico, ganada o perdida.
 // El número de ronda sale del ORDEN, no de la fuente (que no lo trae). En un
@@ -59,18 +57,18 @@ export function caminosDeEquipos(series) {
 // eliminado -- la regla de corte del suizo de TI no se puede deducir de los
 // datos, así que el color sólo dice "va mejor / va peor".
 function tonoPorDiferencia(dif, maxDif) {
-  if (maxDif === 0) return { borde: '#8a8481', fondo: 'rgba(138,132,129,0.12)' };
+  if (maxDif === 0) return { borde: '#1b2634', fondo: '#0a121b' };
   const t = (dif + maxDif) / (2 * maxDif); // 0 = peor, 1 = mejor
   const tono = Math.round(0 + t * 130); // 0 rojo -> 130 verde
-  return { borde: `hsl(${tono}, 62%, 52%)`, fondo: `hsla(${tono}, 62%, 52%, 0.13)` };
+  return { borde: `hsla(${tono}, 62%, 52%, 0.45)`, fondo: `hsla(${tono}, 62%, 52%, 0.08)` };
 }
 
 function celdaCamino(camino) {
   return camino
     .map(
       (x) =>
-        `<span title="${x.gano ? 'ganó' : 'perdió'}" style="display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:3px; background:${
-          x.gano ? '#3fbf6f' : '#e0523f'
+        `<span title="${x.gano ? 'ganó' : 'perdió'}" style="display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:3px; background:${
+          x.gano ? '#22c55e' : '#ef4444'
         };"></span>`,
     )
     .join('');
@@ -81,7 +79,7 @@ function celdaCamino(camino) {
 // pero agrupadas por lo que de verdad agrupa a un suizo.
 export function grillaSuiza(series, nombre, { destacados = new Set() } = {}) {
   const filas = caminosDeEquipos(series);
-  if (filas.length === 0) return '<div style="padding:24px; color:#8a8481;">Todavía no hay series jugadas.</div>';
+  if (filas.length === 0) return '<div class="vacio">Todavía no hay series jugadas.</div>';
 
   const cubos = new Map();
   for (const f of filas) {
@@ -101,19 +99,19 @@ export function grillaSuiza(series, nombre, { destacados = new Set() } = {}) {
           const resaltado = destacados.has(f.teamId);
           return `
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 12px; ${
-          resaltado ? 'background:rgba(255,86,60,0.10);' : ''
+          resaltado ? 'background:rgba(239,68,68,0.10);' : ''
         }">
-          <span style="font-size:13px; ${resaltado ? 'font-weight:600; color:#ffb4a6;' : ''}">${esc(nombre(f.teamId))}</span>
+          <span style="font-size:13px; ${resaltado ? 'font-weight:600; color:#fca5a5;' : 'color:#c3cddb;'}">${esc(nombre(f.teamId))}</span>
           <span style="white-space:nowrap;">${celdaCamino(f.camino)}</span>
         </div>`;
         })
         .join('');
 
       return `
-      <div style="border:1px solid ${borde}; background:${fondo}; border-radius:10px; overflow:hidden; min-width:0;">
-        <div style="display:flex; align-items:baseline; justify-content:space-between; padding:9px 12px; border-bottom:1px solid ${borde}; background:${fondo};">
-          <span style="font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; letter-spacing:0.06em;">${esc(cubo.clave)}</span>
-          <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; color:#a9a4a1;">${cubo.equipos.length} ${
+      <div style="border:1px solid ${borde}; background:${fondo}; border-radius:12px; overflow:hidden; min-width:0;">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; padding:10px 12px; border-bottom:1px solid ${borde};">
+          <span style="font-size:15px; font-weight:800; letter-spacing:0.02em;">${esc(cubo.clave)}</span>
+          <span style="font-size:9px; font-weight:700; letter-spacing:0.12em; color:#5d6a7a;">${cubo.equipos.length} ${
             cubo.equipos.length === 1 ? 'EQUIPO' : 'EQUIPOS'
           }</span>
         </div>
@@ -123,13 +121,13 @@ export function grillaSuiza(series, nombre, { destacados = new Set() } = {}) {
     .join('\n');
 
   return `
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap:14px; padding:20px 24px;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap:14px; padding:18px 20px;">
       ${tarjetas}
     </div>
-    <div style="padding:0 24px 20px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8a8481; line-height:1.7;">
+    <div style="padding:0 20px 18px; font-size:11px; color:#5d6a7a; line-height:1.7;">
       Agrupados por récord de series ganadas–perdidas. Cada cuadrito es una serie en orden:
-      <span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:#3fbf6f;"></span> ganada,
-      <span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:#e0523f;"></span> perdida.<br>
+      <span style="display:inline-block; width:9px; height:9px; border-radius:3px; background:#22c55e;"></span> ganada,
+      <span style="display:inline-block; width:9px; height:9px; border-radius:3px; background:#ef4444;"></span> perdida.<br>
       El color de la tarjeta dice quién va mejor, no quién clasificó: la regla de corte del suizo no viene en los datos y no se inventa.
     </div>`;
 }
@@ -173,8 +171,8 @@ export function grillaLlave(series, nombre, { pendientes = [] } = {}) {
 
   if (playoff.length === 0) {
     return `
-    <div style="padding:28px 24px; text-align:center; color:#8a8481;">
-      <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.12em; margin-bottom:8px;">LLAVE SIN DEFINIR</div>
+    <div class="vacio">
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.14em; margin-bottom:8px;">LLAVE SIN DEFINIR</div>
       <div style="font-size:13px;">El Main Event arranca el 20 de agosto. Los cruces aparecen acá en cuanto se jueguen.</div>
     </div>`;
   }
@@ -198,11 +196,11 @@ export function grillaLlave(series, nombre, { pendientes = [] } = {}) {
           // si ya hubiera ganado es exactamente lo que no se debe hacer.
           const ganoA = s.jugada ? s.victoriasA > s.victoriasB : null;
           const linea = (id, gano, derecha) => `
-            <div style="display:flex; justify-content:space-between; gap:8px; padding:6px 10px; ${
-              gano === true ? 'color:#f3f2f2; font-weight:600;' : gano === false ? 'color:#8a8481;' : 'color:#d8d5d4;'
+            <div style="display:flex; justify-content:space-between; gap:8px; padding:8px 11px; ${
+              gano === true ? 'color:#e5eaf1; font-weight:600;' : gano === false ? 'color:#5d6a7a;' : 'color:#c3cddb;'
             }">
-              <span style="font-size:12px;">${esc(nombre(id))}</span>
-              <span style="font-family:'IBM Plex Mono',monospace; font-size:12px;">${esc(derecha)}</span>
+              <span style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(nombre(id))}</span>
+              <span style="font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;">${esc(derecha)}</span>
             </div>`;
 
           const pct = (p) => (p == null ? '—' : `${Math.round(p * 100)}%`);
@@ -210,19 +208,21 @@ export function grillaLlave(series, nombre, { pendientes = [] } = {}) {
           const derB = s.jugada ? String(s.victoriasB) : pct(s.probB);
 
           return `
-          <div style="border:1px solid rgba(243,242,242,${s.jugada ? '0.22' : '0.14'}); border-radius:8px; overflow:hidden; margin-bottom:12px; ${
+          <div style="border:1px solid ${
+            s.jugada ? '#1b2634' : '#243244'
+          }; background:${s.jugada ? '#0c141d' : 'transparent'}; border-radius:10px; overflow:hidden; margin-bottom:12px; ${
             s.jugada ? '' : 'border-style:dashed;'
           }">
             ${linea(s.equipoA, s.jugada ? ganoA : null, derA)}
-            <div style="height:1px; background:rgba(243,242,242,0.12);"></div>
+            <div style="height:1px; background:#1b2634;"></div>
             ${linea(s.equipoB, s.jugada ? !ganoA : null, derB)}
           </div>`;
         })
         .join('');
 
       return `
-      <div style="min-width:190px;">
-        <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#8a8481; margin-bottom:10px;">RONDA ${
+      <div style="min-width:200px;">
+        <div style="font-size:10px; font-weight:700; letter-spacing:0.14em; color:#5d6a7a; margin-bottom:10px;">RONDA ${
           i + 1
         }</div>
         ${cruces}
@@ -231,10 +231,10 @@ export function grillaLlave(series, nombre, { pendientes = [] } = {}) {
     .join('');
 
   return `
-    <div style="display:flex; gap:20px; padding:20px 24px; overflow-x:auto;">
+    <div style="display:flex; gap:20px; padding:18px 20px; overflow-x:auto;">
       ${columnas}
     </div>
-    <div style="padding:0 24px 20px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8a8481;">
+    <div style="padding:0 20px 18px; font-size:11px; color:#5d6a7a;">
       Las rondas salen de agrupar por día de juego: la fuente no trae etiqueta de ronda.
     </div>`;
 }

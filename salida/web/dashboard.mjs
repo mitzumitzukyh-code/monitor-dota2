@@ -26,13 +26,17 @@
 //
 // Si algún archivo de logos/ falta, se cae al cuadro de color con iniciales:
 // un logo ausente no puede tumbar el panel.
+//
+// El CSS, la barra lateral y el envoltorio del documento viven en
+// salida/web/estilo.mjs, compartidos con el panel de Dota y sus fichas: los
+// tres tienen que verse como el mismo sitio.
 
 import { writeFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { seleccionar } from '../../datos/supabase.mjs';
 import { datosDeEquipos, nombresDeTorneos } from '../../datos/juegos/bo3.mjs';
 import { enVenezuela, hora12 } from '../formato.mjs';
+import { esc, pct1, logo, escudo, kpi, documento, barraLateral } from './estilo.mjs';
 
 // Mismo criterio que salida/resumen-global.mjs: los Brier de Dota y los de
 // bo3.gg NO están en la misma escala (Dota puntúa sobre tres clases). Cada
@@ -49,30 +53,6 @@ const JUEGOS = [
 ];
 
 
-// Los logos oficiales se INCRUSTAN como data URI al generar, no se enlazan.
-// Las URLs del mock (Wikipedia Special:FilePath) devolvian 404 en dos casos y
-// 429 en otro, verificado el 2026-08-18: enlazarlas dejaria huecos justo
-// cuando Wikimedia limite por tasa. Incrustados, el panel no depende de nadie
-// al abrirse y funciona sin conexion.
-//
-// Son SVG de Wikimedia Commons, entre 900 B y 7 KB: pesan menos que una
-// peticion de red.
-const LOGOS = new Map();
-for (const clave of ['dota2', 'lol', 'valorant', 'cs2']) {
-  try {
-    const svg = readFileSync(new URL(`./logos/${clave}.svg`, import.meta.url), 'utf8');
-    LOGOS.set(clave, 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64'));
-  } catch {
-    // Sin el archivo se cae al cuadro de color con iniciales. Un logo que
-    // falta no puede tumbar el panel.
-  }
-}
-
-const esc = (s) =>
-  String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-const pct1 = (x) => (x * 100).toFixed(1);
-
 function fechaCorta(iso) {
   const { fecha, valida } = enVenezuela(iso);
   if (!valida) return '—';
@@ -81,27 +61,6 @@ function fechaCorta(iso) {
 }
 
 // --- piezas ------------------------------------------------------------------
-
-function logo(corto, color, tam = 26, clave = null) {
-  const src = clave ? LOGOS.get(clave) : null;
-  if (src) {
-    return `<img class="lg" width="${tam}" height="${tam}" src="${src}" alt="${esc(corto)}">`;
-  }
-  return `<span class="ph" style="width:${tam}px;height:${tam}px;background:${color}1f;color:${color};border-color:${color}59">${esc(corto)}</span>`;
-}
-
-function kpi({ etiqueta, valor, color, pie, dash }) {
-  const donut =
-    dash == null
-      ? ''
-      : `<svg class="donut" viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="26"/><circle class="prog" cx="32" cy="32" r="26" stroke-dasharray="${dash.toFixed(1)} 999"/></svg>`;
-  return `
-    <div class="kpi" style="--ac:${color};--ac12:${color}14;--ac18:${color}2e;--ac25:${color}4d">
-      <div class="kpi-top"><div class="kpi-label">${esc(etiqueta)}</div>${donut}</div>
-      <div class="kpi-num">${esc(valor)}</div>
-      <div class="kpi-foot">${pie}</div>
-    </div>`;
-}
 
 function filaJuego(j) {
   const { def, n, aciertos, predichas, vsBase } = j;
@@ -131,17 +90,6 @@ function filaJuego(j) {
     </div>`;
 }
 
-
-// Escudo del equipo: el logo real si bo3.gg lo trae, y si no las iniciales.
-// Antes SIEMPRE eran las tres primeras letras del nombre, que para "PCI" o
-// "JUS" no dice absolutamente nada.
-function escudo(nombre, logo, color) {
-  const abrev = String(nombre ?? '?').slice(0, 3).toUpperCase();
-  if (logo) {
-    return `<img class="tmlogo" src="${esc(logo)}" width="26" height="26" alt="${esc(abrev)}" title="${esc(nombre)}" loading="lazy">`;
-  }
-  return `<span class="tm" style="background:${color}" title="${esc(nombre)}">${esc(abrev)}</span>`;
-}
 
 function filaPartida(p) {
   const ganoA = p.resultadoReal === 'ganaA';
@@ -194,148 +142,43 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
 
   const aciertos = recientes.filter((p) => p.acerto).slice(0, 6);
   const fallos = recientes.filter((p) => !p.acerto).slice(0, 6);
+  // La barra lateral sale del módulo compartido: es la misma pieza que usan
+  // el panel de Dota y las fichas, así que navegar entre los tres no cambia
+  // de sitio a mitad de camino.
+  const sidebar = barraLateral({
+    bloques: [
+      {
+        etiqueta: 'Juegos · calificadas',
+        enlaces: juegos.map((j) => ({
+          // Sólo Dota tiene página propia. Los demás no llevan enlace: un
+          // botón que no va a ningún lado es peor que un botón que no lo
+          // parece.
+          href: j.def.clave === 'dota2' ? 'dota.html' : null,
+          texto: j.def.nombre,
+          color: j.def.color,
+          contador: j.n || '—',
+          logoHtml: logo(j.def.corto, j.def.color, 28, j.def.clave),
+        })),
+      },
+      {
+        etiqueta: 'Detalle',
+        enlaces: [
+          {
+            href: 'dota.html',
+            texto: 'Panel de Dota',
+            color: '#ef4444',
+            logoHtml: logo('D2', '#ef4444', 28, 'dota2'),
+          },
+        ],
+      },
+    ],
+    nota: 'Los porcentajes salen de un cálculo matemático sobre los resultados reales. Ningún número de este panel se escribe a mano.',
+  });
 
-  const botonesJuego = juegos
-    .map(
-      (j) => `
-      <div class="game-btn" style="border-color:${j.def.color}59">
-        <span class="gwrap">${logo(j.def.corto, j.def.color, 28, j.def.clave)}</span>
-        <span>${esc(j.def.nombre)}</span>
-        <span class="gcount">${j.n || '—'}</span>
-      </div>`,
-    )
-    .join('');
-
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MONITOR-ESPORTS · Panel</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#05080c; --side:#070b10; --card:#0c141d; --card2:#0a121b;
-  --border:#1b2634; --text:#e5eaf1; --mut:#94a0b0; --dim:#5d6a7a;
-  --green:#22c55e; --red:#ef4444; --blue:#3b82f6; --yellow:#f59e0b;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
-::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1c2733;border-radius:4px}
-
-/* Placa clara detras del logo: varios SVG oficiales estan pensados para
-   fondo blanco y algunos son casi negros (CS2 usa #1E202F), asi que sobre el
-   panel oscuro desaparecian. */
-.lg{border-radius:6px;object-fit:contain;background:#e9edf3;padding:3px;flex:none}
-.ph{display:inline-flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid;font-size:8px;font-weight:800;letter-spacing:.02em;flex:none}
-
-#sidebar{position:fixed;inset:0 auto 0 0;width:232px;background:var(--side);border-right:1px solid var(--border);padding:20px 14px;display:flex;flex-direction:column;gap:6px;z-index:50}
-.brand{display:flex;align-items:center;gap:10px;padding:2px 6px 18px}
-.brand-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;flex:none}
-.brand b{font-size:16px;font-weight:800;display:block;line-height:1.1}
-.brand span{font-size:9px;font-weight:700;letter-spacing:.35em;color:var(--blue)}
-.side-label{font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--dim);padding:16px 8px 8px;border-top:1px solid var(--border);margin-top:12px}
-.game-btn{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:10px;background:#0a121b;border:1px solid;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--text);margin-bottom:8px}
-.gcount{margin-left:auto;color:var(--dim);font-weight:700}
-.side-note{margin-top:auto;font-size:11px;color:var(--dim);line-height:1.6;border-top:1px solid var(--border);padding-top:14px}
-
-main{margin-left:232px;padding:22px 26px}
-.topbar{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-.topbar h1{font-size:22px;font-weight:800}
-.topbar .sub{color:var(--mut);font-size:12px;margin-top:3px}
-.stamp{margin-left:auto;color:var(--dim);font-size:11px}
-
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:16px}
-.kpi{padding:18px 20px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg,var(--ac12),transparent 65%),var(--card);border:1px solid var(--ac25);border-radius:12px}
-.kpi-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.kpi-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--mut);text-transform:uppercase;padding-top:6px}
-.kpi-num{font-size:32px;font-weight:800;letter-spacing:-.02em}
-.donut{width:62px;height:62px;flex:none;transform:rotate(-90deg)}
-.donut .track{fill:none;stroke:var(--ac18);stroke-width:6}
-.donut .prog{fill:none;stroke:var(--ac);stroke-width:6;stroke-linecap:round}
-.kpi-foot{border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--mut);margin-top:auto;flex-wrap:wrap}
-.kpi-foot b{color:var(--text)}
-
-.aviso{margin-top:16px;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.07);border-radius:12px;padding:14px 18px;font-size:13px;line-height:1.6;color:#fcd9a0}
-.aviso b{color:#fbbf24}
-
-.mid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
-.ancho{margin-top:16px}
-@media(max-width:1100px){.mid{grid-template-columns:1fr}}
-.card-h{display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--border)}
-.card-title{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-.hdot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
-.hdot svg{width:13px;height:13px}
-.stat-row{display:grid;grid-template-columns:52px 1fr 1fr 130px;gap:14px;align-items:center;padding:15px 20px;border-top:1px solid var(--border)}
-.stat-row:first-of-type{border-top:none}
-.tile{width:52px;height:52px;border-radius:10px;background:#101a26;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
-.stat-name{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;line-height:1.3}
-.pct{font-size:17px;font-weight:800}
-.pct.dim{color:var(--dim)}
-.frac{font-size:11px;color:var(--dim);margin-top:2px}
-.bar{height:4px;background:#1a2532;border-radius:4px;margin-top:8px;overflow:hidden}
-.bar i{display:block;height:100%;border-radius:4px}
-.spark{display:flex;flex-direction:column;align-items:flex-end;gap:3px;text-align:right}
-.delta{font-size:11px;font-weight:800}
-.delta.dim{color:var(--dim);font-weight:600}
-
-.thead,.trow{display:grid;grid-template-columns:1.4fr 1.2fr .8fr .55fr .8fr;gap:10px;align-items:center;padding:10px 20px}
-.thead{font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)}
-.trow{padding:12px 20px;border-top:1px solid var(--border)}
-.trow:first-of-type{border-top:none}
-.t-cell{display:flex;align-items:center;gap:8px;min-width:0}
-.ttile{width:38px;height:38px;border-radius:8px;background:#101a26;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
-.t-name{font-size:12px;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.t-cell>div:last-child{min-width:0;overflow:hidden}
-.t-sub{font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.match{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800}
-.tm{width:30px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex:none}
-/* Logo de equipo: se enlaza al CDN de bo3.gg. Si falla, el navegador muestra
-   el alt con las iniciales.
-   Placa OSCURA, al reves que la de los juegos: los escudos de esports estan
-   pensados para fondo oscuro y muchos son blancos -- sobre la placa clara
-   desaparecian. Los logos de JUEGO son al reves (CS2 es casi negro), por eso
-   cada uno lleva la suya. */
-.tmlogo{width:26px;height:26px;border-radius:6px;object-fit:contain;background:#151f2b;border:1px solid var(--border);padding:2px;flex:none;font-size:8px;color:var(--mut)}
-.match .w{color:#fff}.match .l{color:var(--dim)}.match .sep{color:var(--dim);font-weight:600}
-.fecha{font-size:11px;color:var(--mut)}
-.badge{display:inline-block;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:800}
-.b-green{background:rgba(34,197,94,.12);color:var(--green)}
-.b-red{background:rgba(239,68,68,.12);color:#f87171}
-.res{font-size:9.5px;font-weight:800;letter-spacing:.08em;padding:5px 9px;border-radius:6px}
-.vacio{padding:26px 20px;color:var(--dim);font-size:12px;text-align:center}
-
-footer{margin-top:20px;padding:16px 20px;border-top:1px solid var(--border);color:var(--dim);font-size:11px;line-height:1.7}
-@media(max-width:900px){#sidebar{display:none}main{margin-left:0;padding:16px}}
-</style>
-</head>
-<body>
-
-<aside id="sidebar">
-  <div class="brand">
-    <div class="brand-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div>
-    <div><b>MONITOR</b><span>ESPORTS</span></div>
-  </div>
-
-  <div class="side-label">JUEGOS · CALIFICADAS</div>
-  ${botonesJuego}
-
-  <div class="side-label">DETALLE</div>
-  <a class="game-btn" href="dota.html" style="border-color:#ef444459;text-decoration:none">
-    <span class="gwrap">${logo("D2", "#ef4444", 28, "dota2")}</span>
-    <span>PANEL DE DOTA</span>
-  </a>
-
-  <div class="side-note">
-    Los porcentajes salen de un cálculo matemático sobre los resultados reales.
-    Ningún número de este panel se escribe a mano.
-  </div>
-</aside>
-
-<main>
+  return documento({
+    titulo: 'MONITOR-ESPORTS · Panel',
+    sidebar,
+    contenido: `
   <header class="topbar">
     <div><h1>Panel</h1><div class="sub">Cómo va el motor contra la realidad</div></div>
     <div class="stamp">Generado ${esc(generadoEn)}</div>
@@ -403,11 +246,8 @@ footer{margin-top:20px;padding:16px 20px;border-top:1px solid var(--border);colo
     La <b>cuota</b> es la mejor disponible en el mercado al momento de predecir, no la de una sola casa.
     Se guarda para poder medirse contra el mercado; este panel no apuesta ni recomienda apostar.
   </footer>
-</main>
-
-</body>
-</html>
-`;
+`,
+  });
 }
 
 // --- datos -------------------------------------------------------------------

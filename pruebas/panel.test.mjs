@@ -124,7 +124,7 @@ test('construirFicha: los marcadores de la ficha son consistentes con la predicc
 
   assert.ok(html.includes('Iron Wing'));
   assert.ok(html.includes('2–1'), 'debe mostrar el marcador real');
-  assert.ok(html.includes('◇ FALLO'), 'el favorito era Falcons y perdió -> fallo');
+  assert.ok(html.includes('FALLÓ'), 'el favorito era Falcons y perdió -> fallo');
   assert.ok(html.includes('1.5379'), 'debe mostrar el brier de la serie');
   // index.html paso a ser el dashboard multijuego (salida/web/dashboard.mjs);
   // el panel de detalle de Dota, al que vuelven las fichas, es dota.html.
@@ -236,7 +236,7 @@ test('ficha pendiente: la narrativa dice el marcador más probable y que no se r
 
 test('ficha pendiente: bo2 muestra la tarjeta de empate y el 1–1 entre los marcadores', () => {
   const html = fichaPendiente({ formato: 'bo2', prob_gana_a: 0.42, prob_empate: 0.2, prob_gana_b: 0.38 });
-  assert.ok(html.includes('EMPATE'), 'un bo2 sí puede empatar');
+  assert.ok(html.includes('Empate'), 'un bo2 sí puede empatar');
   assert.ok(html.includes('1–1'));
 });
 
@@ -263,7 +263,7 @@ test('ficha calificada sigue mostrando su juicio (no se rompió con el cambio)',
 
   assert.ok(html.includes('RESULTADO REAL'));
   assert.ok(html.includes('1–2'));
-  assert.ok(html.includes('◇ FALLO'), 'el favorito era Yandex y perdió');
+  assert.ok(html.includes('FALLÓ'), 'el favorito era Yandex y perdió');
   assert.ok(html.includes('0.8391'));
   assert.ok(!html.includes('SIN JUGAR'));
 });
