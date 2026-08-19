@@ -44,16 +44,36 @@ export const COLOR = { dota2: '#ef4444', lol: '#3b82f6', valorant: '#f43f5e', cs
 // cuando Wikimedia limite por tasa. Incrustados, el panel no depende de nadie
 // al abrirse y funciona sin conexión.
 //
-// Son SVG de Wikimedia Commons, entre 900 B y 7 KB: pesan menos que la
-// petición de red que se ahorran.
+// PARA CAMBIAR UN LOGO: pon el archivo en salida/web/logos/ con el nombre del
+// juego (dota2, lol, valorant, cs2) y vuelve a generar. No hay que tocar
+// código. Se prueban estas extensiones EN ORDEN y gana la primera que exista,
+// así que un .png puesto al lado de un .svg no lo pisa: hay que borrar el
+// .svg o el .svg sigue mandando.
+//
+// El orden pone SVG primero a propósito: escala sin pixelarse y suele pesar
+// menos. Un PNG de 500x500 puede pesar 100 KB para dibujarse a 26 px.
+const FORMATOS = [
+  ['.svg', 'image/svg+xml'],
+  ['.png', 'image/png'],
+  ['.webp', 'image/webp'],
+  ['.jpg', 'image/jpeg'],
+  ['.jpeg', 'image/jpeg'],
+];
+
 export const LOGOS = new Map();
 for (const clave of ['dota2', 'lol', 'valorant', 'cs2']) {
-  try {
-    const svg = readFileSync(new URL(`./logos/${clave}.svg`, import.meta.url), 'utf8');
-    LOGOS.set(clave, 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64'));
-  } catch {
-    // Sin el archivo se cae al cuadro de color con iniciales. Un logo que
-    // falta no puede tumbar el panel.
+  for (const [extension, tipo] of FORMATOS) {
+    try {
+      // Se lee como binario siempre: un SVG es texto pero base64 no distingue,
+      // y así el mismo camino sirve para PNG.
+      const datos = readFileSync(new URL(`./logos/${clave}${extension}`, import.meta.url));
+      LOGOS.set(clave, `data:${tipo};base64,` + datos.toString('base64'));
+      break;
+    } catch {
+      // Sin el archivo se prueba la extensión siguiente, y si no hay ninguna
+      // se cae al cuadro de color con iniciales. Un logo que falta no puede
+      // tumbar el panel.
+    }
   }
 }
 
