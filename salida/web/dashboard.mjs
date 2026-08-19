@@ -73,7 +73,7 @@ function filaJuego(j) {
   const { def, n, aciertos, predichas, vsBase } = j;
   if (n === 0) {
     return `
-      <div class="stat-row">
+      <div class="stat-row" data-juego="${esc(def.clave)}">
         <div class="tile">${logo(def.corto, def.color, 38, def.clave)}</div>
         <div class="stat-name">${esc(def.nombre)}</div>
         <div><div class="pct dim">—</div><div class="frac">${predichas} predichas · 0 calificadas</div></div>
@@ -82,7 +82,7 @@ function filaJuego(j) {
   }
   const tasa = aciertos / n;
   return `
-    <div class="stat-row">
+    <div class="stat-row" data-juego="${esc(def.clave)}">
       <div class="tile">${logo(def.corto, def.color, 38, def.clave)}</div>
       <div class="stat-name">${esc(def.nombre)}</div>
       <div>
@@ -256,13 +256,18 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
     })}
   </section>
 
+  <div class="nota-filtro" data-nota-filtro hidden>
+    Los cuatro números de arriba son de <b>todos los juegos</b> y no cambian con el filtro.
+    Lo que se filtra es de acá para abajo.
+  </div>
+
   <div class="aviso">
     <b>Estos números todavía no dicen nada.</b> Hacen falta ~${MINIMO_POR_JUEGO} partidas calificadas
     <b>por juego</b> para que el resultado deje de ser compatible con el azar, y el que más lleva
     va por ${Math.max(0, ...juegos.map((j) => j.n))}. Sumar los cuatro juegos no cuenta: son motores calibrados por separado.
   </div>
 
-  <section class="card ancho">
+  <section class="card ancho" data-por-juego>
     <div class="card-h"><span class="card-title">Por juego</span></div>
     ${juegos.map(filaJuego).join('')}
   </section>
@@ -303,6 +308,15 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
   var etiqueta = document.querySelector('[data-etiqueta-filtro]');
   if (!botones.length) return;
 
+  // La raya de separación va ARRIBA de cada fila, y la primera no la lleva.
+  // Con el filtro puesto, "la primera" ya no es la misma del HTML, así que hay
+  // que moverla o queda una raya suelta bajo la cabecera.
+  function primera(visibles) {
+    visibles.forEach(function (f, i) {
+      f.classList.toggle('primera', i === 0);
+    });
+  }
+
   function aplicar(filtro, nombre) {
     botones.forEach(function (b) {
       var suyo = b.dataset.filtro === filtro;
@@ -311,17 +325,39 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
     });
 
     tablas.forEach(function (t) {
-      var visibles = 0;
+      var visibles = [];
       [].slice.call(t.querySelectorAll('.trow')).forEach(function (f) {
         var ok = filtro === 'todos' ? f.dataset.global === '1' : f.dataset.juego === filtro;
         f.hidden = !ok;
-        if (ok) visibles++;
+        if (ok) visibles.push(f);
       });
+      primera(visibles);
       var vacio = t.querySelector('[data-vacio]');
-      if (vacio) vacio.hidden = visibles > 0;
+      if (vacio) vacio.hidden = visibles.length > 0;
     });
 
+    // La tabla comparativa de arriba se reduce al juego elegido. Con "todos"
+    // vuelven los cuatro, que es cuando comparar tiene sentido.
+    var comparativa = document.querySelector('[data-por-juego]');
+    if (comparativa) {
+      var filasJuego = [].slice.call(comparativa.querySelectorAll('.stat-row'));
+      var vistas = [];
+      filasJuego.forEach(function (f) {
+        var ok = filtro === 'todos' || f.dataset.juego === filtro;
+        f.hidden = !ok;
+        if (ok) vistas.push(f);
+      });
+      primera(vistas);
+    }
+
     if (etiqueta) etiqueta.textContent = nombre;
+
+    // Los KPI de arriba son globales SIEMPRE. Con un filtro puesto, un
+    // "Acierto global 63.2%" justo encima de una tabla que solo muestra CS2 se
+    // lee como si fuera de CS2, y no lo es. Se dice, en vez de inventar KPI
+    // por juego que nadie pidio.
+    var nota = document.querySelector('[data-nota-filtro]');
+    if (nota) nota.hidden = filtro === 'todos';
     // Queda en la URL para poder compartir "el panel filtrado por CS2".
     try {
       var u = new URL(location.href);
@@ -337,12 +373,20 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
     });
   });
 
-  // Si la URL trae ?juego=cs2, se abre ya filtrado.
+  // Se aplica SIEMPRE al cargar, no solo cuando la URL trae ?juego=cs2.
+  // Ademas de dejar el filtro pedido, normaliza la raya de la primera fila:
+  // el CSS lo intentaba con :first-of-type, que ahi no sirve porque el primer
+  // <div> hermano es la cabecera de la tarjeta, no la primera fila. Resultado:
+  // la primera fila llevaba raya propia encima del borde de la cabecera, dos
+  // lineas pegadas.
+  var inicial = 'todos';
   try {
     var pedido = new URL(location.href).searchParams.get('juego');
-    var boton = pedido && botones.filter(function (b) { return b.dataset.filtro === pedido; })[0];
-    if (boton) aplicar(pedido, boton.querySelector('span:nth-of-type(2)').textContent);
+    if (pedido && botones.filter(function (b) { return b.dataset.filtro === pedido; })[0]) inicial = pedido;
   } catch (e) {}
+
+  var suyo = botones.filter(function (b) { return b.dataset.filtro === inicial; })[0];
+  if (suyo) aplicar(inicial, suyo.querySelector('span:nth-of-type(2)').textContent);
 })();
 </script>
 `,

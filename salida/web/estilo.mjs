@@ -103,8 +103,12 @@ a{color:inherit;text-decoration:none}
 .game-btn.pulsable{cursor:pointer;font-family:inherit;text-align:left}
 .game-btn.pulsable:hover{background:#101a26}
 /* Fila oculta por el filtro de juego. Se oculta con CSS y no borrando del
-   DOM para que volver a "todos" no cueste nada. */
-.trow[hidden],.vacio[hidden]{display:none}
+   DOM para que volver a "todos" no cueste nada.
+   La clase .primera la pone el script sobre la primera fila VISIBLE: la raya
+   arriba de cada fila y la de mas arriba no debe llevarla, pero con el filtro
+   puesto esa ya no es la primera del HTML. */
+.trow[hidden],.stat-row[hidden],.vacio[hidden]{display:none}
+.trow.primera,.stat-row.primera{border-top:none}
 .gcount{margin-left:auto;color:var(--dim);font-weight:700}
 .side-note{margin-top:auto;font-size:11px;color:var(--dim);line-height:1.6;border-top:1px solid var(--border);padding-top:14px}
 
@@ -130,6 +134,9 @@ main{margin-left:232px;padding:22px 26px}
 .kpi.alerta{border-color:rgba(239,68,68,.45)}
 .kpi.alerta .kpi-nota{color:#f87171}
 
+.nota-filtro{margin-top:12px;font-size:12px;color:var(--mut);line-height:1.6;padding:10px 14px;border-left:3px solid var(--blue);background:#0a121b;border-radius:0 8px 8px 0}
+.nota-filtro b{color:var(--text)}
+.nota-filtro[hidden]{display:none}
 .aviso{margin-top:16px;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.07);border-radius:12px;padding:14px 18px;font-size:13px;line-height:1.6;color:#fcd9a0}
 .aviso b{color:#fbbf24}
 .aviso.rojo{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.07);color:#fca5a5}
