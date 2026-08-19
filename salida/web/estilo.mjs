@@ -14,6 +14,20 @@
 // tipografía; de dónde salen los datos es asunto de quien lo llame.
 
 import { readFileSync } from 'node:fs';
+import { cp } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
+
+// Dónde vive el sitio publicado. Hace falta para las tarjetas sociales:
+// og:image y twitter:image TIENEN que ser URL absolutas o WhatsApp, X,
+// Discord y Telegram no muestran nada (lo dice assets/README.md y es cierto).
+// Verificado el 2026-08-19 con una petición real: la página responde 200.
+//
+// Ojo con el SUBDIRECTORIO: el sitio es .../monitor-esports/, no la raíz del
+// dominio. Por eso todo lo demás —favicon, manifest, iconos— va con ruta
+// RELATIVA. Las rutas absolutas que traía assets/head-snippet.html
+// (`/assets/favicon.svg`) apuntarían a mitzumitzukyh-code.github.io/assets/,
+// que no existe.
+export const SITIO = (process.env.SITIO_URL ?? 'https://mitzumitzukyh-code.github.io/monitor-esports').replace(/\/+$/, '');
 
 export const esc = (s) =>
   String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -49,9 +63,9 @@ export function logo(corto, color, tam = 26, clave = null) {
 }
 
 // Escudo de equipo: el logo real si la fuente lo trae, y si no las iniciales.
-// Dota no tiene logo guardado (dota_teams sólo guarda team_id y nombre), así
-// que sus escudos siempre caen a las iniciales -- por eso el parámetro es
-// opcional y no un error.
+// CS2, LoL y Valorant salen de bo3.gg (/teams -> image_url); Dota, de
+// datos/logos-dota.json (OpenDota). La URL es opcional a propósito: un equipo
+// nuevo sin escudo todavía se dibuja con sus iniciales en vez de romper.
 export function escudo(nombre, url, color, tam = 26) {
   const abrev = String(nombre ?? '?').slice(0, 3).toUpperCase();
   if (url) {
@@ -169,7 +183,7 @@ main{margin-left:232px;padding:22px 26px}
 .srow:hover{background:#0a1119}
 .srow.mala{background:rgba(239,68,68,.06)}
 .srow.mala:hover{background:rgba(239,68,68,.1)}
-.slado{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:9px;align-items:center;font-size:13px}
+.slado{display:grid;grid-template-columns:12px 22px minmax(0,1fr) auto;gap:9px;align-items:center;font-size:13px}
 .slado+.slado{margin-top:5px}
 .sfav{font-size:9px;color:var(--ac,var(--red))}
 .sname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut)}
@@ -187,12 +201,15 @@ main{margin-left:232px;padding:22px 26px}
 .frow{display:grid;grid-template-columns:24px minmax(0,1fr) 64px;gap:12px;align-items:center;padding:9px 20px;border-top:1px solid var(--border);font-size:13px}
 .frow:first-of-type{border-top:none}
 .fpos{font-size:11px;color:var(--dim);font-weight:700;font-variant-numeric:tabular-nums}
-.fnom{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fnom{min-width:0;display:flex;align-items:center;gap:9px;overflow:hidden;white-space:nowrap}
+.fnom>img,.fnom>span{flex:none}
 .frat{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;color:var(--red)}
 
 /* --- ficha de serie ------------------------------------------------------ */
 .hero{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:18px}
-.hero h1{font-size:clamp(22px,3.4vw,34px);font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.hero h1{font-size:clamp(20px,3vw,32px);font-weight:800;letter-spacing:-.02em;line-height:1.15;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.heq{display:flex;align-items:center;gap:11px}
+.heq .tmlogo,.heq .tm{width:40px;height:40px}
 .hero .vs{color:var(--red);margin:0 6px}
 .hero .perdio{color:var(--dim)}
 .hero-lado{text-align:right;flex:none}
@@ -226,7 +243,24 @@ footer{margin-top:20px;padding:16px 20px;border-top:1px solid var(--border);colo
 @media(max-width:900px){#sidebar{display:none}main{margin-left:0;padding:16px}}
 `;
 
-const ICONO_MARCA = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>`;
+// La marca sale del paquete de assets (assets/logo-mark-simple.svg), no de un
+// SVG escrito a mano acá: así el cuadrito del panel y el favicon son el mismo
+// dibujo. Se incrusta como data URI —pesa 821 B— para que no dependa de una
+// petición más ni de que la carpeta assets/ esté publicada.
+//
+// Si el archivo no está, se cae al rayo dibujado a mano de siempre: una marca
+// que falta no puede tumbar el panel.
+const RAYO_DE_RESPALDO = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>`;
+
+const ICONO_MARCA = (() => {
+  try {
+    const svg = readFileSync(new URL('../../assets/logo-mark-simple.svg', import.meta.url), 'utf8');
+    const uri = 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64');
+    return `<img src="${uri}" width="38" height="38" alt="" style="display:block;border-radius:10px">`;
+  } catch {
+    return RAYO_DE_RESPALDO;
+  }
+})();
 
 // Barra lateral. `bloques` es una lista de { etiqueta, enlaces }, y cada
 // enlace { href, texto, logoHtml, color, contador, activo }. El panel
@@ -264,15 +298,64 @@ ${secciones}
 </aside>`;
 }
 
+// Iconos, manifest y tarjeta social. Sale de assets/head-snippet.html, con
+// dos correcciones obligadas por dónde se publica de verdad el sitio:
+//
+//   1. RUTAS RELATIVAS, no `/assets/...`. El sitio vive en un subdirectorio
+//      (.../monitor-esports/), así que una ruta absoluta se va a la raíz del
+//      dominio y da 404.
+//   2. og:image y twitter:image SÍ absolutas, con SITIO delante: una ruta
+//      relativa ahí y ninguna red social muestra la tarjeta.
+//
+// `pagina` es el archivo (index.html / dota.html) para armar canonical y
+// og:url. Las fichas de serie no llevan tarjeta social: son cientos y
+// ninguna se comparte suelta.
+function cabeza({ titulo, descripcion, pagina, imagen }) {
+  const social = pagina
+    ? `
+<link rel="canonical" href="${esc(SITIO)}/${esc(pagina)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MONITOR-ESPORTS">
+<meta property="og:locale" content="es_VE">
+<meta property="og:title" content="${esc(titulo)}">
+<meta property="og:description" content="${esc(descripcion)}">
+<meta property="og:url" content="${esc(SITIO)}/${esc(pagina)}">
+<meta property="og:image" content="${esc(SITIO)}/assets/${esc(imagen)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MONITOR-ESPORTS: el motor predice, la realidad califica.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${esc(titulo)}">
+<meta name="twitter:description" content="${esc(descripcion)}">
+<meta name="twitter:image" content="${esc(SITIO)}/assets/${esc(imagen)}">`
+    : '';
+
+  return `<link rel="icon" href="assets/favicon.ico" sizes="32x32">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="assets/site.webmanifest">
+<meta name="theme-color" content="#05080c">
+<meta name="apple-mobile-web-app-title" content="Monitor">
+<meta name="description" content="${esc(descripcion)}">${social}`;
+}
+
 // El documento entero. Todo lo que se publica pasa por acá, así que ningún
-// panel puede quedarse con una tipografía o un fondo distinto.
-export function documento({ titulo, sidebar, contenido }) {
+// panel puede quedarse con una tipografía, un fondo o un favicon distinto.
+export function documento({
+  titulo,
+  sidebar,
+  contenido,
+  descripcion = 'Panel de predicciones de esports (Dota 2, LoL, Valorant, CS2) calificadas partida por partida contra el resultado real. No apuesta ni recomienda apostar.',
+  pagina = null,
+  imagen = 'og-image.png',
+}) {
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(titulo)}</title>
+${cabeza({ titulo, descripcion, pagina, imagen })}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -289,6 +372,40 @@ ${contenido}
 </body>
 </html>
 `;
+}
+
+// Copia assets/ al directorio que se publica y corrige el manifest.
+//
+// El artefacto de Pages es SÓLO salida/web (ver el workflow), así que lo que
+// se quede en la raíz del repo no llega al sitio. Se copia al generar en vez
+// de versionar una segunda copia: el original manda y no hay dos verdades.
+//
+// El manifest del paquete trae rutas absolutas (`/assets/icon-192.png`,
+// `start_url: /index.html`). Bajo un subdirectorio eso apunta a la raíz del
+// dominio, así que se reescribe relativo al vuelo. No se toca el archivo
+// original.
+export async function copiarAssets(destino) {
+  const origen = new URL('../../assets/', import.meta.url);
+  try {
+    await cp(origen, destino, { recursive: true });
+  } catch (e) {
+    // Sin assets el panel se ve igual: pierde favicon y tarjeta social, no
+    // datos. No vale tumbar la generación por esto.
+    return { copiado: false, razon: e.message };
+  }
+
+  try {
+    const manifest = JSON.parse(readFileSync(new URL('site.webmanifest', destino), 'utf8'));
+    manifest.start_url = './index.html';
+    manifest.scope = './';
+    manifest.icons = manifest.icons.map((i) => ({ ...i, src: String(i.src).replace(/^\/assets\//, './') }));
+    await writeFile(new URL('site.webmanifest', destino), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
+  } catch {
+    // El manifest es lo menos crítico del paquete: si no se pudo arreglar,
+    // el resto de los iconos sigue funcionando.
+  }
+
+  return { copiado: true };
 }
 
 // Tarjeta de número grande. `dash` dibuja el anillo (163.4 = la

@@ -80,12 +80,58 @@ datos/          lo que entra
   juegos/       bo3.mjs (adaptador multijuego), bajar-historico.mjs
   liga.mjs      OpenDota — solo Dota 2
   fixtures.mjs  haglund.dev — solo Dota 2
+  logos-dota.mjs / .json   escudos de equipo de Dota (ver abajo)
   cache/        archivos descargados (en .gitignore)
 motor/          elo.mjs, series.mjs — AGNÓSTICOS del juego
 juez/           backtest.mjs, notas.mjs, tabla.mjs, calibrar.mjs
 salida/         discord.mjs, formato.mjs, web/
+  web/estilo.mjs  CSS, barra lateral y envoltorio COMPARTIDOS por las 3 páginas
+assets/         marca: favicon, iconos PWA, manifest, tarjetas sociales
 pruebas/        una prueba por cada función del motor
 ```
+
+### La web: tres páginas, un solo diseño
+
+`salida/web/` produce tres cosas, y las tres salen de `estilo.mjs`:
+
+| Archivo | Lo genera | Qué es |
+|---|---|---|
+| `index.html` | `dashboard.mjs` | panel general, los cuatro juegos |
+| `dota.html` | `generar.mjs` | detalle de Dota: llave de TI, fuerza Elo |
+| `serie-*.html` | `generar.mjs` | una ficha por serie predicha de Dota |
+
+**El CSS vive en un solo archivo a propósito.** Hasta el 2026-08-19 había dos
+diseños conviviendo y abrir un panel después del otro se sentía como entrar a
+dos sitios distintos. Si vas a tocar colores o cajas, tócalos en
+`estilo.mjs`; si escribes CSS suelto en un generador, el problema vuelve.
+
+**Escudos de equipo.** CS2, LoL y Valorant los sacan de bo3.gg (`/teams` →
+`image_url`). Dota los saca de `datos/logos-dota.json`, poblado desde OpenDota
+(`/teams/{id}` → `logo_url`) por `scripts/logos-dota.mjs`. Se guardan en un
+archivo y no en Supabase porque Dota se muda a bo3.gg después de TI y ahí los
+escudos van a venir de la misma fuente que los demás: una columna nueva
+nacería obsoleta en días. El archivo se lee del disco, no cuesta ninguna
+petición por corrida (regla 5). Para refrescarlo cuando aparezcan equipos
+nuevos:
+
+```
+node --env-file=.env scripts/logos-dota.mjs
+```
+
+Sólo pregunta por los que faltan; correrlo dos veces no gasta ni una petición.
+
+**Assets de marca.** El paquete vive en `assets/` (raíz) y `estilo.mjs` lo
+copia a `salida/web/assets/` al generar, porque el artefacto de Pages es sólo
+`salida/web`. Dos correcciones obligadas respecto a lo que traía el paquete,
+y hay que respetarlas:
+
+- **Rutas relativas.** El sitio se publica en un SUBDIRECTORIO
+  (`.../monitor-esports/`), así que `/assets/favicon.svg` se iría a la raíz
+  del dominio y daría 404. Por lo mismo se reescribe `site.webmanifest` al
+  copiarlo.
+- **`og:image` y `twitter:image` absolutas**, con `SITIO` delante. Con ruta
+  relativa, ninguna red social muestra la tarjeta. `SITIO` se puede cambiar
+  con la variable de entorno `SITIO_URL`.
 
 `motor/` no sabe de qué juego se trata y así debe quedarse: si una función
 del motor necesita preguntar "¿esto es CS2 o Dota?", el juego está mal

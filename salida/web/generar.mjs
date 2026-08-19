@@ -21,7 +21,8 @@ import { ratings, ratingDeEquipo, probabilidadGanar } from '../../motor/elo.mjs'
 import { distribucionMarcadores, probabilidadPartidaDesdeSerie } from '../../motor/series.mjs';
 import { EQUIPOS_TI2026 } from '../../datos/equipos-ti2026.mjs';
 import { enVenezuela, hora12 } from '../formato.mjs';
-import { esc, logo, kpi, cabecera, documento, barraLateral } from './estilo.mjs';
+import { esc, logo, escudo, kpi, cabecera, documento, barraLateral, copiarAssets } from './estilo.mjs';
+import { cargarLogos } from '../../datos/logos-dota.mjs';
 
 const LEAGUE_ID_TI2026 = 19719;
 
@@ -141,7 +142,7 @@ function barraDota({ calificadas = null, dondeEstoy = 'panel' } = {}) {
 
 // Una serie calificada: los dos equipos con su probabilidad, el marcador
 // real, el Brier y el veredicto. Toda la fila enlaza a su ficha.
-function filaSerie(c, nombre) {
+function filaSerie(c, nombre, escudoDe) {
   const pa = Number(c.prob_gana_a);
   const pb = Number(c.prob_gana_b);
   const favA = pa >= pb;
@@ -154,18 +155,19 @@ function filaSerie(c, nombre) {
   const ganador =
     c.resultado_real === 'ganaA' ? nombre(c.equipo_a) : c.resultado_real === 'ganaB' ? nombre(c.equipo_b) : 'empate';
 
-  const lado = (nom, prob, esFav, gano) => `
+  const lado = (id, prob, esFav, gano) => `
         <div class="slado">
           <span class="sfav">${esFav ? '▶' : ''}</span>
-          <span class="sname${gano ? ' gano' : ''}">${esc(nom)}</span>
+          ${escudoDe(id)}
+          <span class="sname${gano ? ' gano' : ''}">${esc(nombre(id))}</span>
           <span class="sprob">${pct(prob)}%</span>
         </div>`;
 
   return `
       <a class="srow${peor ? ' mala' : ''}" href="${esc(archivoDeFicha(c.series_id))}" title="Ver la ficha de esta serie">
         <div>
-          ${lado(nombre(c.equipo_a), pa, favA, c.resultado_real === 'ganaA')}
-          ${lado(nombre(c.equipo_b), pb, !favA, c.resultado_real === 'ganaB')}
+          ${lado(c.equipo_a, pa, favA, c.resultado_real === 'ganaA')}
+          ${lado(c.equipo_b, pb, !favA, c.resultado_real === 'ganaB')}
           <div class="sbar"><i style="width:${pct(pa)}%;background:#ef4444"></i><i style="width:${pct(pb)}%;background:#7f1d1d"></i></div>
         </div>
         <div>
@@ -179,23 +181,24 @@ function filaSerie(c, nombre) {
 
 // Una serie predicha que todavía no se juega: hay predicción y hora, no hay
 // resultado ni juicio.
-function filaPendiente(p, nombre) {
+function filaPendiente(p, nombre, escudoDe) {
   const pa = Number(p.prob_gana_a);
   const pb = Number(p.prob_gana_b);
   const favA = pa >= pb;
 
-  const lado = (nom, prob, esFav) => `
+  const lado = (id, prob, esFav) => `
         <div class="slado">
           <span class="sfav">${esFav ? '▶' : ''}</span>
-          <span class="sname">${esc(nom)}</span>
+          ${escudoDe(id)}
+          <span class="sname">${esc(nombre(id))}</span>
           <span class="sprob">${pct(prob)}%</span>
         </div>`;
 
   return `
       <a class="srow" href="${esc(archivoDeFicha(p.series_id))}" style="grid-template-columns:minmax(0,1fr) 96px" title="Ver la ficha de esta serie">
         <div>
-          ${lado(nombre(p.equipo_a), pa, favA)}
-          ${lado(nombre(p.equipo_b), pb, !favA)}
+          ${lado(p.equipo_a, pa, favA)}
+          ${lado(p.equipo_b, pb, !favA)}
           <div class="sbar"><i style="width:${pct(pa)}%;background:#ef4444"></i><i style="width:${pct(pb)}%;background:#7f1d1d"></i></div>
         </div>
         <div style="text-align:right">
@@ -218,7 +221,10 @@ function vacio(mensaje) {
   return `<div class="vacio">${esc(mensaje)}</div>`;
 }
 
-export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn, seriesLiga = [], destacados = new Set() }) {
+export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn, seriesLiga = [], destacados = new Set(), logos = new Map() }) {
+  // Escudo por team_id. Sin archivo de logos caen todos a las iniciales, que
+  // es como se veía hasta ahora: nada se rompe por un escudo que falta.
+  const escudoDe = (id) => escudo(nombre(id), logos.get(id), '#ef4444', 22);
   // La grilla se arma de las series REALES del torneo, no de las predichas:
   // hay series de TI que el sistema nunca llegó a predecir y aun así cuentan
   // para la posición.
@@ -270,13 +276,13 @@ export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerz
   ].join('\n    ');
 
   const cuerpoCalificadas = calificadas.length
-    ? calificadas.map((c) => filaSerie(c, nombre)).join('')
+    ? calificadas.map((c) => filaSerie(c, nombre, escudoDe)).join('')
     : vacio(
         'Todavía no hay series calificadas. Aparecen acá en cuanto una serie predicha termina y el juez la cruza contra el resultado real de OpenDota.',
       );
 
   const cuerpoPendientes = pendientes.length
-    ? pendientes.map((p) => filaPendiente(p, nombre)).join('')
+    ? pendientes.map((p) => filaPendiente(p, nombre, escudoDe)).join('')
     : vacio(
         'Ninguna serie próxima con los dos equipos definidos. En el formato suizo de TI los cruces de la ronda siguiente salen del resultado de la actual, así que el calendario los publica como TBD y no se puede predecir sobre eso. En cuanto se definan, el flujo los predice antes de que empiecen.',
       );
@@ -286,7 +292,7 @@ export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerz
       (f, i) => `
       <div class="frow">
         <span class="fpos">${i + 1}</span>
-        <span class="fnom">${esc(f.nombre)}</span>
+        <span class="fnom">${f.teamId == null ? '' : escudoDe(f.teamId)}${esc(f.nombre)}</span>
         <span class="frat">${Math.round(f.rating)}</span>
       </div>`,
     )
@@ -342,13 +348,17 @@ export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerz
   </footer>`;
 
   return documento({
-    titulo: 'Monitor Dota 2 · The International 2026',
+    titulo: 'MONITOR-ESPORTS · Panel de Dota 2',
+    pagina: 'dota.html',
+    imagen: 'og-image-dota.png',
+    descripcion:
+      'Predicciones de Dota 2 en The International 2026, calificadas serie por serie contra el resultado real. Brier, favorito acertado y la llave del Main Event.',
     sidebar: barraDota({ calificadas: m.n || null, dondeEstoy: 'panel' }),
     contenido,
   });
 }
 
-export function construirFicha({ serie, nombre, p, marcadores, ratingA, ratingB, formaA, formaB, generadoEn }) {
+export function construirFicha({ serie, nombre, p, marcadores, ratingA, ratingB, formaA, formaB, generadoEn, logos = new Map() }) {
   const nombreA = nombre(serie.equipo_a);
   const nombreB = nombre(serie.equipo_b);
   const pa = Number(serie.prob_gana_a);
@@ -361,6 +371,10 @@ export function construirFicha({ serie, nombre, p, marcadores, ratingA, ratingB,
   // puede mostrar de dónde sale el número y qué marcadores son posibles,
   // pero no hay resultado ni Brier que enseñar. Inventar un juicio acá
   // sería justamente lo que el proyecto no hace.
+  const escudoDe = (id) => escudo(nombre(id), logos.get(id), '#ef4444', 26);
+  // En el título va más grande: es el elemento principal de la página.
+  const escudoGrande = (id) => escudo(nombre(id), logos.get(id), '#ef4444', 40);
+
   const calificada = Boolean(serie.resultado_real);
   const brier = calificada ? Number(serie.brier) : null;
   const acerto = calificada && (favA ? 'ganaA' : 'ganaB') === serie.resultado_real;
@@ -473,7 +487,7 @@ export function construirFicha({ serie, nombre, p, marcadores, ratingA, ratingB,
 
   <div class="hero">
     <h1>
-      <span${calificada && serie.resultado_real !== 'ganaA' ? ' class="perdio"' : ''}>${esc(nombreA)}</span><span class="vs">vs</span><span${calificada && serie.resultado_real !== 'ganaB' ? ' class="perdio"' : ''}>${esc(nombreB)}</span>
+      <span class="heq${calificada && serie.resultado_real !== 'ganaA' ? ' perdio' : ''}">${escudoGrande(serie.equipo_a)}${esc(nombreA)}</span><span class="vs">vs</span><span class="heq${calificada && serie.resultado_real !== 'ganaB' ? ' perdio' : ''}">${escudoGrande(serie.equipo_b)}${esc(nombreB)}</span>
     </h1>
     <div class="hero-lado">
 ${
@@ -501,13 +515,13 @@ ${
 
     <section class="card">
       ${cabecera('De dónde sale', 'Elo al momento de predecir')}
-      <div class="drow"><span class="fnom">${esc(nombreA)}</span><span class="dval">${Math.round(ratingA)}</span></div>
-      <div class="drow"><span class="fnom">${esc(nombreB)}</span><span class="dval">${Math.round(ratingB)}</span></div>
+      <div class="drow"><span class="fnom">${escudoDe(serie.equipo_a)}${esc(nombreA)}</span><span class="dval">${Math.round(ratingA)}</span></div>
+      <div class="drow"><span class="fnom">${escudoDe(serie.equipo_b)}${esc(nombreB)}</span><span class="dval">${Math.round(ratingB)}</span></div>
       <div class="drow"><span class="dlab">Diferencia → p por partida</span><span class="dval neutro">${diferencia >= 0 ? '+' : '−'}${Math.abs(Math.round(diferencia))}</span></div>
       <div class="forma">
         <div class="dlab">Forma antes de la serie · más reciente a la izquierda</div>
-        <div class="frm" style="margin-top:12px"><span class="fnom">${esc(nombreA)}</span><span style="display:flex;gap:4px">${forma(formaA)}</span></div>
-        <div class="frm"><span class="fnom">${esc(nombreB)}</span><span style="display:flex;gap:4px">${forma(formaB)}</span></div>
+        <div class="frm" style="margin-top:12px"><span class="fnom">${escudoDe(serie.equipo_a)}${esc(nombreA)}</span><span style="display:flex;gap:4px">${forma(formaA)}</span></div>
+        <div class="frm"><span class="fnom">${escudoDe(serie.equipo_b)}${esc(nombreB)}</span><span style="display:flex;gap:4px">${forma(formaB)}</span></div>
       </div>
     </section>
   </section>
@@ -554,7 +568,7 @@ async function main() {
   const partidasLiga = await partidasDeLaLiga(LEAGUE_ID_TI2026);
   const { partidas } = historicoConLiga(historicoBase, partidasLiga);
   const r = ratings(partidas, Date.now() / 1000);
-  const fuerzas = EQUIPOS_TI2026.map((e) => ({ nombre: e.nombre, rating: ratingDeEquipo(r, e.teamId) })).sort(
+  const fuerzas = EQUIPOS_TI2026.map((e) => ({ teamId: e.teamId, nombre: e.nombre, rating: ratingDeEquipo(r, e.teamId) })).sort(
     (a, b) => b.rating - a.rating,
   );
 
@@ -583,7 +597,12 @@ async function main() {
   // El panel viejo se guarda como dota.html: sigue teniendo cosas que el
   // dashboard nuevo no muestra (fuerzas Elo de los 16, grilla del suizo, llave
   // del Main Event) y las fichas enlazan a él.
-  const html = construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn, seriesLiga, destacados });
+  // Los escudos salen de datos/logos-dota.json, no de la API: se leen del
+  // disco en cada corrida y no cuestan ninguna petición (regla 5). Para
+  // refrescarlos: node --env-file=.env scripts/logos-dota.mjs
+  const logos = cargarLogos();
+
+  const html = construirHtml({ calificadas, pendientes, nombre, metricas, fuerzas, generadoEn, seriesLiga, destacados, logos });
   const destino = new URL('./dota.html', import.meta.url);
   await writeFile(destino, html);
 
@@ -601,6 +620,7 @@ async function main() {
     const ficha = construirFicha({
       serie: s,
       nombre,
+      logos,
       p,
       marcadores,
       ratingA: ratingDeEquipo(rMomento, s.equipo_a),
@@ -612,6 +632,9 @@ async function main() {
     await writeFile(new URL('./' + archivoDeFicha(s.series_id), import.meta.url), ficha);
     fichas++;
   }
+
+  const assets = await copiarAssets(new URL('./assets/', import.meta.url));
+  if (!assets.copiado) console.warn(`  (sin assets: ${assets.razon})`);
 
   console.log(`Panel generado: ${fileURLToPath(destino)}`);
   console.log(`  ${calificadas.length} series calificadas, ${pendientes.length} pendientes, ${fuerzas.length} equipos`);

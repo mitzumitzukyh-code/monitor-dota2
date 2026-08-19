@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 import { seleccionar } from '../../datos/supabase.mjs';
 import { datosDeEquipos, nombresDeTorneos } from '../../datos/juegos/bo3.mjs';
 import { enVenezuela, hora12 } from '../formato.mjs';
-import { esc, pct1, logo, escudo, kpi, documento, barraLateral } from './estilo.mjs';
+import { esc, pct1, logo, escudo, kpi, documento, barraLateral, copiarAssets } from './estilo.mjs';
 
 // Mismo criterio que salida/resumen-global.mjs: los Brier de Dota y los de
 // bo3.gg NO están en la misma escala (Dota puntúa sobre tres clases). Cada
@@ -177,6 +177,10 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
 
   return documento({
     titulo: 'MONITOR-ESPORTS · Panel',
+    pagina: 'index.html',
+    imagen: 'og-image.png',
+    descripcion:
+      'El motor predice, la realidad califica. Acierto, Brier y muestra por juego en Dota 2, LoL, Valorant y CS2, contra resultados reales. No apuesta ni recomienda apostar.',
     sidebar,
     contenido: `
   <header class="topbar">
@@ -394,6 +398,12 @@ if (esEjecutadoDirectamente) {
   const datos = await reunirDatos();
   const destino = new URL('./index.html', import.meta.url);
   await writeFile(destino, construirDashboard(datos), 'utf8');
+
+  // Los iconos y la tarjeta social viven en assets/ (raíz del repo), pero el
+  // artefacto de Pages es sólo salida/web: hay que copiarlos ahí o el sitio
+  // sale sin favicon.
+  const assets = await copiarAssets(new URL('./assets/', import.meta.url));
+  if (!assets.copiado) console.warn(`  (sin assets: ${assets.razon})`);
   const conDatos = datos.juegos.filter((j) => j.n > 0);
   console.log(`panel generado: ${datos.juegos.length} juegos, ${conDatos.reduce((s, j) => s + j.n, 0)} calificadas`);
 }
