@@ -16,6 +16,7 @@
 import { readFileSync } from 'node:fs';
 import { cp } from 'node:fs/promises';
 import { writeFile } from 'node:fs/promises';
+import { basename } from 'node:path';
 
 // Dónde vive el sitio publicado. Hace falta para las tarjetas sociales:
 // og:image y twitter:image TIENEN que ser URL absolutas o WhatsApp, X,
@@ -98,7 +99,12 @@ a{color:inherit;text-decoration:none}
 .brand span{font-size:9px;font-weight:700;letter-spacing:.35em;color:var(--blue)}
 .side-label{font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--dim);padding:16px 8px 8px;border-top:1px solid var(--border);margin-top:12px}
 .game-btn{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:10px;background:#0a121b;border:1px solid;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--text);margin-bottom:8px}
-.game-btn.activo{background:#101a26}
+.game-btn.activo{background:#101a26;box-shadow:inset 3px 0 0 var(--gc,currentColor)}
+.game-btn.pulsable{cursor:pointer;font-family:inherit;text-align:left}
+.game-btn.pulsable:hover{background:#101a26}
+/* Fila oculta por el filtro de juego. Se oculta con CSS y no borrando del
+   DOM para que volver a "todos" no cueste nada. */
+.trow[hidden],.vacio[hidden]{display:none}
 .gcount{margin-left:auto;color:var(--dim);font-weight:700}
 .side-note{margin-top:auto;font-size:11px;color:var(--dim);line-height:1.6;border-top:1px solid var(--border);padding-top:14px}
 
@@ -240,7 +246,17 @@ main{margin-left:232px;padding:22px 26px}
 
 footer{margin-top:20px;padding:16px 20px;border-top:1px solid var(--border);color:var(--dim);font-size:11px;line-height:1.7}
 .scroll{overflow-x:auto}
-@media(max-width:900px){#sidebar{display:none}main{margin-left:0;padding:16px}}
+/* En el telefono la barra pasa a ser una tira arriba, con los juegos como
+   fichas que se acomodan solas. Antes se escondia entera (display:none), y
+   con eso desaparecian el filtro por juego y el enlace al panel de Dota: en
+   un telefono no habia forma de llegar a ninguno de los dos. */
+@media(max-width:900px){
+  #sidebar{position:static;width:auto;display:block;overflow:visible;padding:14px 16px;border-right:none;border-bottom:1px solid var(--border)}
+  #sidebar .side-label{border-top:none;margin-top:0;padding:12px 2px 8px}
+  #sidebar .game-btn{display:inline-flex;width:auto;margin:0 8px 8px 0}
+  .side-note{margin-top:6px}
+  main{margin-left:0;padding:16px}
+}
 `;
 
 // La marca sale del paquete de assets (assets/logo-mark-simple.svg), no de un
@@ -270,12 +286,17 @@ export function barraLateral({ bloques = [], nota = '' } = {}) {
     .map(({ etiqueta, enlaces }) => {
       const items = enlaces
         .map((e) => {
-          // Sin href se dibuja como caja, no como enlace: un <a> que no lleva
-          // a ningún lado se ve igual de pulsable y no hace nada.
-          const etiquetaHtml = e.href ? 'a' : 'div';
+          // Tres formas, y la diferencia importa:
+          //   href     -> enlace de verdad, va a otra página
+          //   filtro   -> botón que filtra ESTA página sin recargar
+          //   ninguno  -> caja muerta; se dibuja como caja, no como enlace,
+          //               porque un <a> que no lleva a ningún lado se ve
+          //               igual de pulsable y no hace nada.
+          const etiquetaHtml = e.href ? 'a' : e.filtro ? 'button' : 'div';
           const atrHref = e.href ? ` href="${esc(e.href)}"` : '';
+          const atrFiltro = e.filtro ? ` type="button" data-filtro="${esc(e.filtro)}"` : '';
           return `
-  <${etiquetaHtml} class="game-btn${e.activo ? ' activo' : ''}"${atrHref} style="border-color:${e.color}59">
+  <${etiquetaHtml} class="game-btn${e.filtro ? ' pulsable' : ''}${e.activo ? ' activo' : ''}"${atrHref}${atrFiltro} style="border-color:${e.color}59;--gc:${e.color}">
     <span class="gwrap">${e.logoHtml}</span>
     <span>${esc(e.texto)}</span>
     ${e.contador == null ? '' : `<span class="gcount">${esc(e.contador)}</span>`}
@@ -384,10 +405,20 @@ ${contenido}
 // `start_url: /index.html`). Bajo un subdirectorio eso apunta a la raíz del
 // dominio, así que se reescribe relativo al vuelo. No se toca el archivo
 // original.
+// Lo que NO se publica. Son archivos del paquete que sirven para trabajar con
+// la marca, no para que los pida un navegador: publicarlos sólo engorda el
+// sitio. brand-preview.png solo pesa más que todos los iconos juntos.
+const NO_SE_PUBLICAN = new Set(['brand-preview.png', 'README.md', 'head-snippet.html']);
+
 export async function copiarAssets(destino) {
   const origen = new URL('../../assets/', import.meta.url);
   try {
-    await cp(origen, destino, { recursive: true });
+    await cp(origen, destino, {
+      recursive: true,
+      // Devolver false salta el archivo. El directorio raíz siempre pasa, si
+      // no, no se copiaría nada.
+      filter: (ruta) => !NO_SE_PUBLICAN.has(basename(ruta)),
+    });
   } catch (e) {
     // Sin assets el panel se ve igual: pierde favicon y tarjeta social, no
     // datos. No vale tumbar la generación por esto.

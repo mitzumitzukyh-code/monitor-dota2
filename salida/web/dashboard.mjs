@@ -45,6 +45,13 @@ const BASE_DOTA = { bo1: 0.5, bo2: 2 / 3, bo3: 0.5, bo5: 0.5 };
 const BASE_ESLO = 0.25;
 const MINIMO_POR_JUEGO = 275;
 
+// Cuántas filas se dibujan en cada tabla. La vista "todos" muestra las más
+// recientes sin importar el juego; al filtrar por uno se muestran más de ese,
+// porque si no, filtrar CS2 podía dejar la tabla vacía cuando las últimas seis
+// eran de otro juego.
+const TOPE_GLOBAL = 6;
+const TOPE_POR_JUEGO = 8;
+
 const JUEGOS = [
   { clave: 'dota2', nombre: 'Dota 2', corto: 'D2', color: '#ef4444' },
   { clave: 'lol', nombre: 'League of Legends', corto: 'LoL', color: '#3b82f6' },
@@ -99,8 +106,10 @@ function filaPartida(p) {
       : `<span class="${ganoA ? 'w' : 'l'}">${p.marcadorA}</span><span class="sep">-</span><span class="${ganoA ? 'l' : 'w'}">${p.marcadorB}</span>`;
 
   const cuota = p.cuota == null ? '—' : p.cuota.toFixed(2);
+  // `hidden` de entrada en las que no entran en la vista "todos": así el HTML
+  // servido ya se ve bien aunque el navegador no ejecute el script.
   return `
-    <div class="trow">
+    <div class="trow" data-juego="${esc(p.def.clave)}"${p.enGlobal ? ' data-global="1"' : ' hidden'}>
       <div class="t-cell">
         <div class="ttile">${logo(p.def.corto, p.def.color, 26, p.def.clave)}</div>
         <div title="${esc(p.torneo ?? p.def.nombre)}"><div class="t-name">${esc(p.torneo ?? p.def.nombre)}</div><div class="t-sub">${esc(p.def.nombre)}${p.tier ? ' · TIER ' + String(p.tier).toUpperCase() : ''}</div></div>
@@ -121,14 +130,33 @@ function tablaPartidas(titulo, color, icono, filas) {
     ? filas.map(filaPartida).join('')
     : `<div class="vacio">Todavía no hay partidas calificadas acá.</div>`;
   return `
-    <div class="card">
+    <div class="card" data-tabla>
       <div class="card-h">
         <span class="hdot" style="background:${color}26">${icono}</span>
         <span class="card-title">${esc(titulo)}</span>
       </div>
       <div class="thead"><span>Juego</span><span>Encuentro</span><span>Fecha</span><span>Cuota</span><span>Resultado</span></div>
       ${cuerpo}
+      <div class="vacio" data-vacio hidden>Ese juego no tiene ninguna acá todavía.</div>
     </div>`;
+}
+
+// Qué filas se dibujan: las más recientes en general (vista "todos") MÁS las
+// más recientes de cada juego, para que el filtro tenga qué mostrar. Se
+// dibujan todas de una vez y el filtro sólo esconde: así cambiar de juego no
+// recarga ni pide nada.
+function filasParaTabla(recientes, acerto) {
+  const suyas = recientes.filter((p) => p.acerto === acerto);
+  const enGlobal = new Set(suyas.slice(0, TOPE_GLOBAL));
+
+  const elegidas = new Set(enGlobal);
+  for (const def of JUEGOS) {
+    for (const p of suyas.filter((x) => x.def.clave === def.clave).slice(0, TOPE_POR_JUEGO)) elegidas.add(p);
+  }
+
+  return [...elegidas]
+    .sort((a, b) => new Date(b.inicio) - new Date(a.inicio))
+    .map((p) => ({ ...p, enGlobal: enGlobal.has(p) }));
 }
 
 // --- documento ---------------------------------------------------------------
@@ -140,25 +168,36 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
   const totalPredichas = juegos.reduce((s, j) => s + j.predichas, 0);
   const tasa = totalCalificadas ? totalAciertos / totalCalificadas : 0;
 
-  const aciertos = recientes.filter((p) => p.acerto).slice(0, 6);
-  const fallos = recientes.filter((p) => !p.acerto).slice(0, 6);
+  const aciertos = filasParaTabla(recientes, true);
+  const fallos = filasParaTabla(recientes, false);
   // La barra lateral sale del módulo compartido: es la misma pieza que usan
   // el panel de Dota y las fichas, así que navegar entre los tres no cambia
   // de sitio a mitad de camino.
   const sidebar = barraLateral({
     bloques: [
       {
+        // Los cuatro FILTRAN esta misma página; no llevan a otra. Antes sólo
+        // Dota era pulsable (es el único con página propia) y los otros tres
+        // parecían botones muertos. Filtrar es lo que de verdad hacía falta:
+        // ver un juego a la vez sin salir del panel.
         etiqueta: 'Juegos · calificadas',
-        enlaces: juegos.map((j) => ({
-          // Sólo Dota tiene página propia. Los demás no llevan enlace: un
-          // botón que no va a ningún lado es peor que un botón que no lo
-          // parece.
-          href: j.def.clave === 'dota2' ? 'dota.html' : null,
-          texto: j.def.nombre,
-          color: j.def.color,
-          contador: j.n || '—',
-          logoHtml: logo(j.def.corto, j.def.color, 28, j.def.clave),
-        })),
+        enlaces: [
+          {
+            filtro: 'todos',
+            activo: true,
+            texto: 'Todos los juegos',
+            color: '#3b82f6',
+            contador: juegos.reduce((s, j) => s + j.n, 0) || '—',
+            logoHtml: `<span class="ph" style="width:28px;height:28px;background:#3b82f61f;border-color:#3b82f659"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.4" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>`,
+          },
+          ...juegos.map((j) => ({
+            filtro: j.def.clave,
+            texto: j.def.nombre,
+            color: j.def.color,
+            contador: j.n || '—',
+            logoHtml: logo(j.def.corto, j.def.color, 28, j.def.clave),
+          })),
+        ],
       },
       {
         etiqueta: 'Detalle',
@@ -184,7 +223,7 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
     sidebar,
     contenido: `
   <header class="topbar">
-    <div><h1>Panel</h1><div class="sub">Cómo va el motor contra la realidad</div></div>
+    <div><h1>Panel</h1><div class="sub">Cómo va el motor contra la realidad · <span class="badge b-gris" data-etiqueta-filtro>Todos los juegos</span></div></div>
     <div class="stamp">Generado ${esc(generadoEn)}</div>
   </header>
 
@@ -250,6 +289,62 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
     La <b>cuota</b> es la mejor disponible en el mercado al momento de predecir, no la de una sola casa.
     Se guarda para poder medirse contra el mercado; este panel no apuesta ni recomienda apostar.
   </footer>
+
+<script>
+// Filtro por juego. Sólo esconde y muestra filas que YA están en la página:
+// no pide nada, no recalcula nada y ningún número cambia por filtrar.
+//
+// El HTML se sirve con el filtro "todos" ya aplicado (las filas que no entran
+// vienen con el atributo hidden), así que sin JavaScript la página se ve
+// lo que se pierde es poder cambiar de juego, no el contenido.
+(function () {
+  var botones = [].slice.call(document.querySelectorAll('[data-filtro]'));
+  var tablas = [].slice.call(document.querySelectorAll('[data-tabla]'));
+  var etiqueta = document.querySelector('[data-etiqueta-filtro]');
+  if (!botones.length) return;
+
+  function aplicar(filtro, nombre) {
+    botones.forEach(function (b) {
+      var suyo = b.dataset.filtro === filtro;
+      b.classList.toggle('activo', suyo);
+      b.setAttribute('aria-pressed', suyo ? 'true' : 'false');
+    });
+
+    tablas.forEach(function (t) {
+      var visibles = 0;
+      [].slice.call(t.querySelectorAll('.trow')).forEach(function (f) {
+        var ok = filtro === 'todos' ? f.dataset.global === '1' : f.dataset.juego === filtro;
+        f.hidden = !ok;
+        if (ok) visibles++;
+      });
+      var vacio = t.querySelector('[data-vacio]');
+      if (vacio) vacio.hidden = visibles > 0;
+    });
+
+    if (etiqueta) etiqueta.textContent = nombre;
+    // Queda en la URL para poder compartir "el panel filtrado por CS2".
+    try {
+      var u = new URL(location.href);
+      if (filtro === 'todos') u.searchParams.delete('juego');
+      else u.searchParams.set('juego', filtro);
+      history.replaceState(null, '', u);
+    } catch (e) {}
+  }
+
+  botones.forEach(function (b) {
+    b.addEventListener('click', function () {
+      aplicar(b.dataset.filtro, b.querySelector('span:nth-of-type(2)').textContent);
+    });
+  });
+
+  // Si la URL trae ?juego=cs2, se abre ya filtrado.
+  try {
+    var pedido = new URL(location.href).searchParams.get('juego');
+    var boton = pedido && botones.filter(function (b) { return b.dataset.filtro === pedido; })[0];
+    if (boton) aplicar(pedido, boton.querySelector('span:nth-of-type(2)').textContent);
+  } catch (e) {}
+})();
+</script>
 `,
   });
 }
