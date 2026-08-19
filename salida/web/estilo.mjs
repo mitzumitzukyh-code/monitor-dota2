@@ -13,7 +13,7 @@
 // Nada de esto toca los NÚMEROS. Este módulo sólo sabe de colores, cajas y
 // tipografía; de dónde salen los datos es asunto de quien lo llame.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { cp } from 'node:fs/promises';
 import { writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';
@@ -46,40 +46,55 @@ export const COLOR = { dota2: '#ef4444', lol: '#3b82f6', valorant: '#f43f5e', cs
 //
 // PARA CAMBIAR UN LOGO: pon el archivo en salida/web/logos/ con el nombre del
 // juego (dota2, lol, valorant, cs2) y vuelve a generar. No hay que tocar
-// código. Se prueban estas extensiones EN ORDEN y gana la primera que exista,
-// así que un .png puesto al lado de un .svg no lo pisa: hay que borrar el
-// .svg o el .svg sigue mandando.
+// código ni borrar el anterior.
 //
-// El orden pone SVG primero a propósito: escala sin pixelarse y suele pesar
-// menos. Un PNG de 500x500 puede pesar 100 KB para dibujarse a 26 px.
-const FORMATOS = [
+// Si hay varios con el mismo nombre y distinta extensión, gana EL MÁS
+// RECIENTE, no un orden fijo de formatos. Es la regla que hace lo que uno
+// espera: sueltas dota2.png encima y manda ése, aunque siga estando el
+// dota2.svg viejo. Con un orden fijo (svg primero) el archivo nuevo se
+// ignoraba en silencio, que es la peor forma de fallar: parece que no se
+// guardó.
+const FORMATOS = new Map([
   ['.svg', 'image/svg+xml'],
   ['.png', 'image/png'],
   ['.webp', 'image/webp'],
   ['.jpg', 'image/jpeg'],
   ['.jpeg', 'image/jpeg'],
-];
+]);
 
 export const LOGOS = new Map();
 for (const clave of ['dota2', 'lol', 'valorant', 'cs2']) {
+  let elegido = null;
+
   for (const [extension, tipo] of FORMATOS) {
+    const ruta = new URL(`./logos/${clave}${extension}`, import.meta.url);
     try {
-      // Se lee como binario siempre: un SVG es texto pero base64 no distingue,
-      // y así el mismo camino sirve para PNG.
-      const datos = readFileSync(new URL(`./logos/${clave}${extension}`, import.meta.url));
-      LOGOS.set(clave, `data:${tipo};base64,` + datos.toString('base64'));
-      break;
+      const cuando = statSync(ruta).mtimeMs;
+      if (!elegido || cuando > elegido.cuando) elegido = { ruta, tipo, cuando };
     } catch {
-      // Sin el archivo se prueba la extensión siguiente, y si no hay ninguna
+      // Esa extensión no está. Se sigue probando; si no hay ninguna, el juego
       // se cae al cuadro de color con iniciales. Un logo que falta no puede
       // tumbar el panel.
     }
   }
+
+  if (!elegido) continue;
+  // Se lee como binario siempre: un SVG es texto, pero base64 no distingue, y
+  // así el mismo camino sirve para PNG.
+  LOGOS.set(clave, `data:${elegido.tipo};base64,` + readFileSync(elegido.ruta).toString('base64'));
 }
 
+// El logo va como FONDO de un <span>, no como <img src="data:...">.
+//
+// POR QUÉ: los data URI se repiten en cada aparición, y el logo de un juego
+// aparece decenas de veces por página (una por fila). Con los SVG de 900 B
+// eso daba igual; al cambiarlos por PNG, index.html se fue a 1,58 MB. Puestos
+// una sola vez en el CSS —una regla .lg-dota2 por juego— los bytes van una
+// vez y las decenas de apariciones sólo la referencian.
 export function logo(corto, color, tam = 26, clave = null) {
-  const src = clave ? LOGOS.get(clave) : null;
-  if (src) return `<img class="lg" width="${tam}" height="${tam}" src="${src}" alt="${esc(corto)}">`;
+  if (clave && LOGOS.has(clave)) {
+    return `<span class="lg lg-${esc(clave)}" style="width:${tam}px;height:${tam}px" role="img" aria-label="${esc(corto)}"></span>`;
+  }
   return `<span class="ph" style="width:${tam}px;height:${tam}px;background:${color}1f;color:${color};border-color:${color}59">${esc(corto)}</span>`;
 }
 
@@ -95,7 +110,7 @@ export function escudo(nombre, url, color, tam = 26) {
   return `<span class="tm" style="background:${color}" title="${esc(nombre)}">${esc(abrev)}</span>`;
 }
 
-export const CSS = `
+const CSS_BASE = `
 :root{
   --bg:#05080c; --side:#070b10; --card:#0c141d; --card2:#0a121b;
   --border:#1b2634; --text:#e5eaf1; --mut:#94a0b0; --dim:#5d6a7a;
@@ -106,10 +121,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 a{color:inherit;text-decoration:none}
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1c2733;border-radius:4px}
 
-/* Placa clara detras del logo del juego: varios SVG oficiales estan pensados
-   para fondo blanco y algunos son casi negros (CS2 usa #1E202F), asi que
-   sobre el panel oscuro desaparecian. */
-.lg{border-radius:6px;object-fit:contain;background:#e9edf3;padding:3px;flex:none}
+/* Placa clara detras del logo del juego: varios oficiales estan pensados para
+   fondo blanco y alguno es casi negro, asi que sobre el panel oscuro
+   desaparecian. La imagen va de background para no repetir el data URI en
+   cada fila (ver logo()). */
+.lg{border-radius:6px;background-color:#e9edf3;background-repeat:no-repeat;background-position:center;background-size:calc(100% - 6px) calc(100% - 6px);display:inline-block;flex:none}
 .ph{display:inline-flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid;font-size:8px;font-weight:800;letter-spacing:.02em;flex:none}
 
 #sidebar{position:fixed;inset:0 auto 0 0;width:232px;background:var(--side);border-right:1px solid var(--border);padding:20px 14px;display:flex;flex-direction:column;gap:6px;z-index:50;overflow-y:auto}
@@ -286,6 +302,21 @@ footer{margin-top:20px;padding:16px 20px;border-top:1px solid var(--border);colo
 }
 `;
 
+// Una regla por juego, con el logo dentro. Acá es donde viven los bytes de las
+// imágenes: una sola vez por documento, por muchas filas que haya.
+// `claves` acota a los juegos que la página de verdad usa. El panel de Dota y
+// sus 27 fichas sólo muestran el de Dota; meterles los cuatro les sumaba
+// ~85 KB de imágenes que nadie dibuja.
+function cssDeLogos(claves = null) {
+  return [...LOGOS]
+    .filter(([clave]) => !claves || claves.includes(clave))
+    .map(([clave, uri]) => `.lg-${clave}{background-image:url("${uri}")}`)
+    .join('\n');
+}
+
+// El CSS entero, con los cuatro logos. Se exporta para quien lo quiera completo.
+export const CSS = CSS_BASE + '\n' + cssDeLogos() + '\n';
+
 // La marca sale del paquete de assets (assets/logo-mark-simple.svg), no de un
 // SVG escrito a mano acá: así el cuadrito del panel y el favicon son el mismo
 // dibujo. Se incrusta como data URI —pesa 821 B— para que no dependa de una
@@ -396,6 +427,8 @@ export function documento({
   descripcion = 'Panel de predicciones de esports (Dota 2, LoL, Valorant, CS2) calificadas partida por partida contra el resultado real. No apuesta ni recomienda apostar.',
   pagina = null,
   imagen = 'og-image.png',
+  // Qué logos de juego necesita ESTA página. null = los cuatro.
+  juegos = null,
 }) {
   return `<!DOCTYPE html>
 <html lang="es">
@@ -407,7 +440,8 @@ ${cabeza({ titulo, descripcion, pagina, imagen })}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>${CSS}</style>
+<style>${CSS_BASE}
+${cssDeLogos(juegos)}</style>
 </head>
 <body>
 

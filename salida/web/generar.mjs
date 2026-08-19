@@ -350,6 +350,8 @@ export function construirHtml({ calificadas, pendientes, nombre, metricas, fuerz
   return documento({
     titulo: 'MONITOR-ESPORTS · Panel de Dota 2',
     pagina: 'dota.html',
+    // Esta página y sus fichas sólo dibujan el logo de Dota.
+    juegos: ['dota2'],
     imagen: 'og-image-dota.png',
     descripcion:
       'Predicciones de Dota 2 en The International 2026, calificadas serie por serie contra el resultado real. Brier, favorito acertado y la llave del Main Event.',
@@ -538,6 +540,7 @@ ${
 
   return documento({
     titulo: `${nombreA} vs ${nombreB} · Monitor Dota 2`,
+    juegos: ['dota2'],
     sidebar: barraDota({ dondeEstoy: 'ficha' }),
     contenido,
   });
