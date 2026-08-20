@@ -85,25 +85,41 @@ datos/          lo que entra
 motor/          elo.mjs, series.mjs — AGNÓSTICOS del juego
 juez/           backtest.mjs, notas.mjs, tabla.mjs, calibrar.mjs
 salida/         discord.mjs, formato.mjs, web/
-  web/estilo.mjs  CSS, barra lateral y envoltorio COMPARTIDOS por las 3 páginas
+  web/estilo.mjs  CSS, barra lateral y envoltorio COMPARTIDOS por todas las páginas
 assets/         marca: favicon, iconos PWA, manifest, tarjetas sociales
 pruebas/        una prueba por cada función del motor
 ```
 
-### La web: tres páginas, un solo diseño
+### La web: varias páginas, un solo diseño
 
-`salida/web/` produce tres cosas, y las tres salen de `estilo.mjs`:
+`salida/web/` produce los paneles, y todos salen de `estilo.mjs`:
 
 | Archivo | Lo genera | Qué es |
 |---|---|---|
 | `index.html` | `dashboard.mjs` | panel general, los cuatro juegos |
 | `dota.html` | `generar.mjs` | detalle de Dota: llave de TI, fuerza Elo |
 | `serie-*.html` | `generar.mjs` | una ficha por serie predicha de Dota |
+| `cs2.html` / `lol.html` / `valorant.html` | `juego.mjs` | detalle por juego: desglose por torneo, ranking de fuerza, partidas |
+| `partida-*.html` | `juego.mjs` | una ficha por partida predicha de CS2/LoL/Valorant |
 
 **El CSS vive en un solo archivo a propósito.** Hasta el 2026-08-19 había dos
 diseños conviviendo y abrir un panel después del otro se sentía como entrar a
 dos sitios distintos. Si vas a tocar colores o cajas, tócalos en
 `estilo.mjs`; si escribes CSS suelto en un generador, el problema vuelve.
+
+**Por qué las páginas de los juegos de bo3.gg salen de un generador aparte
+(`juego.mjs`) y no de `generar.mjs`:** Dota llegó primero, con su Elo
+calibrado sobre OpenDota, y su panel reconstruye los ratings replayeando el
+histórico. CS2/LoL/Valorant no necesitan eso: el rating, la RD, la cuota y el
+torneo con los que se predijo ya están GUARDADOS en las tablas `eslo_*`
+(regla 5), así que `juego.mjs` solo los pinta, y la ficha **reproduce** la
+probabilidad con `probabilidadGanar()` sobre el estado congelado en la fila —
+ninguna ficha ve información que no existía al predecir (regla 6). Ojo con la
+diferencia de unidades: en esports `prob_a` es de UNA partida y el Brier es
+de una sola clase contra 0.25; en Dota la predicción es de la serie y la base
+se pondera por formato. Un solo generador para los tres juegos:
+`node salida/web/juego.mjs cs2 lol valorant` (comparte las lecturas de
+Supabase entre los tres, no pide tres veces lo mismo).
 
 **Escudos de equipo.** CS2, LoL y Valorant los sacan de bo3.gg (`/teams` →
 `image_url`). Dota los saca de `datos/logos-dota.json`, poblado desde OpenDota

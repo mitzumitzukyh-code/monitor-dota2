@@ -37,6 +37,11 @@ import { seleccionar } from '../../datos/supabase.mjs';
 import { datosDeEquipos, nombresDeTorneos } from '../../datos/juegos/bo3.mjs';
 import { enVenezuela, hora12 } from '../formato.mjs';
 import { esc, pct1, logo, escudo, kpi, documento, barraLateral, copiarAssets } from './estilo.mjs';
+// Las fichas de Dota las genera salida/web/generar.mjs; las de CS2/LoL/
+// Valorant, salida/web/juego.mjs. El panel enlaza a las dos clases, así la
+// fila de cualquier partida lleva a su ficha.
+import { archivoDeFicha as archivoDeFichaDota } from './generar.mjs';
+import { archivoDeFicha as archivoDeFichaEsports } from './juego.mjs';
 
 // Mismo criterio que salida/resumen-global.mjs: los Brier de Dota y los de
 // bo3.gg NO están en la misma escala (Dota puntúa sobre tres clases). Cada
@@ -109,7 +114,7 @@ function filaPartida(p) {
   // `hidden` de entrada en las que no entran en la vista "todos": así el HTML
   // servido ya se ve bien aunque el navegador no ejecute el script.
   return `
-    <div class="trow" data-juego="${esc(p.def.clave)}"${p.enGlobal ? ' data-global="1"' : ' hidden'}>
+    <a class="trow" data-juego="${esc(p.def.clave)}"${p.enGlobal ? ' data-global="1"' : ' hidden'} href="${esc(p.enlace)}" title="Ver la ficha de esta partida">
       <div class="t-cell">
         <div class="ttile">${logo(p.def.corto, p.def.color, 26, p.def.clave)}</div>
         <div title="${esc(p.torneo ?? p.def.nombre)}"><div class="t-name">${esc(p.torneo ?? p.def.nombre)}</div><div class="t-sub">${esc(p.def.nombre)}${p.tier ? ' · TIER ' + String(p.tier).toUpperCase() : ''}</div></div>
@@ -122,7 +127,7 @@ function filaPartida(p) {
       <span class="fecha">${esc(fechaCorta(p.inicio))}</span>
       <span><span class="badge ${p.acerto ? 'b-green' : 'b-red'}">${esc(cuota)}</span></span>
       <span><span class="res ${p.acerto ? 'b-green' : 'b-red'}">${p.acerto ? 'ACERTÓ' : 'FALLÓ'}</span></span>
-    </div>`;
+    </a>`;
 }
 
 function tablaPartidas(titulo, color, icono, filas) {
@@ -207,6 +212,24 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
             texto: 'Panel de Dota',
             color: '#ef4444',
             logoHtml: logo('D2', '#ef4444', 28, 'dota2'),
+          },
+          {
+            href: 'cs2.html',
+            texto: 'Counter-Strike 2',
+            color: '#f59e0b',
+            logoHtml: logo('CS2', '#f59e0b', 28, 'cs2'),
+          },
+          {
+            href: 'lol.html',
+            texto: 'League of Legends',
+            color: '#3b82f6',
+            logoHtml: logo('LoL', '#3b82f6', 28, 'lol'),
+          },
+          {
+            href: 'valorant.html',
+            texto: 'Valorant',
+            color: '#f43f5e',
+            logoHtml: logo('VAL', '#f43f5e', 28, 'valorant'),
           },
         ],
       },
@@ -454,6 +477,7 @@ export async function reunirDatos({ fetchImpl, fetchImplSupabase } = {}) {
           torneo: s.league_name ?? null,
           tier: null,
           cuota: null,
+          enlace: archivoDeFichaDota(s.series_id),
         });
       }
       continue;
@@ -492,6 +516,7 @@ export async function reunirDatos({ fetchImpl, fetchImplSupabase } = {}) {
         tier: p.tier,
         // La mejor del mercado si está; si no, la del proveedor.
         cuota: c ? Number(c.max_coeff_a ?? c.coeff_a) : null,
+        enlace: archivoDeFichaEsports(p.match_id),
       });
     }
   }

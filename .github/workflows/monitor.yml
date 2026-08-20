@@ -164,9 +164,11 @@ jobs:
         run: node salida/discord.mjs
 
       # 4. Regenerar el panel y publicarlo en GitHub Pages.
-      # Dos panels: dashboard.mjs hace el principal (index.html, multijuego,
-      # diseno nuevo) y generar.mjs las fichas por serie de Dota mas su panel
-      # de detalle (dota.html), que tiene la grilla del suizo y la llave.
+      # Tres generadores: dashboard.mjs hace el principal (index.html,
+      # multijuego, diseno nuevo); generar.mjs las fichas por serie de Dota
+      # mas su panel de detalle (dota.html), que tiene la grilla del suizo y
+      # la llave; juego.mjs las paginas por juego de CS2/LoL/Valorant
+      # (cs2.html, lol.html, valorant.html) y sus fichas por partida.
       - name: Generar el panel de Dota y las fichas
         if: always()
         run: node salida/web/generar.mjs
@@ -174,6 +176,14 @@ jobs:
       - name: Generar el panel principal
         if: always()
         run: node salida/web/dashboard.mjs
+
+      # 4.1 Páginas por juego de bo3.gg. Nada que recalcular: los ratings
+      #     con los que se predijo, el ranking y las cuotas ya estan
+      #     guardados en las tablas eslo_* (regla 5), asi que esto solo
+      #     pinta. Un generador para los tres, con lecturas compartidas.
+      - name: Generar las páginas por juego
+        if: always()
+        run: node salida/web/juego.mjs cs2 lol valorant
 
       # Resumen diario de los tres juegos. Se protege solo: lleva marcado en
       # eslo_estado si ya salió hoy (día de Venezuela), así que correr cada 10

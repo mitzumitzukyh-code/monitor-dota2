@@ -203,6 +203,9 @@ main{margin-left:232px;padding:22px 26px}
 .thead{font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)}
 .trow{padding:12px 20px;border-top:1px solid var(--border)}
 .trow:first-of-type{border-top:none}
+/* Las filas de partida del panel enlazan a su ficha: la raya hover es la
+   señal de que se puede entrar, igual que en las series de Dota (.srow). */
+.trow:hover{background:#0a1119}
 .t-cell{display:flex;align-items:center;gap:8px;min-width:0}
 .ttile{width:38px;height:38px;border-radius:8px;background:#101a26;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
 .t-name{font-size:12px;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -253,6 +256,12 @@ main{margin-left:232px;padding:22px 26px}
 .fnom{min-width:0;display:flex;align-items:center;gap:9px;overflow:hidden;white-space:nowrap}
 .fnom>img,.fnom>span{flex:none}
 .frat{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;color:var(--red)}
+/* Ranking de fuerza de los juegos de bo3.gg: rating Glicko-2, RD y partidas
+   jugadas. La cabecera (fhead) comparte la misma grilla para que las
+   columnas queden alineadas. */
+.frow.rd{grid-template-columns:24px minmax(0,1fr) 64px 60px 60px}
+.fhead{display:grid;grid-template-columns:24px minmax(0,1fr) 64px 60px 60px;gap:12px;align-items:center;padding:9px 20px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)}
+.fnum{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;color:var(--mut)}
 
 /* --- ficha de serie ------------------------------------------------------ */
 .hero{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:18px}
