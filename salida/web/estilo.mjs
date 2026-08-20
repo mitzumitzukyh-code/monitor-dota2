@@ -309,6 +309,45 @@ footer{margin-top:20px;padding:16px 20px;border-top:1px solid var(--border);colo
   .side-note{margin-top:6px}
   main{margin-left:0;padding:16px}
 }
+
+/* Transiciones entre páginas --------------------------------------------
+   View Transitions API: al navegar entre páginas (Chrome/Edge 111+, Safari
+   18+, Firefox 141+) el navegador anima la salida de la página vieja y la
+   entrada de la nueva. Es un opt-in de CSS puro, sin JavaScript; en
+   navegadores que no lo soportan la navegación es la normal, sin animación.
+   Se mantiene corta y sutil a propósito: la transición no es el show, los
+   datos lo son. */
+@view-transition{navigation:auto}
+::view-transition-old(root){animation:120ms ease-out both vt-salida}
+::view-transition-new(root){animation:220ms ease-out both vt-entrada}
+@keyframes vt-salida{to{opacity:0;transform:translateY(-6px)}}
+@keyframes vt-entrada{from{opacity:0;transform:translateY(8px)}}
+
+/* Entrada del contenido al cargar: en una visita directa (enlace compartido,
+   refresh) la página no aparece de golpe. Es corta y de un solo trazo. */
+@keyframes subir{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+main{animation:subir .28s ease-out both}
+
+/* Lo que responde al cursor pasa de un cambio seco a una transición corta.
+   Solo colores y opacidad: mover el transform de un elemento con transición
+   saldría caro en filas largas. */
+a,.game-btn,.card,.trow,.srow,.frow,.stat-row,.mrow,.drow{transition:background-color .15s ease,color .15s ease,border-color .15s ease,opacity .15s ease}
+
+/* Entrada escalonada de las filas del panel al filtrar por juego. El script
+   pone la clase .entra en las filas que quedan visibles y marca cada una con
+   --i (su índice entre las visibles), así entran en cascada en vez de todas
+   juntas. Con el relleno both y el delay, la fila espera su turno invisible
+   (estado from) y sube de a poco. El remove + reflow + add del script
+   reinicia la animación en cada clic. */
+@keyframes entrar{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.trow.entra,.stat-row.entra{animation:entrar .26s ease-out both;animation-delay:calc(var(--i,0)*30ms)}
+
+/* Usuarios que piden menos movimiento: todo estático. En las transiciones de
+   página, sin animación en los snapshots el cambio es instantáneo. */
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  ::view-transition-old(root),::view-transition-new(root){animation:none!important}
+}
 `;
 
 // Una regla por juego, con el logo dentro. Acá es donde viven los bytes de las

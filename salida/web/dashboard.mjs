@@ -340,6 +340,21 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
     });
   }
 
+  // Las filas que quedan visibles entran animadas, en cascada (ver .entra en
+  // estilo.mjs). Hay que quitar la clase y forzar un reflow para que el
+  // navegador reinicie la animación en cada clic: sin eso, la segunda vez que
+  // se filtra el mismo juego las filas ya tienen la clase y no se mueven.
+  function entrarEnCascada(visibles) {
+    var contenedor = visibles[0] && visibles[0].parentNode;
+    visibles.forEach(function (f) { f.classList.remove('entra'); });
+    if (!contenedor) return;
+    void contenedor.offsetWidth;
+    visibles.forEach(function (f, i) {
+      f.style.setProperty('--i', i);
+      f.classList.add('entra');
+    });
+  }
+
   function aplicar(filtro, nombre) {
     botones.forEach(function (b) {
       var suyo = b.dataset.filtro === filtro;
@@ -355,6 +370,7 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
         if (ok) visibles.push(f);
       });
       primera(visibles);
+      entrarEnCascada(visibles);
       var vacio = t.querySelector('[data-vacio]');
       if (vacio) vacio.hidden = visibles.length > 0;
     });
@@ -371,6 +387,7 @@ export function construirDashboard({ juegos, recientes, generadoEn }) {
         if (ok) vistas.push(f);
       });
       primera(vistas);
+      entrarEnCascada(vistas);
     }
 
     if (etiqueta) etiqueta.textContent = nombre;
