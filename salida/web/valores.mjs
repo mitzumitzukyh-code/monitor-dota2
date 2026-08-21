@@ -168,13 +168,22 @@ function arteStyle(uri, juego, pos) {
 
 // Una serie PRÓXIMA (de Supabase) en la forma de tarjeta. Sin resultado
 // todavía, así que no hay Brier: la ventaja sale «—», no un cero.
+// Una fecha inválida en start_time reventaría toISOString() y con él TODA la
+// generación — y sin panel generado no hay nada que publicar. Se degrada al
+// marcador vacío en vez de tumbar el sitio.
+function cuandoEmpieza(iso) {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return VACIO;
+  return new Date(t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+}
+
 function proximaComoPartido(s, arte) {
-  const tiene = s.prediccion != null;
-  const pa = tiene ? s.prediccion.ganaA * 100 : 0;
+  const tiene = s.prediccion != null && Number.isFinite(Number(s.prediccion.ganaA));
+  const pa = tiene ? Math.max(0, Math.min(100, Number(s.prediccion.ganaA) * 100)) : 0;
   return {
     id: String(s.seriesId), juego: JUEGO, torneo: s.torneo,
     formato: (s.formato || '').toUpperCase() || VACIO,
-    cierra: new Date(s.inicio).toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
+    cierra: cuandoEmpieza(s.inicio),
     a: s.nombreA, b: s.nombreB, chip: chipJuego(JUEGO),
     inicialA: inicial(s.nombreA), inicialB: inicial(s.nombreB),
     escudoA: escudo(s.nombreA, JUEGO), escudoB: escudo(s.nombreB, JUEGO),

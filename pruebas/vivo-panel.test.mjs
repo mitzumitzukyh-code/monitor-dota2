@@ -98,3 +98,38 @@ test('un equipo que no está en dota_teams sale con su id, no en blanco', async 
     assert.equal(primera.nombreA, '#1');
   });
 });
+
+// --- que una fila rota de Supabase no tumbe la generación ----------------
+// Sin esto, un start_time nulo revienta toISOString(), muere el generador y
+// no se publica NADA. El sitio caído por una fila mala es el peor final.
+import { valores } from '../salida/web/valores.mjs';
+
+const RESUMEN_MINIMO = {
+  partidas: [{ start_time: 1 }],
+  series: [],
+  calidad: { global: { cantidad: 0, brier: NaN, base: 0.5, aciertos: 0, acierto: 0, bajo: NaN, alto: NaN, n: 0, concluyente: false }, porFormato: {} },
+  clasificacion: [],
+  cambios: [],
+};
+
+test('una próxima con fecha inválida sale con «—» y no revienta', () => {
+  const v = valores(RESUMEN_MINIMO, {
+    proximas: [{ seriesId: 'x', torneo: 'T', formato: 'bo3', nombreA: 'A', nombreB: 'B', inicio: null, prediccion: null }],
+  });
+  assert.equal(v.partidos.length, 1);
+  assert.equal(v.partidos[0].cierra, '—');
+});
+
+test('una próxima sin predicción muestra «—», no 0 %', () => {
+  const v = valores(RESUMEN_MINIMO, {
+    proximas: [{ seriesId: 'x', torneo: 'T', formato: 'bo3', nombreA: 'A', nombreB: 'B', inicio: '2026-09-01T10:00:00Z', prediccion: null }],
+  });
+  assert.equal(v.partidos[0].probA, '—');
+});
+
+test('una probabilidad corrupta no propaga NaN a la barra', () => {
+  const v = valores(RESUMEN_MINIMO, {
+    proximas: [{ seriesId: 'x', torneo: 'T', formato: 'bo3', nombreA: 'A', nombreB: 'B', inicio: '2026-09-01T10:00:00Z', prediccion: { ganaA: 'roto', empate: 0, ganaB: 0 } }],
+  });
+  assert.ok(!String(v.partidos[0].barStyle.width).includes('NaN'));
+});
