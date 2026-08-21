@@ -84,74 +84,24 @@ datos/          lo que entra
   cache/        archivos descargados (en .gitignore)
 motor/          elo.mjs, series.mjs — AGNÓSTICOS del juego
 juez/           backtest.mjs, notas.mjs, tabla.mjs, calibrar.mjs
-salida/         discord.mjs, formato.mjs, web/
-  web/estilo.mjs  CSS, barra lateral y envoltorio COMPARTIDOS por todas las páginas
+salida/         discord.mjs, formato.mjs
 assets/         marca: favicon, iconos PWA, manifest, tarjetas sociales
 pruebas/        una prueba por cada función del motor
 ```
 
-### La web: varias páginas, un solo diseño
+### Sin interfaz web (2026-08-21)
 
-`salida/web/` produce los paneles, y todos salen de `estilo.mjs`:
+El proyecto **no tiene panel web**. `salida/web/` se retiró entero: los
+generadores, el CSS compartido, las páginas por juego y sus fichas, los pasos
+del workflow que las generaban y el job que las publicaba en GitHub Pages.
 
-| Archivo | Lo genera | Qué es |
-|---|---|---|
-| `index.html` | `dashboard.mjs` | panel general, los cuatro juegos |
-| `dota.html` | `generar.mjs` | detalle de Dota: llave de TI, fuerza Elo |
-| `serie-*.html` | `generar.mjs` | una ficha por serie predicha de Dota |
-| `cs2.html` / `lol.html` / `valorant.html` | `juego.mjs` | detalle por juego: desglose por torneo, ranking de fuerza, partidas |
-| `partida-*.html` | `juego.mjs` | una ficha por partida predicha de CS2/LoL/Valorant |
+La salida hoy es **Discord** (`salida/discord.mjs`, `salida/discord-esports.mjs`,
+`salida/resumen-global.mjs`) y los avisos de error (`salida/errores.mjs`).
 
-**El CSS vive en un solo archivo a propósito.** Hasta el 2026-08-19 había dos
-diseños conviviendo y abrir un panel después del otro se sentía como entrar a
-dos sitios distintos. Si vas a tocar colores o cajas, tócalos en
-`estilo.mjs`; si escribes CSS suelto en un generador, el problema vuelve.
+`assets/` se queda: es el paquete de marca, no dependía de la web.
 
-**Por qué las páginas de los juegos de bo3.gg salen de un generador aparte
-(`juego.mjs`) y no de `generar.mjs`:** Dota llegó primero, con su Elo
-calibrado sobre OpenDota, y su panel reconstruye los ratings replayeando el
-histórico. CS2/LoL/Valorant no necesitan eso: el rating, la RD, la cuota y el
-torneo con los que se predijo ya están GUARDADOS en las tablas `eslo_*`
-(regla 5), así que `juego.mjs` solo los pinta, y la ficha **reproduce** la
-probabilidad con `probabilidadGanar()` sobre el estado congelado en la fila —
-ninguna ficha ve información que no existía al predecir (regla 6). Ojo con la
-diferencia de unidades: en esports `prob_a` es de UNA partida y el Brier es
-de una sola clase contra 0.25; en Dota la predicción es de la serie y la base
-se pondera por formato. Un solo generador para los tres juegos:
-`node salida/web/juego.mjs cs2 lol valorant` (comparte las lecturas de
-Supabase entre los tres, no pide tres veces lo mismo).
-
-**Escudos de equipo.** CS2, LoL y Valorant los sacan de bo3.gg (`/teams` →
-`image_url`). Dota los saca de `datos/logos-dota.json`, poblado desde OpenDota
-(`/teams/{id}` → `logo_url`) por `scripts/logos-dota.mjs`. Se guardan en un
-archivo y no en Supabase porque Dota se muda a bo3.gg después de TI y ahí los
-escudos van a venir de la misma fuente que los demás: una columna nueva
-nacería obsoleta en días. El archivo se lee del disco, no cuesta ninguna
-petición por corrida (regla 5). Para refrescarlo cuando aparezcan equipos
-nuevos:
-
-```
-node --env-file=.env scripts/logos-dota.mjs
-```
-
-Sólo pregunta por los que faltan; correrlo dos veces no gasta ni una petición.
-
-**Assets de marca.** El paquete vive en `assets/` (raíz) y `estilo.mjs` lo
-copia a `salida/web/assets/` al generar, porque el artefacto de Pages es sólo
-`salida/web`. Dos correcciones obligadas respecto a lo que traía el paquete,
-y hay que respetarlas:
-
-- **Rutas relativas.** El sitio se publica en un SUBDIRECTORIO
-  (`.../monitor-esports/`), así que `/assets/favicon.svg` se iría a la raíz
-  del dominio y daría 404. Por lo mismo se reescribe `site.webmanifest` al
-  copiarlo.
-- **`og:image` y `twitter:image` absolutas**, con `SITIO` delante. Con ruta
-  relativa, ninguna red social muestra la tarjeta. `SITIO` se puede cambiar
-  con la variable de entorno `SITIO_URL`.
-
-`motor/` no sabe de qué juego se trata y así debe quedarse: si una función
-del motor necesita preguntar "¿esto es CS2 o Dota?", el juego está mal
-modelado y lo que falta es un campo en los datos, no un `if` en el motor.
+Si algún día vuelve una interfaz, arranca de cero y con una decisión tomada
+antes de escribir la primera línea — no rescatando lo que había.
 
 ## Fuentes de datos
 

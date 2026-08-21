@@ -12,7 +12,6 @@ lee la sección de tu capa y la de "Invariantes".
   bo3.gg ──┐
   (multi)  │  historial   elo.mjs          backtest.mjs      discord.mjs
            ├─ ─────────►  (rating por  ──► (mide contra  ──► formato.mjs
-  OpenDota │  fixtures    equipo)          el pasado)         web/generar.mjs
   (dota2)  │              series.mjs       notas.mjs
            │              (rating →        (Brier,           Supabase
   haglund ─┘              prob. de         log loss)         (estado)
@@ -46,7 +45,6 @@ que pueda cambiar por debajo.
 | Cambiar un coeficiente | `config.mjs` — **nunca** un número suelto en una función |
 | Cambiar el texto de un aviso | `salida/discord.mjs`, las funciones `mensaje*` |
 | Cambiar a Telegram | solo `enviar()` de `salida/discord.mjs` (ver abajo) |
-| Cambiar el panel web | `salida/web/generar.mjs`, `salida/web/grilla.mjs` |
 | Agregar una tabla | `sql/` con un archivo `migracion-*.sql` nuevo |
 | Entender por qué algo está así | `CLAUDE.md` — casi todo tiene su porqué escrito |
 
@@ -92,10 +90,9 @@ Lo que ya está aplicado y **por qué**, para que no se desarme por accidente:
   `id-token: write` que hacen falta para publicar el panel. Nada de
   `contents: write`.
 - **Todo dato externo se escapa antes de entrar al HTML.** Los nombres de
-  equipo vienen de APIs de terceros y el panel se publica en GitHub Pages:
-  sin escapar, un nombre con `<script>` sería XSS almacenado. `esc()` en
-  `salida/web/generar.mjs` y `salida/web/grilla.mjs`. **Si agregas una
-  interpolación con datos de la API, pásala por `esc()`.**
+  equipo vienen de APIs de terceros. Ya no hay panel web donde inyectarlos,
+  pero la regla sigue viva para cualquier salida futura: **si algún día se
+  vuelve a interpolar un dato de la API en HTML, pásalo por un `esc()`.**
 - **Discord con las menciones desactivadas.** `enviar()` manda
   `allowed_mentions: { parse: [] }`. Un equipo llamado `@everyone` haría que
   el bot pingue a todo el servidor en cada aviso, y ese nombre lo controla

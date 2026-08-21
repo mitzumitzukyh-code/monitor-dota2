@@ -36,8 +36,6 @@ concurrency:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   # El ciclo NO declara `environment`. Lo declaraba, y el 2026-08-17 eso lo
@@ -163,28 +161,6 @@ jobs:
         if: always()
         run: node salida/discord.mjs
 
-      # 4. Regenerar el panel y publicarlo en GitHub Pages.
-      # Tres generadores: dashboard.mjs hace el principal (index.html,
-      # multijuego, diseno nuevo); generar.mjs las fichas por serie de Dota
-      # mas su panel de detalle (dota.html), que tiene la grilla del suizo y
-      # la llave; juego.mjs las paginas por juego de CS2/LoL/Valorant
-      # (cs2.html, lol.html, valorant.html) y sus fichas por partida.
-      - name: Generar el panel de Dota y las fichas
-        if: always()
-        run: node salida/web/generar.mjs
-
-      - name: Generar el panel principal
-        if: always()
-        run: node salida/web/dashboard.mjs
-
-      # 4.1 Páginas por juego de bo3.gg. Nada que recalcular: los ratings
-      #     con los que se predijo, el ranking y las cuotas ya estan
-      #     guardados en las tablas eslo_* (regla 5), asi que esto solo
-      #     pinta. Un generador para los tres, con lecturas compartidas.
-      - name: Generar las páginas por juego
-        if: always()
-        run: node salida/web/juego.mjs cs2 lol valorant
-
       # Resumen diario de los tres juegos. Se protege solo: lleva marcado en
       # eslo_estado si ya salió hoy (día de Venezuela), así que correr cada 10
       # minutos no lo repite.
@@ -207,38 +183,13 @@ jobs:
       # Va a DISCORD_WEBHOOK_ERRORES si está puesto; si no, al webhook normal.
       # `continue-on-error` evita que un problema avisando tape el problema
       # real en el resumen de la corrida.
-      - name: Subir el panel como artefacto
-        if: always()
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: salida/web
 
-  # Publicar el panel, aparte. `continue-on-error` en el job entero: si Pages
-  # está mal configurado, el panel se queda como estaba y el ciclo NO se marca
-  # como fallido por eso. Un panel desactualizado es un problema menor; perder
-  # una tanda de cuotas o de predicciones no se arregla después.
-  publicar:
-    needs: ciclo
-    if: always()
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.despliegue.outputs.page_url }}
-    steps:
-      - name: Preparar Pages
-        uses: actions/configure-pages@v5
-
-      - name: Publicar en Pages
-        id: despliegue
-        uses: actions/deploy-pages@v4
-
-  # El aviso de fallo también va en su propio job, y depende de los dos.
+  # El aviso de fallo va en su propio job.
   # Estando aparte, se dispara aunque `ciclo` muera en "Set up job" -- que es
   # exactamente lo que pasó el 2026-08-17 y dejó seis fallos seguidos sin un
   # solo aviso a Discord.
   avisar-fallo:
-    needs: [ciclo, publicar]
+    needs: [ciclo]
     if: failure()
     runs-on: ubuntu-latest
     steps:
@@ -253,9 +204,7 @@ jobs:
           DISCORD_WEBHOOK_ERRORES: ${{ secrets.DISCORD_WEBHOOK_ERRORES }}
           MENSAJE_COMMIT: ${{ github.event.head_commit.message }}
         run: |
-          # Decir CUÁL job murió, no "el ciclo": con tres jobs, "falló algo" no
-          # orienta. `ciclo` es el que recoge datos y el que de verdad importa;
-          # `publicar` sólo deja el panel viejo.
+          # `ciclo` es el job que recoge datos y calcula: si muere, importa.
           node salida/errores.mjs \
-            "ciclo=${{ needs.ciclo.result }} · publicar=${{ needs.publicar.result }}" \
+            "ciclo=${{ needs.ciclo.result }}" \
             "Revisar los pasos en rojo del enlace de abajo."
