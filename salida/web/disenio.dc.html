@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #05070A; }
+  a { color: #FF2638; text-decoration: none; }
+  a:hover { color: #FF3347; }
+  ::selection { background: #FF263833; }
+</style>
+</helmet>
+<div style="width: 100%; min-width: 1440px; min-height: 100vh; background: #05070A; font-family: Manrope, Helvetica, sans-serif; color: #F2F4F7; display: grid; grid-template-columns: 80px minmax(0, 1fr);">
+
+  <aside style="background: #05070A; border-right: 1px solid #1a1e26; display: flex; flex-direction: column; align-items: stretch; padding: 22px 0 20px;">
+    <div style="display: flex; align-items: center; justify-content: center; height: 34px; color: #6F7784;">
+      <svg width="19" height="14" viewBox="0 0 19 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1h17M1 7h17M1 13h17" /></svg>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 34px;">
+      <div onClick="{{ goHome }}" style="{{ railHome }}">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V20h13V9.5" /><path d="M9.5 20v-6h5v6" /></svg>
+        <span style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.09em;">INICIO</span>
+      </div>
+      <div onClick="{{ goPreds }}" style="{{ railPreds }}">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.6" /><circle cx="12" cy="12" r="1.1" fill="currentColor" /></svg>
+        <span style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.09em; text-align: center; line-height: 1.2;">PREDIC<span style="letter-spacing: 0;">-</span>CIONES</span>
+      </div>
+      <div onClick="{{ goBoard }}" style="{{ railBoard }}">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v6a5 5 0 0 1-10 0V4Z" /><path d="M7 5.5H4.2v1.8A3.2 3.2 0 0 0 7.4 10.5" /><path d="M17 5.5h2.8v1.8a3.2 3.2 0 0 1-3.2 3.2" /><path d="M12 15v3.5M8.5 20.5h7" /></svg>
+        <span style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.09em; text-align: center; line-height: 1.2;">CLASIFI<span style="letter-spacing: 0;">-</span>CACIÓN</span>
+      </div>
+      <div onClick="{{ goCalidad }}" style="{{ railCalidad }}">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19h18" /><path d="M4 15l5-5 4 3.5 6.5-7" /><path d="M17 5.5h3v3" /></svg>
+        <span style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.09em;">CALIDAD</span>
+      </div>
+      <div onClick="{{ goNews }}" style="{{ railNews }}">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3" /><path d="M20 16H7l3 3" /></svg>
+        <span style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.09em;">CAMBIOS</span>
+      </div>
+    </div>
+    <div onClick="{{ goContacto }}" style="{{ railAjustes }}">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1.05-1.46 1.6 1.6 0 0 0-1.76.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.46-1.05 1.6 1.6 0 0 0-.32-1.76l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.32H9a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77V9a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" /></svg>
+      <span style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.09em;">AJUSTES</span>
+    </div>
+  </aside>
+
+  <div style="display: flex; flex-direction: column; min-width: 0; background: #080A0E;">
+
+    <header style="display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 24px; height: 80px; padding: 0 26px; border-bottom: 1px solid #1a1e26; background: #05070A;">
+      <div onClick="{{ goHome }}" style="display: flex; align-items: center; gap: 14px; cursor: pointer; justify-self: start;">
+        <img src="./logo-monitor.png" alt="Monitor eSports" style="height: 56px; width: auto; display: block;" />
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div style="font-size: 19px; font-weight: 800; letter-spacing: 0.01em; line-height: 1;">MONITOR <span style="color: #FF2638;">eSPORTS</span></div>
+          <div style="font-size: 9.5px; font-weight: 600; color: #6F7784; letter-spacing: 0.14em;">INTELIGENCIA PARA GANAR</div>
+        </div>
+      </div>
+
+      <nav style="display: flex; align-items: center; gap: 34px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; height: 80px;">
+        <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+          <div onClick="{{ n.onClick }}" style="{{ n.style }}" style-hover="color: #F2F4F7;">{{ n.label }}</div>
+        </sc-for>
+      </nav>
+
+      <div style="display: flex; align-items: center; gap: 18px; justify-self: end;">
+        <div style="position: relative; color: #A7ADB8; display: flex;">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 1 0-12 0c0 6-2 7.5-2 7.5h16s-2-1.5-2-7.5" /><path d="M13.7 19.5a2 2 0 0 1-3.4 0" /></svg>
+          <span style="position: absolute; top: -5px; right: -6px; min-width: 14px; height: 14px; border-radius: 999px; background: #FF2638; color: #05070A; font-size: 8.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 3px;">3</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 30px; height: 30px; border-radius: 999px; border: 1px solid #343943; background: #15181E; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #FF2638;">JP</div>
+          <div style="display: flex; flex-direction: column; gap: 1px;">
+            <div style="font-size: 12px; font-weight: 700; line-height: 1.1;">JugadorPro</div>
+            <div style="font-size: 10px; color: #6F7784; line-height: 1.1;">Nivel 24</div>
+          </div>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6F7784" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+        </div>
+      </div>
+    </header>
+
+    <sc-if value="{{ esMock }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 26px; background: #1c1400; border-bottom: 1px solid #4a3600; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #FFB000;">
+        <span style="width: 6px; height: 6px; border-radius: 999px; background: #FFB000; display: inline-block;"></span>
+        ESQUELETO · DATOS DE EJEMPLO — sin cablear a Supabase. Ver handoff_monitor_esports/README.md
+      </div>
+    </sc-if>
+    <sc-if value="{{ hayError }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 8px 26px; background: #240309; border-bottom: 1px solid #B80F1F; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #FF3347;">{{ errorMsg }}</div>
+    </sc-if>
+
+    <sc-if value="{{ viewHome }}" hint-placeholder-val="{{ true }}">
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; padding: 20px 26px 26px; flex: 1; align-items: start;">
+      <main style="min-width: 0;">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 12px 16px;">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+            <span style="width: 7px; height: 7px; border-radius: 999px; background: #19E68C; box-shadow: 0 0 8px #19E68C88; display: inline-block; flex: none;"></span>
+            <span style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; color: #19E68C; white-space: nowrap;">CICLO ACTIVO</span>
+            <span style="font-size: 11.5px; color: #6F7784; white-space: nowrap;">{{ cicloTexto }}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 18px;">
+            <sc-for list="{{ fuentes }}" as="f" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 7px;">
+                <span style="{{ f.dot }}"></span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #A7ADB8; white-space: nowrap;">{{ f.nombre }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin: 22px 0 14px;">
+          <div style="display: flex; align-items: baseline; gap: 14px;">
+            <h1 style="margin: 0; font-size: 21px; font-weight: 800; letter-spacing: 0.01em;">PRÓXIMAS SERIES</h1>
+            <span style="font-size: 12px; color: #6F7784;">Análisis y probabilidades actualizadas</span>
+          </div>
+          <div style="font-size: 10.5px; color: #4B5360; letter-spacing: 0.08em; font-weight: 600; white-space: nowrap;">PROBABILIDAD DEL MOTOR VS MERCADO SIN VIG</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(390px, 1fr)); gap: 16px;">
+          <sc-for list="{{ partidos }}" as="p" hint-placeholder-count="4">
+            <article style="border: 1px solid #242933; border-radius: 12px; background: #11141A; overflow: hidden; display: flex; flex-direction: column; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);">
+              <div style="position: relative; height: 140px; overflow: hidden; flex: none;">
+                <div style="{{ p.arteStyle }}"></div>
+                <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,7,10,0.30) 0%, rgba(5,7,10,0.35) 45%, rgba(5,7,10,0.92) 82%, #11141A 100%);"></div>
+                <div style="position: absolute; top: 12px; left: 14px; right: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                  <span style="{{ p.chip }}">{{ p.juego }}</span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; color: #F2F4F7; letter-spacing: 0.06em; white-space: nowrap; text-shadow: 0 1px 4px rgba(0,0,0,0.95);">{{ p.formato }} · {{ p.cierra }}</span>
+                </div>
+                <div style="position: absolute; left: 15px; right: 15px; bottom: 10px; font-size: 12px; font-weight: 600; color: #F2F4F7; text-shadow: 0 1px 5px rgba(0,0,0,0.95); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ p.torneo }}</div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 14px 15px 12px;">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                  <div style="{{ p.escudoA }}">{{ p.inicialA }}</div>
+                  <span style="font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ p.a }}</span>
+                </div>
+                <span style="font-size: 10px; font-weight: 600; color: #4B5360; letter-spacing: 0.1em;">VS</span>
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0; justify-content: flex-end;">
+                  <span style="font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ p.b }}</span>
+                  <div style="{{ p.escudoB }}">{{ p.inicialB }}</div>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) 76px minmax(0, 1fr); align-items: stretch; gap: 8px; padding: 0 15px;">
+                <div style="border: 1px solid #242933; border-radius: 9px; background: #15181E; padding: 9px 12px;">
+                  <div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6F7784;">MOTOR</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: #FF2638; margin-top: 5px; line-height: 1;">{{ p.probA }}</div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+                  <div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.11em; color: #6F7784;">VENTAJA</div>
+                  <div style="{{ p.edgeStyle }}">{{ p.edge }}</div>
+                </div>
+                <div style="border: 1px solid #242933; border-radius: 9px; background: #15181E; padding: 9px 12px; text-align: right;">
+                  <div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6F7784;">MERCADO</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 500; color: #F2F4F7; margin-top: 5px; line-height: 1;">{{ p.mercadoA }}</div>
+                  <div style="font-size: 10px; color: #4B5360; margin-top: 4px;">cuota {{ p.cuotaA }}</div>
+                </div>
+              </div>
+
+              <div style="height: 3px; border-radius: 999px; background: #242933; overflow: hidden; display: flex; margin: 16px 15px 0;">
+                <div style="{{ p.barStyle }}"></div>
+              </div>
+              <div style="font-size: 11px; color: #A7ADB8; padding: 10px 15px 0;">Marcador más probable: <span style="color: #F2F4F7; font-weight: 700;">{{ p.mejorMarcador }}</span></div>
+
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 15px 14px; margin-top: 8px; border-top: 1px solid #1a1e26;">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: #4B5360; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.motor }} · {{ p.coef }}</span>
+                <div onClick="{{ p.onClick }}" style="display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: 10px; font-weight: 700; letter-spacing: 0.09em; color: #F2F4F7; border: 1px solid #2c313b; border-radius: 8px; padding: 8px 13px; white-space: nowrap;" style-hover="border-color: #FF2638; color: #FF3347;">VER FICHA <span style="color: #6F7784;">→</span></div>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+      </main>
+
+      <sc-if value="{{ mostrarSidebar }}" hint-placeholder-val="{{ true }}">
+        <aside style="display: flex; flex-direction: column; gap: 18px; min-width: 0;">
+          <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 16px 17px 15px;">
+            <div style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em;">MAYOR DESVÍO VS MERCADO</div>
+            <div style="font-size: 10.5px; color: #6F7784; margin-top: 5px; line-height: 1.4;">Donde más se separa el motor de la casa.</div>
+            <div style="display: flex; flex-direction: column; gap: 9px; margin-top: 14px;">
+              <sc-for list="{{ topEdge }}" as="t" hint-placeholder-count="3">
+                <div onClick="{{ t.onClick }}" style="cursor: pointer; border: 1px solid #242933; border-radius: 9px; background: #11141A; padding: 11px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;" style-hover="border-color: #343943;">
+                  <div style="min-width: 0;">
+                    <div style="font-size: 11.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ t.titulo }}</div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #6F7784; margin-top: 5px;">{{ t.detalle }}</div>
+                  </div>
+                  <span style="{{ t.edgeStyle }}">{{ t.edge }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <sc-if value="{{ mostrarSalud }}" hint-placeholder-val="{{ true }}">
+            <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 16px 17px 15px;">
+              <div style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em;">SALUD DE FUENTES</div>
+              <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+                <sc-for list="{{ fuentes }}" as="f" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11.5px;">
+                    <div style="display: flex; align-items: center; gap: 9px;">
+                      <span style="{{ f.dot }}"></span>
+                      <span style="color: #F2F4F7; font-weight: 600;">{{ f.nombre }}</span>
+                    </div>
+                    <span style="font-size: 10.5px; color: #6F7784; white-space: nowrap;">{{ f.detalle }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 16px 17px 17px;">
+            <div style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em;">REGLA DE LA CASA</div>
+            <div style="font-size: 11px; color: #A7ADB8; margin-top: 12px; line-height: 1.55; text-wrap: pretty;">Los porcentajes salen solo del cálculo. Ningún LLM produce un número que llegue a esta pantalla.</div>
+            <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 14px;">
+              <div style="font-size: 11px; color: #6F7784; line-height: 1.55; text-wrap: pretty;">La cuota se guarda para medirnos contra ella, no para recomendarla.</div>
+              <div style="width: 28px; height: 28px; flex: none; border: 1px solid #242933; border-radius: 8px; background: #11141A; display: flex; align-items: center; justify-content: center; color: #4B5360;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v6c0 4.6 3.2 7.9 7.5 9 4.3-1.1 7.5-4.4 7.5-9V6L12 3Z" /></svg>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ viewPreds }}" hint-placeholder-val="{{ false }}">
+      <main style="flex: 1; padding: 22px 26px 30px;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px;">
+          <div>
+            <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 0.01em;">PREDICCIONES</h1>
+            <div style="font-size: 12px; font-weight: 600; color: #6F7784; letter-spacing: 0.04em; margin-top: 6px;">INTELIGENCIA PREDICTIVA EN TIEMPO REAL</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px; padding-top: 4px;">
+            <div style="text-align: right;">
+              <div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6F7784;">ÚLTIMA ACTUALIZACIÓN</div>
+              <div style="font-size: 11.5px; color: #A7ADB8; margin-top: 3px;">{{ predsUltima }}</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; border: 1px solid #B61224; border-radius: 999px; padding: 6px 11px; background: rgba(255,35,56,0.09); box-shadow: 0 0 10px rgba(255,35,56,0.18); white-space: nowrap;">
+              <span style="width: 6px; height: 6px; border-radius: 999px; background: #FF2338; box-shadow: 0 0 7px #FF2338; display: inline-block;"></span>
+              <span style="font-size: 10px; font-weight: 800; letter-spacing: 0.1em; color: #FF2338;">EN VIVO</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;">
+          <div style="display: flex; gap: 9px; flex-wrap: wrap;">
+            <div onClick="{{ pTodos.onClick }}" style="{{ pTodos.style }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+              TODOS
+            </div>
+            <div onClick="{{ pCs2.onClick }}" style="{{ pCs2.style }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"></path></svg>
+              CS2
+            </div>
+            <div onClick="{{ pDota.onClick }}" style="{{ pDota.style }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 8v8l8 5 8-5V8Z"></path></svg>
+              DOTA 2
+            </div>
+            <div onClick="{{ pLol.onClick }}" style="{{ pLol.style }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h6l7 8-7 8H5l7-8Z"></path></svg>
+              LOL
+            </div>
+            <div onClick="{{ pVal.onClick }}" style="{{ pVal.style }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-8 15Z"></path></svg>
+              VALORANT
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; color: #6F7784; white-space: nowrap;">ORDENAR POR</span>
+            <div onClick="{{ ordenMotor }}" style="display: flex; align-items: center; gap: 8px; border: 1px solid #242933; border-radius: 8px; background: #0D1015; padding: 8px 12px; font-size: 11px; font-weight: 700; color: #F2F4F7; cursor: pointer; white-space: nowrap;">
+              MÁS CONFIABLE
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6F7784" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+            </div>
+            <div style="width: 34px; height: 34px; border: 1px solid #242933; border-radius: 8px; background: #0D1015; display: flex; align-items: center; justify-content: center; color: #A7ADB8; cursor: pointer; flex: none;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
+            </div>
+          </div>
+        </div>
+
+        <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: minmax(0, 1.7fr) 92px 60px 190px 96px 92px 96px; gap: 10px; padding: 11px 18px 11px 15px; background: #11141A; border-bottom: 1px solid #242933; font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; color: #6F7784;">
+            <div>SERIE</div><div>JUEGO</div><div>FMT</div><div>MOTOR (CONFIANZA)</div><div>MERCADO</div><div onClick="{{ ordenEdge }}" style="cursor: pointer;">VENTAJA</div><div onClick="{{ ordenCierre }}" style="cursor: pointer; text-align: right;">CIERRE</div>
+          </div>
+          <sc-for list="{{ tabla }}" as="r" hint-placeholder-count="4">
+            <div onClick="{{ r.onClick }}" style="{{ r.rowStyle }}" style-hover="background: #11141A;">
+              <div style="min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <div style="{{ r.escudoA }}">{{ r.inicialA }}</div>
+                  <span style="font-weight: 700; font-size: 13px; white-space: nowrap;">{{ r.a }}</span>
+                  <span style="font-size: 9px; font-weight: 700; color: #4B5360;">VS</span>
+                  <div style="{{ r.escudoB }}">{{ r.inicialB }}</div>
+                  <span style="font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.b }}</span>
+                </div>
+                <div style="font-size: 10.5px; color: #6F7784; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.torneo }}</div>
+              </div>
+              <div><span style="{{ r.chip }}">{{ r.juego }}</span></div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6F7784;">{{ r.formato }}</div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <svg width="56" height="30" viewBox="0 0 60 32" style="flex: none;">
+                  <path d="M8 30 A22 22 0 0 1 52 30" fill="none" stroke="#242933" stroke-width="5" stroke-linecap="round"></path>
+                  <path d="M8 30 A22 22 0 0 1 52 30" fill="none" stroke="{{ r.gaugeColor }}" stroke-width="5" stroke-linecap="round" stroke-dasharray="{{ r.gaugeDash }}"></path>
+                </svg>
+                <div>
+                  <div style="{{ r.probStyle }}">{{ r.probA }}</div>
+                  <div style="{{ r.tendStyle }}">{{ r.tend }}</div>
+                </div>
+              </div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #A7ADB8;">{{ r.mercadoA }}</div>
+              <div><span style="{{ r.edgeStyle }}">{{ r.edge }}</span></div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6F7784; text-align: right;">{{ r.cierra }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 13px; flex-wrap: wrap;">
+          <div style="font-size: 10.5px; color: #4B5360;">Los datos se actualizan en tiempo real. Las predicciones se calculan con IA y modelos propietarios.</div>
+          <div onClick="{{ goAbout }}" style="display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; color: #FF2338; cursor: pointer; white-space: nowrap;" style-hover="color: #FF3347;">
+            VER ANÁLISIS METODOLÓGICO
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-5M12 8h.01"></path></svg>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ viewBoard }}" hint-placeholder-val="{{ false }}">
+      <main style="flex: 1; padding: 20px 26px 30px;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px;">
+          <div style="min-width: 0; max-width: 620px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; white-space: nowrap;">CLASIFICACIÓN DE EQUIPOS</h1>
+              <span style="color: #5F6577; cursor: default;" title="Ranking recalculado tras cada serie jugada">ⓘ</span>
+            </div>
+            <div style="font-size: 12px; color: #8B95A5; margin-top: 6px; text-wrap: pretty;">Ranking generado por nuestro motor de predicción basado en rendimiento, forma actual y análisis estadístico avanzado.</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding-top: 4px; flex: none;">
+            <div style="display: flex; align-items: center; gap: 7px; font-size: 12px; color: #8B95A5; white-space: nowrap;">
+              Última actualización: <span style="color: #F2F4F7; font-weight: 600;">Hoy, 14:32</span>
+              <span style="width: 6px; height: 6px; border-radius: 999px; background: #19E68C; box-shadow: 0 0 7px #19E68C88; display: inline-block;"></span>
+            </div>
+            <div style="border: 1px solid #242933; border-radius: 8px; padding: 8px 13px; font-size: 11px; font-weight: 700; color: #A7ADB8; white-space: nowrap; cursor: pointer;" style-hover="border-color: #343943; color: #F2F4F7;">ⓘ Sobre el sistema</div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; border-bottom: 1px solid #1a1e26; flex-wrap: wrap;">
+          <div style="display: flex;">
+            <sc-for list="{{ clasifTabs }}" as="tb" hint-placeholder-count="4">
+              <div onClick="{{ tb.onClick }}" style="{{ tb.style }}"><span style="{{ tb.dotStyle }}"></span>{{ tb.label }}</div>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding-bottom: 10px;">
+            <select value="{{ clasifRegionValue }}" onChange="{{ clasifOnRegion }}" style="border: 1px solid #242933; border-radius: 8px; background: #0D1015; color: #F2F4F7; font-size: 11.5px; font-weight: 600; padding: 8px 10px; cursor: pointer;">
+              <sc-for list="{{ clasifRegionOptions }}" as="ro" hint-placeholder-count="6">
+                <option value="{{ ro.v }}">{{ ro.t }}</option>
+              </sc-for>
+            </select>
+            <div style="display: flex; align-items: center; gap: 7px; border: 1px solid #242933; border-radius: 8px; background: #0D1015; padding: 8px 13px; font-size: 11px; font-weight: 700; color: #A7ADB8; cursor: pointer; white-space: nowrap;" style-hover="border-color: #343943; color: #F2F4F7;">⬇ Exportar ranking</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px;">
+          <sc-for list="{{ clasifKpis }}" as="k" hint-placeholder-count="4">
+            <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 16px; display: flex; align-items: center; gap: 13px;">
+              <div style="width: 44px; height: 44px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; background: {{ k.iconBg }}; color: {{ k.iconColor }};">
+                <sc-if value="{{ k.isUsers }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path><circle cx="10" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></sc-if>
+                <sc-if value="{{ k.isTarget }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle></svg></sc-if>
+                <sc-if value="{{ k.isTrend }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 9 11l4 4 8-8"></path><path d="M15 7h6v6"></path></svg></sc-if>
+                <sc-if value="{{ k.isClock }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg></sc-if>
+              </div>
+              <div style="min-width: 0;">
+                <div style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em; color: #5F6577;">{{ k.label }}</div>
+                <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 3px;">
+                  <span style="font-size: 22px; font-weight: 800; color: #F2F4F7; font-family: 'JetBrains Mono', monospace;">{{ k.value }}</span>
+                  <sc-if value="{{ k.delta }}" hint-placeholder-val="{{ false }}"><span style="font-size: 10.5px; font-weight: 700; color: #19E68C;">{{ k.delta }}</span></sc-if>
+                </div>
+                <div style="font-size: 10.5px; color: #6F7784; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ k.ctx }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2.2fr) minmax(260px, 1fr); gap: 14px; align-items: start;">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 16px;">
+              <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.09em; color: #5F6577;">DISTRIBUCIÓN DE CALIFICACIONES</div>
+              <div style="display: flex; gap: 8px; margin-top: 14px; height: 130px;">
+                <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 9px; color: #5F6577; text-align: right; padding-bottom: 16px;">
+                  <sc-for list="{{ clasifHistTicks }}" as="t" hint-placeholder-count="5"><div>{{ t }}</div></sc-for>
+                </div>
+                <div style="flex: 1; display: flex; align-items: flex-end; gap: 6px; border-left: 1px solid #1D1D28; padding-left: 6px;">
+                  <sc-for list="{{ clasifHistBars }}" as="hb" hint-placeholder-count="6">
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 4px;">
+                      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9BA1B2; font-weight: 700;">{{ hb.count }}</div>
+                      <div style="{{ hb.barStyle }}"></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display: flex; gap: 6px; margin-top: 8px; padding-left: 30px;">
+                <sc-for list="{{ clasifHistBars }}" as="hb" hint-placeholder-count="6">
+                  <div style="flex: 1; font-size: 8px; color: #5F6577; text-align: center; white-space: nowrap;">{{ hb.label }}</div>
+                </sc-for>
+              </div>
+              <div style="font-size: 9.5px; color: #5F6577; text-align: center; margin-top: 8px;">Rango de calificación (Motor)</div>
+            </div>
+
+            <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 16px;">
+              <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.09em; color: #5F6577; margin-bottom: 12px;">TOP MÉTRICAS DEL JUEGO</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <sc-for list="{{ clasifMetrics }}" as="m" hint-placeholder-count="4">
+                  <div style="border-left: 2px solid {{ m.color }}; padding-left: 10px;">
+                    <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #5F6577;">{{ m.label }}</div>
+                    <div style="font-size: 16px; font-weight: 700; color: #F2F4F7; margin-top: 4px;">{{ m.value }}</div>
+                    <div style="font-size: 10px; color: #19E68C; margin-top: 2px;">{{ m.delta }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; overflow: hidden;">
+            <div style="padding: 16px 18px 0; font-size: 10px; font-weight: 800; letter-spacing: 0.09em; color: #5F6577;">{{ clasifRankingTitulo }}</div>
+            <div style="display: grid; grid-template-columns: 30px minmax(0, 1.3fr) 90px 78px 150px minmax(0, 1.2fr); gap: 10px; padding: 12px 18px; margin-top: 8px; border-bottom: 1px solid #1D1D28; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; color: #5F6577;">
+              <div>#</div><div>EQUIPO</div>
+              <div onClick="{{ clasifOrdenCalif }}" style="{{ clasifOrdenCalifStyle }}">CALIF. {{ clasifOrdenCalifArrow }}</div>
+              <div>TEND.</div>
+              <div onClick="{{ clasifOrdenConf }}" style="{{ clasifOrdenConfStyle }}">CONFIANZA {{ clasifOrdenConfArrow }}</div>
+              <div>PRÓXIMO PARTIDO</div>
+            </div>
+            <sc-if value="{{ clasifVacio }}" hint-placeholder-val="{{ false }}">
+              <div style="padding: 30px 18px; text-align: center; font-size: 12px; color: #8B95A5;">No hay equipos clasificados en esta región todavía. Prueba con Todas las regiones.</div>
+            </sc-if>
+            <sc-for list="{{ clasifFilas }}" as="r" hint-placeholder-count="10">
+              <div style="display: grid; grid-template-columns: 30px minmax(0, 1.3fr) 90px 78px 150px minmax(0, 1.2fr); gap: 10px; padding: 10px 18px; border-bottom: 1px solid #15151d; font-size: 12px; align-items: center;" style-hover="background: #16161F;">
+                <div style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: {{ r.posColor }};">{{ r.pos }}</div>
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <div style="{{ r.escudo }}">{{ r.inicial }}</div>
+                  <span style="font-weight: 500; color: #F2F4F7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.equipo }}</span>
+                </div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: #F2F4F7;">{{ r.rating }}</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: {{ r.tendColor }};">{{ r.tendArrow }} {{ r.tendVal }}</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <svg width="26" height="26" viewBox="0 0 26 26" style="flex: none; transform: rotate(-90deg);">
+                    <circle cx="13" cy="13" r="11" fill="none" stroke="#1D1D28" stroke-width="3"></circle>
+                    <circle cx="13" cy="13" r="11" fill="none" stroke="{{ r.ringColor }}" stroke-width="3" stroke-dasharray="{{ r.ringDash }}" stroke-linecap="round"></circle>
+                  </svg>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #9BA1B2; width: 30px; flex: none;">{{ r.confPct }}</span>
+                  <div style="flex: 1; height: 5px; border-radius: 999px; background: #1D1D28; overflow: hidden; display: flex;">
+                    <div style="{{ r.barStyle }}"></div>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                    <span style="font-size: 9.5px; color: #5F6577; flex: none;">vs</span>
+                    <div style="{{ r.rivalEscudo }}">{{ r.rivalInicial }}</div>
+                    <span style="font-size: 11.5px; color: #9BA1B2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.rival }}</span>
+                  </div>
+                  <div style="text-align: right; flex: none;">
+                    <div style="font-size: 10px; color: #9BA1B2;">{{ r.fecha }} · {{ r.hora }}</div>
+                    <div style="font-size: 9px; color: #5F6577;">{{ r.torneo }}</div>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+            <div style="padding: 14px 18px 16px; text-align: center;">
+              <span style="border: 1px solid #242933; border-radius: 8px; padding: 9px 16px; font-size: 11.5px; font-weight: 700; color: #A7ADB8; cursor: pointer; display: inline-block;" style-hover="border-color: #343943; color: #F2F4F7;">Ver ranking completo →</span>
+            </div>
+          </div>
+
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 16px;">
+            <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.09em; color: #5F6577;">EVOLUCIÓN DEL TOP 5</div>
+            <div style="font-size: 10px; color: #5F6577; margin-top: 3px;">Últimos 30 días</div>
+            <div style="display: flex; gap: 8px; margin-top: 14px;">
+              <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 9px; color: #5F6577; text-align: right; height: 170px;">
+                <sc-for list="{{ clasifEvoYLabels }}" as="yl" hint-placeholder-count="4"><div>{{ yl }}</div></sc-for>
+              </div>
+              <svg width="100%" height="170" viewBox="0 0 420 170" preserveAspectRatio="none" style="flex: 1; overflow: visible;">
+                <sc-for list="{{ clasifEvoSeries }}" as="sr" hint-placeholder-count="5">
+                  <polyline points="{{ sr.points }}" fill="none" stroke="{{ sr.color }}" stroke-width="2"></polyline>
+                  <sc-for list="{{ sr.pts }}" as="pt" hint-placeholder-count="5">
+                    <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="2.6" fill="{{ sr.color }}"></circle>
+                  </sc-for>
+                </sc-for>
+              </svg>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-left: 22px; font-size: 8.5px; color: #5F6577; margin-top: 4px;">
+              <sc-for list="{{ clasifEvoXLabels }}" as="xl" hint-placeholder-count="5"><div>{{ xl }}</div></sc-for>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+              <sc-for list="{{ clasifEvoSeries }}" as="sr" hint-placeholder-count="5">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; color: #9BA1B2;">
+                  <span style="width: 8px; height: 8px; border-radius: 999px; background: {{ sr.color }}; flex: none;"></span>{{ sr.name }}
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 14px; margin-top: 14px; align-items: start;">
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.09em; color: #5F6577;">COMPARATIVA ENTRE JUEGOS</div>
+              <span style="color: #5F6577; font-size: 10px;" title="Paridad vs nivel promedio de equipos, por juego">ⓘ</span>
+            </div>
+            <div style="display: flex; gap: 14px; margin-top: 14px;">
+              <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 8.5px; color: #5F6577; text-align: right; height: 170px;">
+                <div>1.0 Alta</div><div>0.5</div><div>0.0 Baja</div>
+              </div>
+              <div style="position: relative; width: 240px; height: 170px; flex: none;">
+                <svg width="240" height="170" viewBox="0 0 280 170" style="position: absolute; inset: 0; overflow: visible;">
+                  <sc-for list="{{ clasifScatter }}" as="c" hint-placeholder-count="4">
+                    <circle cx="{{ c.cx }}" cy="{{ c.cy }}" r="{{ c.r }}" fill="{{ c.color }}" opacity="0.30" stroke="{{ c.color }}" stroke-width="1.4"></circle>
+                  </sc-for>
+                </svg>
+                <sc-for list="{{ clasifScatter }}" as="c" hint-placeholder-count="4">
+                  <div style="{{ c.labelStyle }}">
+                    <div style="font-size: 8px; font-weight: 800; letter-spacing: 0.04em; color: {{ c.color }};">{{ c.juego }}</div>
+                    <div style="font-size: 10.5px; font-weight: 700; color: #F2F4F7; margin-top: 1px;">{{ c.paridadTxt }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-left: 34px; font-size: 8.5px; color: #5F6577; margin-top: 4px;">
+              <div>1200</div><div>1700</div><div>2200</div>
+            </div>
+            <div style="font-size: 9.5px; color: #5F6577; text-align: center; margin-top: 4px;">Nivel promedio de equipos (Calificación)</div>
+            <div style="font-size: 11.5px; color: #9BA1B2; line-height: 1.6; margin-top: 14px; text-wrap: pretty;">El tamaño representa la cantidad de equipos activos y el color indica el juego. Mayor paridad (arriba) significa competencia más equilibrada. Mayor nivel promedio (derecha) indica escenas más consolidadas.</div>
+            <div style="margin-top: 14px;">
+              <span style="border: 1px solid #242933; border-radius: 8px; padding: 9px 16px; font-size: 11.5px; font-weight: 700; color: #A7ADB8; cursor: pointer; display: inline-block;" style-hover="border-color: #343943; color: #F2F4F7;">Ver análisis detallado →</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px;">
+            <sc-for list="{{ clasifLeaders }}" as="l" hint-placeholder-count="4">
+              <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; overflow: hidden; display: flex; flex-direction: column;">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #1D1D28;">
+                  <span style="font-size: 10px; font-weight: 800; letter-spacing: 0.06em; color: {{ l.color }};">{{ l.juego }}</span>
+                  <span style="font-size: 9px; font-weight: 800; color: #05070A; background: {{ l.color }}; border-radius: 6px; padding: 2px 6px;">#1</span>
+                </div>
+                <div style="{{ l.gradStyle }}; padding: 18px 0; display: flex; align-items: center; justify-content: center;">
+                  <div style="{{ l.escudo }}">{{ l.inicial }}</div>
+                </div>
+                <div style="padding: 0 14px 14px; text-align: center;">
+                  <div style="font-size: 14px; font-weight: 700; letter-spacing: 0.02em;">{{ l.equipo }}</div>
+                  <div style="font-size: 21px; font-weight: 800; color: {{ l.color }}; font-family: 'JetBrains Mono', monospace; margin-top: 6px;">{{ l.rating }}</div>
+                  <div style="font-size: 9.5px; color: #5F6577;">Calificación del motor</div>
+                  <div style="display: flex; margin-top: 12px; border-top: 1px solid #1D1D28; padding-top: 10px;">
+                    <div style="flex: 1; border-right: 1px solid #1D1D28;">
+                      <div style="font-size: 12px; font-weight: 700; color: #F2F4F7;">{{ l.winrate }}</div>
+                      <div style="font-size: 8.5px; color: #5F6577; margin-top: 2px;">Win Rate</div>
+                    </div>
+                    <div style="flex: 1; border-right: 1px solid #1D1D28;">
+                      <div style="font-size: 12px; font-weight: 700; color: {{ l.rachaColor }};">{{ l.racha }}</div>
+                      <div style="font-size: 8.5px; color: #5F6577; margin-top: 2px;">Racha</div>
+                    </div>
+                    <div style="flex: 1;">
+                      <div style="font-size: 12px; font-weight: 700; color: #F2F4F7;">{{ l.conf }}</div>
+                      <div style="font-size: 8.5px; color: #5F6577; margin-top: 2px;">Confianza</div>
+                    </div>
+                  </div>
+                  <div style="margin-top: 12px; border: 1px solid #242933; border-radius: 8px; padding: 8px; font-size: 10.5px; font-weight: 700; color: #A7ADB8; cursor: pointer;" style-hover="border-color: #343943; color: #F2F4F7;">Ver perfil del equipo →</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ viewCalidad }}" hint-placeholder-val="{{ false }}">
+      <main style="flex: 1; padding: 20px 26px 34px;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px;">
+          <div style="min-width: 0; max-width: 640px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; white-space: nowrap;">CALIDAD DEL MOTOR DE PREDICCIONES</h1>
+              <span style="color: #5F6577; cursor: default;" title="Cómo medimos si el motor está funcionando bien">ⓘ</span>
+            </div>
+            <div style="font-size: 12px; color: #8B95A5; margin-top: 6px; text-wrap: pretty;">Métricas en tiempo real sobre el rendimiento y confiabilidad de nuestro algoritmo.</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: #8B95A5; white-space: nowrap; flex: none; padding-top: 6px;">
+            <span style="width: 6px; height: 6px; border-radius: 999px; background: #19E68C; box-shadow: 0 0 7px #19E68C88; display: inline-block;"></span>
+            Última actualización: <span style="color: #F2F4F7; font-weight: 600;">{{ calUltima }}</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 16px;">
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 18px; display: flex; align-items: center; gap: 22px;">
+            <div style="position: relative; width: 92px; height: 92px; flex: none;">
+              <svg width="92" height="92" viewBox="0 0 92 92" style="position: absolute; inset: 0; transform: rotate(-90deg);">
+                <circle cx="46" cy="46" r="42" fill="none" stroke="#1D1D28" stroke-width="7"></circle>
+                <circle cx="46" cy="46" r="42" fill="none" stroke="#19E68C" stroke-width="7" stroke-linecap="round" stroke-dasharray="{{ calGaugeDash }}" style="filter: drop-shadow(0 0 5px #19E68C88);"></circle>
+              </svg>
+              <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none;">
+                <div style="font-size: 22px; font-weight: 800; font-family: 'JetBrains Mono', monospace;">{{ calGaugeVal }}</div>
+                <div style="font-size: 8px; font-weight: 800; letter-spacing: 0.02em; color: #19E68C; margin-top: 2px;">{{ calGaugeLabel }}</div>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; flex: 1;">
+              <div>
+                <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #5F6577;">PRECISIÓN HISTÓRICA</div>
+                <div style="font-size: 17px; font-weight: 700; margin-top: 4px;">{{ calPrecision }}</div>
+              </div>
+              <div>
+                <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #5F6577;">PARTIDAS ANALIZADAS</div>
+                <div style="font-size: 17px; font-weight: 700; margin-top: 4px;">{{ calPartidas }}</div>
+              </div>
+              <div>
+                <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #5F6577;">PREDICCIONES CORRECTAS</div>
+                <div style="font-size: 17px; font-weight: 700; margin-top: 4px;">{{ calCorrectas }}</div>
+              </div>
+              <div>
+                <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #5F6577;">VARIACIÓN</div>
+                <div style="font-size: 12px; font-weight: 700; color: #19E68C; margin-top: 6px;">{{ calVariacion }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 18px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 800; letter-spacing: 0.09em; color: #5F6577;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00CFFF" stroke-width="1.8"><path d="M12 3 4.5 6v6c0 4.6 3.2 7.9 7.5 9 4.3-1.1 7.5-4.4 7.5-9V6L12 3Z"></path></svg>
+              NIVEL DE CONFIANZA PROMEDIO
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 9px; margin-top: 12px;">
+              <span style="font-size: 30px; font-weight: 800; font-family: 'JetBrains Mono', monospace;">{{ calConfVal }}%</span>
+              <span style="font-size: 10.5px; font-weight: 700; color: #00CFFF;">ALTO</span>
+            </div>
+            <div style="height: 6px; border-radius: 999px; background: #1D1D28; overflow: hidden; display: flex; margin-top: 16px;" title="Porcentaje promedio de confianza asignado por el motor a sus predicciones.">
+              <div style="{{ calConfBarStyle }}"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px; font-size: 10px; color: #5F6577; margin-top: 9px;">RANGO TÍPICO DE CONFIANZA 60%–95% <span title="El motor rara vez publica fuera de esta banda.">ⓘ</span></div>
+          </div>
+
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 18px;">
+            <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.09em; color: #5F6577;">ESTADO DEL MOTOR</div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
+              <span style="width: 7px; height: 7px; border-radius: 999px; background: #19E68C; box-shadow: 0 0 7px #19E68C88; display: inline-block;"></span>
+              <span style="font-size: 15px; font-weight: 800; color: #19E68C; letter-spacing: 0.04em;">ACTIVO</span>
+            </div>
+            <div style="font-size: 11px; color: #8B95A5; margin-top: 3px;">Operando normalmente</div>
+            <div style="display: flex; gap: 20px; margin-top: 16px;">
+              <div>
+                <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #5F6577;">MODELO</div>
+                <div style="font-size: 12.5px; font-weight: 600; margin-top: 3px; font-family: 'JetBrains Mono', monospace;">v3.2.1</div>
+              </div>
+              <div>
+                <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #5F6577;">UPTIME</div>
+                <div style="font-size: 12.5px; font-weight: 600; margin-top: 3px; font-family: 'JetBrains Mono', monospace;">15d 8h 42m</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.09em; color: #5F6577; margin-bottom: 11px;">RENDIMIENTO POR JUEGO</div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px;">
+          <sc-for list="{{ calGames }}" as="g" hint-placeholder-count="4">
+            <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 16px;" style-hover="border-color: currentColor;">
+              <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                <span style="width: 8px; height: 8px; border-radius: 999px; background: {{ g.color }}; flex: none;"></span>
+                <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ g.label }}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 14px; margin-top: 14px;">
+                <div style="position: relative; width: 64px; height: 64px; flex: none;">
+                  <svg width="64" height="64" viewBox="0 0 64 64" style="position: absolute; inset: 0; transform: rotate(-90deg);">
+                    <circle cx="32" cy="32" r="27" fill="none" stroke="#1D1D28" stroke-width="4"></circle>
+                    <circle cx="32" cy="32" r="27" fill="none" stroke="{{ g.color }}" stroke-width="4" stroke-linecap="round" stroke-dasharray="{{ g.ringDash }}"></circle>
+                  </svg>
+                  <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none;">
+                    <div style="font-size: 16px; font-weight: 800; font-family: 'JetBrains Mono', monospace;">{{ g.score }}%</div>
+                    <div style="font-size: 6.5px; font-weight: 800; letter-spacing: 0; color: {{ g.color }}; white-space: nowrap;">{{ g.estado }}</div>
+                  </div>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em; color: #5F6577;">CONF. PROMEDIO</div>
+                  <div style="font-size: 13px; font-weight: 700; margin-top: 2px;">{{ g.conf }}%</div>
+                  <svg width="40" height="16" viewBox="0 0 30 13" style="margin-top: 4px;"><polyline points="{{ calSpark }}" fill="none" stroke="#19E68C" stroke-width="1.4"></polyline></svg>
+                </div>
+              </div>
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 13px; padding-top: 11px; border-top: 1px solid #1D1D28;">
+                <div>
+                  <div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em; color: #5F6577;">PARTIDAS</div>
+                  <div style="font-size: 12px; font-weight: 700; margin-top: 2px; font-family: 'JetBrains Mono', monospace;">{{ g.partidas }}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 11px; font-weight: 700; color: #19E68C;">{{ g.variacion }}</div>
+                  <div style="font-size: 8px; color: #5F6577;">vs semana anterior</div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; align-items: start;">
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 16px 16px 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 10px; font-weight: 800; letter-spacing: 0.09em; color: #5F6577;">HISTÓRICO DE RENDIMIENTO GLOBAL</span>
+                <span style="color: #5F6577; font-size: 10px;" title="Precisión del motor a lo largo del tiempo, medida sobre resultados ya conocidos.">ⓘ</span>
+              </div>
+              <div style="display: flex; gap: 4px;">
+                <sc-for list="{{ calTfs }}" as="tf" hint-placeholder-count="4">
+                  <div onClick="{{ tf.onClick }}" style="{{ tf.style }}">{{ tf.t }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+              <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 9px; color: #5F6577; text-align: right; height: 150px;">
+                <div>100%</div><div>75%</div><div>50%</div><div>25%</div><div>0%</div>
+              </div>
+              <svg width="100%" height="150" viewBox="0 0 700 150" preserveAspectRatio="none" style="flex: 1; overflow: visible;">
+                <polygon points="{{ calHistAreaPoints }}" fill="#19E68C" opacity="0.07"></polygon>
+                <polyline points="{{ calHistPoints }}" fill="none" stroke="#19E68C" stroke-width="2" style="filter: drop-shadow(0 0 4px #19E68C77);"></polyline>
+                <sc-for list="{{ calHistPts }}" as="pt" hint-placeholder-count="9">
+                  <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="3" fill="#0D1015" stroke="#19E68C" stroke-width="1.6"><title>{{ pt.label }} · Precisión: {{ pt.val }}%</title></circle>
+                </sc-for>
+              </svg>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-left: 30px; font-size: 8.5px; color: #5F6577; margin-top: 6px;">
+              <sc-for list="{{ calHistPts }}" as="pt" hint-placeholder-count="9"><div>{{ pt.label }}</div></sc-for>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: #8B95A5; padding: 12px 0 12px;">
+              <span style="width: 7px; height: 7px; border-radius: 999px; background: #19E68C; display: inline-block;"></span> Precisión (%)
+            </div>
+          </div>
+
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 16px;">
+            <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.09em; color: #5F6577; margin-bottom: 10px;">FACTORES QUE IMPACTAN LA CALIDAD</div>
+            <sc-for list="{{ calFactores }}" as="f" hint-placeholder-count="4">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 4px; border-bottom: 1px solid #15151d; cursor: pointer;" style-hover="background: #131720;">
+                <span style="font-size: 12px; color: #F2F4F7;">{{ f.nombre }}</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 10px; font-weight: 800; letter-spacing: 0.04em; color: {{ f.color }};">{{ f.estado }}</span>
+                  <span style="color: #5F6577;">›</span>
+                </div>
+              </div>
+            </sc-for>
+            <div onClick="{{ goCalidad }}" style="margin-top: 14px; border: 1px solid #29313B; border-radius: 8px; background: #11161D; padding: 10px; text-align: center; font-size: 11.5px; font-weight: 700; color: #F2F4F7; cursor: pointer;" style-hover="border-color: #FF2338;">Ver análisis detallado →</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.1fr); gap: 14px; margin-top: 14px;">
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 15px 17px; display: flex; gap: 11px; align-items: flex-start;">
+            <span style="color: #FFB000; flex: none;">💡</span>
+            <div>
+              <div style="font-size: 11.5px; font-weight: 700;">¿QUÉ SIGNIFICA CADA MÉTRICA?</div>
+              <div style="font-size: 11px; color: #8B95A5; margin-top: 4px; line-height: 1.5;">Pasa el cursor sobre los indicadores para más información.</div>
+            </div>
+          </div>
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 15px 17px;">
+            <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: #5F6577; margin-bottom: 10px;">RANGOS DE CALIDAD</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #A7ADB8;">
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 7px; height: 7px; border-radius: 999px; background: #19E68C; display: inline-block;"></span>EXCELENTE <span style="color: #5F6577;">80–100%</span></div>
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 7px; height: 7px; border-radius: 999px; background: #00CFFF; display: inline-block;"></span>BUENO <span style="color: #5F6577;">60–79%</span></div>
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 7px; height: 7px; border-radius: 999px; background: #FFB000; display: inline-block;"></span>REGULAR <span style="color: #5F6577;">40–59%</span></div>
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 7px; height: 7px; border-radius: 999px; background: #FF2338; display: inline-block;"></span>BAJO <span style="color: #5F6577;">0–39%</span></div>
+            </div>
+          </div>
+          <div style="border: 1px solid #242933; border-radius: 10px; background: #0D1015; padding: 15px 17px; display: flex; gap: 11px; align-items: flex-start;">
+            <span style="color: #00CFFF; flex: none;">⚙</span>
+            <div>
+              <div style="font-size: 11.5px; font-weight: 700;">METODOLOGÍA</div>
+              <div style="font-size: 11px; color: #8B95A5; margin-top: 4px; line-height: 1.5;">Nuestro motor utiliza +50 variables por partido y aprendizaje automático para generar predicciones.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em; color: #6F7784; margin: 30px 0 11px;">DETALLE ESTADÍSTICO · BRIER POR FORMATO CONTRA LA BASE INGENUA</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px;">
+          <sc-for list="{{ brier }}" as="b" hint-placeholder-count="4">
+            <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 16px 17px;">
+              <div style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em; color: #6F7784;">{{ b.formato }}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 27px; font-weight: 700; color: #FF2638; margin-top: 9px; line-height: 1;">{{ b.motor }}</div>
+              <div style="font-size: 11px; color: #6F7784; margin-top: 8px;">base ingenua {{ b.ingenua }}</div>
+              <div style="height: 3px; border-radius: 999px; background: #242933; overflow: hidden; display: flex; margin-top: 12px;">
+                <div style="{{ b.barStyle }}"></div>
+              </div>
+              <div style="font-size: 10.5px; color: #19E68C; margin-top: 9px; font-weight: 600;">{{ b.mejora }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em; color: #6F7784; margin: 26px 0 11px;">ELO VS GLICKO-2 · TEST PAREADO CON IC95</div>
+        <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: 110px 118px minmax(0, 1fr) 96px 84px minmax(0, 1.1fr); gap: 12px; padding: 11px 18px; background: #11141A; border-bottom: 1px solid #242933; font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; color: #6F7784;">
+            <div>JUEGO</div><div>MOTOR ELEGIDO</div><div>COEFICIENTES</div><div>DIF.</div><div>t</div><div>VEREDICTO</div>
+          </div>
+          <sc-for list="{{ duelo }}" as="d" hint-placeholder-count="4">
+            <div style="display: grid; grid-template-columns: 110px 118px minmax(0, 1fr) 96px 84px minmax(0, 1.1fr); gap: 12px; padding: 13px 18px; border-bottom: 1px solid #1a1e26; font-size: 12px; align-items: center;">
+              <div style="font-weight: 700;">{{ d.juego }}</div>
+              <div><span style="{{ d.chip }}">{{ d.motor }}</span></div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A7ADB8;">{{ d.coef }}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #F2F4F7;">{{ d.dif }}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #F2F4F7;">{{ d.t }}</div>
+              <div style="font-size: 11px; color: #6F7784; line-height: 1.45;">{{ d.veredicto }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin-top: 22px;">
+          <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 17px 19px;">
+            <div style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em; color: #6F7784;">CÓMO SE MIDE</div>
+            <div style="display: flex; flex-direction: column; gap: 9px; margin-top: 12px;">
+              <sc-for list="{{ metodo }}" as="m" hint-placeholder-count="4">
+                <div style="display: flex; gap: 10px; font-size: 12px; color: #A7ADB8; line-height: 1.5;">
+                  <span style="color: #FF2638; flex: none;">·</span><span>{{ m }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 17px 19px;">
+            <div style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em; color: #6F7784;">LÍMITES CONOCIDOS</div>
+            <div style="display: flex; flex-direction: column; gap: 9px; margin-top: 12px;">
+              <sc-for list="{{ limites }}" as="l" hint-placeholder-count="4">
+                <div style="display: flex; gap: 10px; font-size: 12px; color: #6F7784; line-height: 1.5;">
+                  <span style="color: #FFB000; flex: none;">·</span><span>{{ l }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ viewNews }}" hint-placeholder-val="{{ false }}">
+      <main style="flex: 1; padding: 22px 26px 34px; max-width: 900px;">
+        <div style="margin-bottom: 18px;">
+          <h1 style="margin: 0; font-size: 21px; font-weight: 800;">CAMBIOS DEL MOTOR</h1>
+          <div style="font-size: 12px; color: #6F7784; margin-top: 5px;">Qué se tocó, cuándo y por qué. Nada entra sin pasar por el backtest.</div>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <sc-for list="{{ changelog }}" as="c" hint-placeholder-count="4">
+            <div style="display: grid; grid-template-columns: 108px 106px minmax(0, 1fr); gap: 16px; padding: 17px 0; border-bottom: 1px solid #1a1e26; align-items: start;">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #4B5360; padding-top: 2px;">{{ c.fecha }}</div>
+              <div><span style="{{ c.chip }}">{{ c.tipo }}</span></div>
+              <div>
+                <div style="font-size: 14px; font-weight: 700;">{{ c.titulo }}</div>
+                <div style="font-size: 12.5px; color: #6F7784; margin-top: 6px; line-height: 1.55; text-wrap: pretty;">{{ c.texto }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ viewMatch }}" hint-placeholder-val="{{ false }}">
+      <main style="flex: 1; padding: 18px 26px 32px;">
+        <div onClick="{{ goBack }}" style="display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #6F7784; cursor: pointer; margin-bottom: 14px;" style-hover="color: #F2F4F7;">← VOLVER</div>
+
+        <div style="border: 1px solid #242933; border-radius: 12px; background: #11141A; overflow: hidden;">
+          <sc-if value="{{ mEmbed }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 18px; background: #15181E; border-bottom: 1px solid #242933;">
+                <div style="display: flex; align-items: center; gap: 9px;">
+                  <span style="width: 7px; height: 7px; border-radius: 999px; background: #FF2638; box-shadow: 0 0 8px #FF263899; display: inline-block;"></span>
+                  <span style="font-size: 10px; font-weight: 800; letter-spacing: 0.12em; color: #FF2638;">EN VIVO</span>
+                  <span style="font-size: 11px; color: #6F7784;">{{ mStreamLabel }}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div onClick="{{ useYoutube }}" style="{{ ytTab }}">YOUTUBE</div>
+                  <div onClick="{{ useTwitch }}" style="{{ twTab }}">TWITCH</div>
+                </div>
+              </div>
+              <sc-if value="{{ mReproductor }}" hint-placeholder-val="{{ false }}">
+                <iframe src="{{ mStreamUrl }}" title="Transmisión oficial" allowfullscreen="" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" referrerpolicy="strict-origin-when-cross-origin" style="width: 100%; height: 420px; border: 0; display: block; background: #05070A;"></iframe>
+              </sc-if>
+              <sc-if value="{{ mPoster }}" hint-placeholder-val="{{ true }}">
+                <div style="position: relative; height: 420px; overflow: hidden;">
+                  <div style="{{ mArteStyle }}"></div>
+                  <div style="position: absolute; inset: 0; background: rgba(5,7,10,0.80); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px;">
+                    <div style="display: flex; align-items: center; gap: 9px;">
+                      <span style="width: 8px; height: 8px; border-radius: 999px; background: #FF2638; box-shadow: 0 0 10px #FF2638; display: inline-block;"></span>
+                      <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; color: #FF2638;">TRANSMISIÓN EN CURSO</span>
+                    </div>
+                    <div style="font-size: 19px; font-weight: 700;">{{ mStreamLabel }}</div>
+                    <a href="{{ mStreamPage }}" target="_blank" rel="noopener" style="background: #FF2638; color: #05070A; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; padding: 12px 18px; border-radius: 8px; text-decoration: none;" style-hover="background: #FF3347; color: #05070A;">VER EN {{ mPlataforma }} ↗</a>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; line-height: 1.65; color: #6F7784; max-width: 470px;">{{ mStreamNota }}</div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ mSinStream }}" hint-placeholder-val="{{ true }}">
+            <div style="position: relative; height: 200px; overflow: hidden;">
+              <div style="{{ mArteStyle }}"></div>
+              <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,7,10,0.25) 0%, rgba(5,7,10,0.70) 60%, #11141A 100%);"></div>
+            </div>
+          </sc-if>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 22px; border-bottom: 1px solid #1a1e26; background: #15181E;">
+            <div style="display: flex; align-items: center; gap: 11px;">
+              <span style="{{ mChip }}">{{ mJuego }}</span>
+              <span style="font-size: 11.5px; color: #A7ADB8;">{{ mTorneo }}</span>
+            </div>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6F7784; letter-spacing: 0.06em;">{{ mFormato }} · {{ mInicio }} · CIERRA {{ mCierra }}</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 22px; padding: 24px 26px 10px;">
+            <div style="display: flex; align-items: center; gap: 14px; justify-content: flex-end;">
+              <div style="text-align: right;">
+                <div style="font-size: 22px; font-weight: 800;">{{ mTeamA }}</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6F7784; margin-top: 5px;">rating {{ mRatingA }} · RD {{ mRdA }}</div>
+              </div>
+              <div style="{{ mEscudoA }}">{{ mInicialA }}</div>
+            </div>
+            <div style="font-size: 11px; color: #4B5360; letter-spacing: 0.12em; font-weight: 600;">VS</div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div style="{{ mEscudoB }}">{{ mInicialB }}</div>
+              <div>
+                <div style="font-size: 22px; font-weight: 800;">{{ mTeamB }}</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6F7784; margin-top: 5px;">rating {{ mRatingB }} · RD {{ mRdB }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 100px minmax(0, 1fr); align-items: center; gap: 14px; padding: 12px 26px 24px;">
+            <div style="border: 1px solid #242933; border-radius: 10px; background: #15181E; padding: 13px 15px;">
+              <div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6F7784;">MOTOR</div>
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 7px;">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 27px; font-weight: 700; color: #FF2638; line-height: 1;">{{ mProbA }}</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #4B5360;">{{ mProbB }}</span>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.11em; color: #6F7784;">VENTAJA</div>
+              <div style="{{ mEdgeStyle }}">{{ mEdge }}</div>
+            </div>
+            <div style="border: 1px solid #242933; border-radius: 10px; background: #15181E; padding: 13px 15px; text-align: right;">
+              <div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6F7784;">MERCADO SIN VIG</div>
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 7px;">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #4B5360;">{{ mMercadoB }}</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 27px; font-weight: 500; color: #F2F4F7; line-height: 1;">{{ mMercadoA }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 18px; margin-top: 18px; align-items: start;">
+          <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 18px 20px;">
+            <div style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em; color: #6F7784;">DISTRIBUCIÓN DE MARCADOR EXACTO</div>
+            <div style="font-size: 10.5px; color: #4B5360; margin-top: 6px;">Derivada de la p de partida, consistente con la probabilidad de serie guardada.</div>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+              <sc-for list="{{ mMarcadores }}" as="sc" hint-placeholder-count="6">
+                <div style="display: grid; grid-template-columns: 54px minmax(0, 1fr) 58px; gap: 12px; align-items: center;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #F2F4F7;">{{ sc.label }}</div>
+                  <div style="height: 6px; border-radius: 999px; background: #1a1e26; overflow: hidden; display: flex;">
+                    <div style="{{ sc.barStyle }}"></div>
+                  </div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #6F7784; text-align: right;">{{ sc.pct }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 18px;">
+            <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 18px 20px;">
+              <div style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em; color: #6F7784;">CONGELADO AL PREDECIR</div>
+              <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 13px;">
+                <sc-for list="{{ mCongelado }}" as="k" hint-placeholder-count="5">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12px;">
+                    <span style="color: #6F7784;">{{ k.k }}</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500; color: #F2F4F7;">{{ k.v }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 18px 20px;">
+              <div style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em; color: #6F7784;">HISTORIAL DIRECTO</div>
+              <div style="display: flex; flex-direction: column; margin-top: 9px;">
+                <sc-for list="{{ mH2h }}" as="h" hint-placeholder-count="3">
+                  <div style="display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #1a1e26; font-size: 12px;">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #4B5360;">{{ h.fecha }}</div>
+                    <div style="color: #A7ADB8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ h.evento }}</div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-weight: 700;">{{ h.marcador }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ viewAbout }}" hint-placeholder-val="{{ false }}">
+      <main style="flex: 1; padding: 22px 26px 34px; max-width: 820px;">
+        <h1 style="margin: 0; font-size: 21px; font-weight: 800;">NOSOTROS</h1>
+        <div style="font-size: 12px; color: #6F7784; margin-top: 5px;">Qué es esto y qué no es</div>
+        <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 18px; font-size: 13.5px; line-height: 1.65; color: #A7ADB8; text-wrap: pretty;">
+          <p style="margin: 0;">Monitor eSports publica la salida de un motor de calificación propio: Elo clásico para Dota 2, Glicko-2 para CS2, League of Legends y Valorant. La matemática es pura, sin dependencias, y todos los coeficientes viven en un archivo de configuración: no hay números mágicos sueltos ni ramas por juego dentro del motor.</p>
+          <p style="margin: 0;">De la probabilidad de partida derivamos la probabilidad de serie (Bo1, Bo2, Bo3, Bo5) y la distribución de marcadores exactos. El Bo2 lleva corrección de correlación intra-serie en escala logit; con delta cero se reduce a la binomial ingenua.</p>
+          <p style="margin: 0;">Guardamos la cuota de la casa únicamente para medirnos contra ella. Esta web no acepta apuestas ni recomienda apostar.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-top: 24px;">
+          <sc-for list="{{ cifras }}" as="c" hint-placeholder-count="3">
+            <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 18px;">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 25px; font-weight: 700; color: #FF2638;">{{ c.n }}</div>
+              <div style="font-size: 11.5px; color: #6F7784; margin-top: 6px;">{{ c.t }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ viewFaq }}" hint-placeholder-val="{{ false }}">
+      <main style="flex: 1; padding: 22px 26px 34px; max-width: 860px;">
+        <h1 style="margin: 0; font-size: 21px; font-weight: 800;">PREGUNTAS FRECUENTES</h1>
+        <div style="font-size: 12px; color: #6F7784; margin-top: 5px;">Lo que más nos preguntan</div>
+        <div style="display: flex; flex-direction: column; gap: 11px; margin-top: 18px;">
+          <sc-for list="{{ faq }}" as="f" hint-placeholder-count="6">
+            <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 16px 18px;">
+              <div style="font-size: 13.5px; font-weight: 700;">{{ f.q }}</div>
+              <div style="font-size: 12.5px; color: #6F7784; margin-top: 7px; line-height: 1.55; text-wrap: pretty;">{{ f.a }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ viewTerms }}" hint-placeholder-val="{{ false }}">
+      <main style="flex: 1; padding: 22px 26px 34px; max-width: 860px;">
+        <h1 style="margin: 0; font-size: 21px; font-weight: 800;">TÉRMINOS DEL SERVICIO</h1>
+        <div style="font-size: 12px; color: #6F7784; margin-top: 5px;">Última actualización: 20 de agosto de 2026</div>
+        <div style="display: flex; flex-direction: column; gap: 17px; margin-top: 18px;">
+          <sc-for list="{{ terms }}" as="t" hint-placeholder-count="5">
+            <div>
+              <div style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.05em;">{{ t.h }}</div>
+              <div style="font-size: 12.5px; color: #6F7784; margin-top: 7px; line-height: 1.6; text-wrap: pretty;">{{ t.p }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ viewContacto }}" hint-placeholder-val="{{ false }}">
+      <main style="flex: 1; padding: 22px 26px 34px; max-width: 760px;">
+        <h1 style="margin: 0; font-size: 21px; font-weight: 800;">CONTACTO</h1>
+        <div style="font-size: 12px; color: #6F7784; margin-top: 5px;">Errores de datos, torneos que faltan, dudas del método</div>
+        <div style="display: flex; flex-direction: column; gap: 11px; margin-top: 20px;">
+          <sc-for list="{{ contacto }}" as="c" hint-placeholder-count="3">
+            <div style="border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">{{ c.canal }}</div>
+                <div style="font-size: 11.5px; color: #6F7784; margin-top: 5px;">{{ c.para }}</div>
+              </div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #FF2638;">{{ c.destino }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </main>
+    </sc-if>
+
+    <footer style="border-top: 1px solid #1a1e26; background: #05070A; padding: 0 26px; height: 56px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 20px; margin-top: auto;">
+      <div style="display: flex; gap: 24px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; color: #6F7784;">
+        <div onClick="{{ goAbout }}" style="cursor: pointer;" style-hover="color: #F2F4F7;">NOSOTROS</div>
+        <div onClick="{{ goFaq }}" style="cursor: pointer;" style-hover="color: #F2F4F7;">PREGUNTAS FRECUENTES</div>
+        <div onClick="{{ goTerms }}" style="cursor: pointer;" style-hover="color: #F2F4F7;">TÉRMINOS</div>
+        <div onClick="{{ goContacto }}" style="cursor: pointer;" style-hover="color: #F2F4F7;">CONTACTO</div>
+      </div>
+      <img src="./logo-monitor.png" alt="" style="height: 34px; width: auto; display: block; opacity: 0.75;" />
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: #4B5360; letter-spacing: 0.06em; justify-self: end;">SIN APUESTAS · SIN CUENTAS · SOLO CÁLCULO</div>
+    </footer>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;supabaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Cableado&quot;,&quot;label&quot;:&quot;Supabase URL (vacío = datos de ejemplo)&quot;},&quot;supabaseKey&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Cableado&quot;,&quot;label&quot;:&quot;Supabase anon key&quot;},&quot;plataformaDirecto&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;youtube&quot;,&quot;twitch&quot;],&quot;default&quot;:&quot;youtube&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Directo&quot;},&quot;mostrarSidebar&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;mostrarSalud&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+class Component extends DCLogic {
+  state = {
+    view: 'home', matchId: null, filtro: 'todos', orden: 'cierra', datos: null, error: null, platform: null,
+    clas: null, equipos: [], sel: {}, actividad: [], cargando: false,
+    colsOpen: false, reclasOpen: false, toastMsg: null, undo: null,
+    clasifTab: 'dota2', clasifRegion: 'todas', clasifOrdenCampo: 'calificacion', clasifOrdenDir: 'desc',
+    calTf: '30D',
+  };
+  EMPTY = [];
+
+  // ─────────────────────────────────────────────────────────────
+  // ÚNICO PUNTO DE CABLEADO. Ver handoff_monitor_esports/README.md
+  // ─────────────────────────────────────────────────────────────
+  TABLAS = {
+    partidos: 'v_partidos_abiertos',
+    ratings: 'v_ratings_vigentes',
+    backtest: 'v_backtest_formato',
+    duelo: 'v_comparacion_motores',
+    salud: 'v_salud_fuentes',
+    changelog: 'changelog',
+  };
+  ARTE = { dota2: './arte/dota2.webp', cs2: './arte/cs2.jpg', lol: './arte/lol.jpg', valorant: './arte/valorant.jpg' };
+  arteDe(j) { return this.ARTE[j] || './arte/cs2.jpg'; }
+  // El arte va como background y no como <img src="{{ }}">: un hueco sin resolver
+  // dentro de src se emite literal y el navegador lo pide, dejando un 404 en cada carga.
+  arteStyle(url, pos) {
+    return { position: 'absolute', inset: 0, backgroundImage: 'url("' + url + '")', backgroundSize: 'cover', backgroundPosition: pos || 'center', backgroundRepeat: 'no-repeat' };
+  }
+
+  componentDidMount() {
+    this.setState({ datos: this.MOCK() });
+    this.cargarClas();
+    const url = (this.props.supabaseUrl || '').trim();
+    const key = (this.props.supabaseKey || '').trim();
+    if (url && key) this.cargar(url, key);
+  }
+
+  async cargar(url, key) {
+    const pedir = async tabla => {
+      const r = await fetch(url.replace(/\/$/, '') + '/rest/v1/' + tabla + '?select=*', {
+        headers: { apikey: key, Authorization: 'Bearer ' + key },
+      });
+      if (!r.ok) throw new Error(tabla + ' → HTTP ' + r.status);
+      return r.json();
+    };
+    try {
+      const T = this.TABLAS;
+      const [partidos, ratings, backtest, duelo, salud, changelog] = await Promise.all([
+        pedir(T.partidos), pedir(T.ratings), pedir(T.backtest), pedir(T.duelo), pedir(T.salud), pedir(T.changelog),
+      ]);
+      // TODO(claude-code): adaptar aquí si los nombres de columna difieren del contrato.
+      this.setState({
+        error: null,
+        datos: {
+          mock: false,
+          ciclo: 'Sincronizado ahora mismo',
+          partidos: partidos.map(this.mapPartido),
+          ratings: ratings.map(this.mapRating),
+          brier: backtest.map(this.mapBrier),
+          duelo: duelo.map(this.mapDuelo),
+          fuentes: salud.map(this.mapFuente),
+          changelog: changelog.map(this.mapChangelog),
+        },
+      });
+    } catch (e) {
+      this.setState({ error: 'Sin conexión con Supabase (' + e.message + '). Mostrando datos de ejemplo.' });
+    }
+  }
+
+  mapPartido = r => ({
+    id: r.match_id, juegoId: r.juego, juego: (r.juego || '').toUpperCase(),
+    arte: r.arte_url || this.arteDe(r.juego),   // TODO(claude-code): arte_url por torneo si existe
+    torneo: r.torneo, formato: (r.formato || '').toUpperCase(), inicio: r.inicio_utc,
+    cierra: r.cierra_en || '—', enVivo: !!r.en_vivo,
+    a: r.equipo_a, b: r.equipo_b, escudoA: r.escudo_a, escudoB: r.escudo_b,
+    pa: r.prob_serie_a * 100, pb: r.prob_serie_b * 100,
+    ma: r.prob_mercado_a * 100, mb: r.prob_mercado_b * 100,
+    cuotaA: r.cuota_a, cuotaB: r.cuota_b,
+    ratingA: r.rating_a, rdA: r.rd_a, ratingB: r.rating_b, rdB: r.rd_b,
+    motor: r.motor, coef: r.coeficientes,
+    pPartida: r.prob_partida_a, predichoUtc: r.predicho_utc,
+    marcadores: r.marcadores || [], h2h: r.h2h || [],
+  });
+  mapRating = r => ({ equipo: r.equipo, juego: (r.juego || '').toUpperCase(), juegoId: r.juego, rating: Math.round(r.rating), rd: r.rd == null ? '—' : Math.round(r.rd), partidas: r.partidas, delta: r.delta_30d });
+  mapBrier = r => ({ formato: (r.formato || '').toUpperCase(), motor: r.brier_motor, ingenua: r.brier_ingenuo, n: r.n });
+  mapDuelo = r => ({ juego: r.juego, motor: r.motor_elegido, coef: r.coeficientes, dif: r.dif, t: r.t, veredicto: r.veredicto });
+  mapFuente = r => ({ nombre: r.fuente, estado: r.estado, detalle: r.detalle || r.ultimo_ok_utc });
+  mapChangelog = r => ({ fecha: r.fecha, tipo: (r.tipo || '').toUpperCase(), titulo: r.titulo, texto: r.texto });
+
+  MOCK() {
+    const mk = (id, juegoId, juego, torneo, formato, cierra, a, b, pa, ma, cuotaA, cuotaB, ratingA, rdA, ratingB, rdB, motor, coef, marcadores, h2h, enVivo) => ({
+      id, juegoId, juego, torneo, formato, cierra, a, b,
+      pa, pb: 100 - pa, ma, mb: 100 - ma, cuotaA, cuotaB,
+      ratingA, rdA, ratingB, rdB, motor, coef, marcadores, h2h, enVivo,
+      inicio: '20 AGO · 19:00 CEST', predichoUtc: '2026-08-20 14:10 UTC', pPartida: 0.606,
+    });
+    return {
+      mock: true,
+      ciclo: 'Última pasada hace 4 min · Próxima en 6 min',
+      fuentes: [
+        { nombre: 'bo3.gg', estado: 'ok', detalle: 'hace 4 min' },
+        { nombre: 'OpenDota', estado: 'ok', detalle: 'hace 4 min' },
+        { nombre: 'haglund.dev', estado: 'respaldo', detalle: 'usando bo3.gg' },
+      ],
+      partidos: [
+        mk('m-cs2-1', 'cs2', 'CS2', 'IEM Rio 2026 · Cuartos', 'BO3', '2 H 14 M', 'NAVI', 'Cloud9', 64.2, 58.4, '1.71', '2.40', 1842, 71, 1768, 88, 'Glicko-2', 'τ=1.2 · RD=200',
+          [{ l: '2-0', v: 38.1 }, { l: '2-1', v: 26.1 }, { l: '1-2', v: 21.4 }, { l: '0-2', v: 14.4 }],
+          [{ fecha: '02 AGO 2026', evento: 'BLAST Fall Groups', marcador: '2-0' }, { fecha: '11 JUN 2026', evento: 'ESL Pro League', marcador: '1-2' }, { fecha: '23 MAR 2026', evento: 'IEM Katowice', marcador: '2-1' }], true),
+        mk('m-dota-1', 'dota2', 'DOTA 2', 'Riyadh Masters · Upper Bracket', 'BO3', '5 H 02 M', 'Team Liquid', 'PSG.LGD', 52.8, 55.1, '2.05', '1.82', 1911, null, 1897, null, 'Elo', 'K=24 · escala=400',
+          [{ l: '2-0', v: 27.9 }, { l: '2-1', v: 24.9 }, { l: '1-2', v: 24.3 }, { l: '0-2', v: 22.9 }],
+          [{ fecha: '12 JUL 2026', evento: 'ESL One Kuala Lumpur', marcador: '2-1' }, { fecha: '04 MAY 2026', evento: 'DreamLeague S26', marcador: '0-2' }], false),
+        mk('m-lol-1', 'lol', 'LOL', 'LCK Summer · Semifinal', 'BO5', '21 H 40 M', 'T1', 'Gen.G', 47.3, 44.0, '2.28', '1.68', 1774, 132, 1826, 96, 'Glicko-2', 'τ=0.2 · RD=150',
+          [{ l: '3-0', v: 12.4 }, { l: '3-1', v: 17.8 }, { l: '3-2', v: 17.1 }, { l: '2-3', v: 18.6 }, { l: '1-3', v: 19.2 }, { l: '0-3', v: 14.9 }],
+          [{ fecha: '08 JUL 2026', evento: 'LCK Spring Finals', marcador: '3-2' }, { fecha: '30 MAR 2026', evento: 'MSI', marcador: '1-3' }], false),
+        mk('m-val-1', 'valorant', 'VALORANT', 'VCT EMEA · Fase de grupos', 'BO2', '26 H 15 M', 'Fnatic', 'Sentinels', 58.9, 56.7, '1.86', '2.12', 1698, 118, 1651, 144, 'Glicko-2', 'τ=1.2 · RD=150',
+          [{ l: '2-0', v: 34.8 }, { l: '1-1', v: 33.1 }, { l: '0-2', v: 32.1 }],
+          [{ fecha: '05 JUL 2026', evento: 'VCT Champions', marcador: '2-0' }, { fecha: '17 ABR 2026', evento: 'Masters Madrid', marcador: '0-2' }], false),
+      ],
+      ratings: [
+        { equipo: 'Team Spirit', juego: 'DOTA 2', juegoId: 'dota2', rating: 1958, rd: '—', partidas: 412, delta: '+34' },
+        { equipo: 'Team Liquid', juego: 'DOTA 2', juegoId: 'dota2', rating: 1911, rd: '—', partidas: 388, delta: '+12' },
+        { equipo: 'PSG.LGD', juego: 'DOTA 2', juegoId: 'dota2', rating: 1897, rd: '—', partidas: 361, delta: '−8' },
+        { equipo: 'NAVI', juego: 'CS2', juegoId: 'cs2', rating: 1842, rd: 71, partidas: 297, delta: '+21' },
+        { equipo: 'FaZe', juego: 'CS2', juegoId: 'cs2', rating: 1811, rd: 64, partidas: 314, delta: '−5' },
+        { equipo: 'Cloud9', juego: 'CS2', juegoId: 'cs2', rating: 1768, rd: 88, partidas: 241, delta: '+16' },
+        { equipo: 'Gen.G', juego: 'LOL', juegoId: 'lol', rating: 1826, rd: 96, partidas: 205, delta: '+9' },
+        { equipo: 'T1', juego: 'LOL', juegoId: 'lol', rating: 1774, rd: 132, partidas: 198, delta: '−14' },
+        { equipo: 'Fnatic', juego: 'VALORANT', juegoId: 'valorant', rating: 1698, rd: 118, partidas: 176, delta: '+7' },
+        { equipo: 'Sentinels', juego: 'VALORANT', juegoId: 'valorant', rating: 1651, rd: 144, partidas: 163, delta: '−3' },
+      ],
+      brier: [
+        { formato: 'BO1', motor: 0.4875, ingenua: 0.5, n: 18420 },
+        { formato: 'BO2', motor: 0.5977, ingenua: 0.6667, n: 4106 },
+        { formato: 'BO3', motor: 0.4735, ingenua: 0.5, n: 11938 },
+        { formato: 'BO5', motor: 0.4587, ingenua: 0.5, n: 2214 },
+      ],
+      duelo: [
+        { juego: 'dota2', motor: 'Elo', coef: 'K=24 · escala=400', dif: '—', t: '—', veredicto: 'Glicko-2 nunca se probó contra el histórico de Dota. Sweep de 35 combos sobre 16.450 partidas.' },
+        { juego: 'cs2', motor: 'Glicko-2', coef: 'τ=1.2 · RD=200', dif: '−0.002162', t: '−4.31', veredicto: 'Gana concluyente · n=12.447' },
+        { juego: 'lol', motor: 'Glicko-2', coef: 'τ=0.2 · RD=150', dif: '−0.000410', t: '1.47', veredicto: 'Empate técnico · elegido por expresar incertidumbre, no por ganar' },
+        { juego: 'valorant', motor: 'Glicko-2', coef: 'τ=1.2 · RD=150', dif: '−0.000061', t: '0.24', veredicto: 'Empate puro · pasa por ganarle a la base ingenua (−7,3 %)' },
+      ],
+      changelog: [
+        { fecha: '16 AGO 2026', tipo: 'DATOS', titulo: 'Respaldo automático del calendario de Dota', texto: 'Si haglund.dev deja de responder, el calendario cae a bo3.gg sin intervención. El aviso queda visible en la salud de fuentes.' },
+        { fecha: '15 AGO 2026', tipo: 'INCIDENTE', titulo: 'OpenDota estuvo caído 40 minutos', texto: 'Los reintentos cubren segundos, no cuarentenas. Las series de esa ventana no se predijeron: recuperarlas hacia atrás sería mentir sobre el momento del cálculo.' },
+        { fecha: '14 AGO 2026', tipo: 'CORRECCIÓN', titulo: 'Ventana temporal al calificar', texto: 'La calificación cruzaba revanchas de fase de grupos con series de playoffs entre los mismos equipos. Ahora exige coincidencia dentro de una ventana temporal.' },
+        { fecha: '09 AGO 2026', tipo: 'MOTOR', titulo: 'Corrección de correlación intra-serie en Bo2', texto: 'DELTA_BO2 = 1.4 en escala logit. Con delta cero el cálculo se reduce a la binomial ingenua, así que el cambio es auditable contra su propia línea base.' },
+      ],
+    };
+  }
+
+  D() { return this.state.datos || { partidos: [], ratings: [], brier: [], duelo: [], fuentes: [], changelog: [], mock: true, ciclo: '' }; }
+
+  go = v => this.setState({ view: v, matchId: null });
+  goHome = () => this.go('home');
+  goPreds = () => this.go('preds');
+  goBoard = () => this.go('board');
+  goCalidad = () => this.go('calidad');
+  goNews = () => this.go('news');
+  goAbout = () => this.go('about');
+  goFaq = () => this.go('faq');
+  goTerms = () => this.go('terms');
+  goContacto = () => this.go('contacto');
+  goBack = () => this.setState({ view: this.state.from || 'home', matchId: null });
+  verFicha(id) { this.setState({ view: 'match', matchId: id, from: this.state.view }); }
+  setFiltro = f => this.setState({ filtro: f });
+  ordenEdge = () => this.setState({ orden: 'edge' });
+  ordenMotor = () => this.setState({ orden: 'motor' });
+  ordenCierre = () => this.setState({ orden: 'cierra' });
+  useTwitch = () => this.setState({ platform: 'twitch' });
+  useYoutube = () => this.setState({ platform: 'youtube' });
+
+  pct(n) { return (Math.round(n * 10) / 10).toFixed(1) + ' %'; }
+  edgeOf(p) { return p.pa - p.ma; }
+  edgeTxt(e) { return (e >= 0 ? '+' : '−') + Math.abs(Math.round(e * 10) / 10).toFixed(1); }
+  edgeStyle(e, big) {
+    const pos = e >= 0;
+    return {
+      fontFamily: "'JetBrains Mono', monospace", fontSize: big ? '15px' : '12px', fontWeight: 700,
+      padding: big ? '8px 12px' : '5px 9px', borderRadius: '7px', whiteSpace: 'nowrap', lineHeight: 1,
+      color: pos ? '#19E68C' : '#FFB000',
+      border: '1px solid ' + (pos ? '#0C9B60' : '#D88B00'),
+      background: pos ? 'rgba(25,230,140,0.09)' : 'rgba(255,176,0,0.09)',
+    };
+  }
+  colorJuego(j) { return { 'DOTA 2': '#9A3CFF', CS2: '#F5C400', LOL: '#00CFFF', VALORANT: '#23F28A' }[j] || '#6F7784'; }
+  gauge(pct, color) {
+    const len = Math.PI * 22, f = Math.max(0, Math.min(1, pct / 100)) * len;
+    return { dash: f.toFixed(2) + ' ' + len.toFixed(2), color };
+  }
+  tendTxt(v) { return (v >= 0 ? '▲ ' : '▼ ') + Math.abs(v).toFixed(1) + '%'; }
+  tendStyle(v) { return { fontFamily: "'JetBrains Mono', monospace", fontSize: '10.5px', fontWeight: 700, color: v >= 0 ? '#19E68C' : '#FF2338', marginTop: '4px' }; }
+  pillGame(color, active) {
+    return {
+      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px', fontSize: '11px', fontWeight: 800,
+      letterSpacing: '0.06em', padding: '9px 14px', borderRadius: '999px', border: '1px solid ' + (active ? color : '#242933'),
+      color: active ? color : '#A7ADB8', background: active ? 'rgba(255,255,255,0.035)' : '#0D1015',
+      boxShadow: active ? '0 0 12px ' + color + '40' : 'none', whiteSpace: 'nowrap',
+    };
+  }
+  ringDash(pct) { const len = 2 * Math.PI * 11; return (Math.max(0, Math.min(100, pct)) / 100 * len).toFixed(2) + ' ' + len.toFixed(2); }
+  REGION_CICLO = ['Europa', 'Norteamérica', 'China', 'SEA', 'Sudamérica'];
+  buildRanking(names, torneo, leaderRating) {
+    const ratios = [1, 0.9424, 0.9007, 0.8752, 0.8284, 0.7942, 0.7630, 0.7411, 0.7202, 0.6895];
+    const conf = [86, 82, 78, 75, 72, 68, 64, 62, 60, 58];
+    const tend = [2, -1, 3, -1, 1, 4, -2, -1, -1, -1];
+    const pairs = [[0, 5], [1, 3], [2, 4], [6, 9], [7, 8]];
+    const fh = ['31 Mayo|19:00', '30 Mayo|13:00', '31 Mayo|13:00', '30 Mayo|13:00', '31 Mayo|13:00', '31 Mayo|19:00', '30 Mayo|16:00', '31 Mayo|19:00', '31 Mayo|19:00', '30 Mayo|16:00'];
+    const rivalIdx = {}; pairs.forEach(([a, b]) => { rivalIdx[a] = b; rivalIdx[b] = a; });
+    return names.map((n, i) => {
+      const [fecha, hora] = fh[i].split('|');
+      return { equipo: n, rating: Math.round(leaderRating * ratios[i]), tend: tend[i], conf: conf[i], rival: names[rivalIdx[i]], fecha, hora, torneo, region: this.REGION_CICLO[i % 5] };
+    });
+  }
+  buildEvo(names, ratings, colors) {
+    const frac = [-0.1419, -0.1093, -0.0816, -0.0445, 0];
+    return names.map((n, idx) => {
+      const final = ratings[idx];
+      const osc = (idx % 2 === 0 ? 1 : -1) * 0.015 * (idx > 0 ? 1 : 0);
+      const vals = frac.map((f, t) => Math.round(final * (1 + f + osc * (1 - t / 4))));
+      return { name: n, color: colors[idx], vals };
+    });
+  }
+  CLASIF_DATA() {
+    const mkGame = (label, color, names, torneo, leaderRating, kpis, hist, metrics) => {
+      const ranking = this.buildRanking(names, torneo, leaderRating);
+      const top5 = ranking.slice(0, 5);
+      const evo = this.buildEvo(top5.map(r => r.equipo), top5.map(r => r.rating), [color, '#38BDF8', '#2ECC71', '#F5C518', '#EF4444']);
+      return { label, color, kpis, hist, metrics, ranking, evo };
+    };
+    return {
+      dota2: mkGame('DOTA 2', this.colorJuego('DOTA 2'),
+        ['Team Spirit', 'Team Liquid', 'Gaimin Gladiators', 'BetBoom Team', 'Tundra Esports', 'PARIVISION', 'Shopify Rebellion', '9Pandas', 'Entity', 'nouns'],
+        'DreamLeague S23', 2156,
+        { total: 142, precision: '68.7%', precisionDelta: '+2.3pp', partidos: '8.452', ultima: '14:32', ultimaCtx: 'Hoy, 29 de Mayo 2025' },
+        [6, 15, 32, 41, 28, 20],
+        { winrate: '52.4%', winrateD: '+1.7pp', duracion: '36:42', duracionD: '+2:15', kills: '47.8', killsD: '+3.2', obj: '14.3', objD: '+1.1' }),
+      lol: mkGame('LOL', this.colorJuego('LOL'),
+        ['G2 Esports', 'T1', 'Gen.G', 'JDG Intel Esports Club', 'Dplus KIA', 'Hanwha Life Esports', 'FlyQuest', 'KT Rolster', 'LNG Esports', 'DRX'],
+        'LCK Summer 2025', 2042,
+        { total: 156, precision: '71.2%', precisionDelta: '+1.8pp', partidos: '9.187', ultima: '14:32', ultimaCtx: 'Hoy, 29 de Mayo 2025' },
+        [7, 16, 35, 45, 31, 22],
+        { winrate: '51.8%', winrateD: '+1.2pp', duracion: '32:15', duracionD: '+1:40', kills: '22.4', killsD: '+1.8', obj: '9.6', objD: '+0.6' }),
+      valorant: mkGame('VALORANT', this.colorJuego('VALORANT'),
+        ['Sentinels', 'LOUD', 'Paper Rex', 'Fnatic', 'NRG Esports', 'EDward Gaming', 'Team Heretics', 'KRÜ Esports', 'Trace Esports', 'Talon Esports'],
+        'VCT Americas Stage 2', 1985,
+        { total: 128, precision: '65.4%', precisionDelta: '+3.1pp', partidos: '6.734', ultima: '14:32', ultimaCtx: 'Hoy, 29 de Mayo 2025' },
+        [5, 14, 29, 37, 25, 18],
+        { winrate: '50.6%', winrateD: '+0.9pp', duracion: '16:48', duracionD: '+0:35', kills: '16.2', killsD: '+1.1', obj: '3.4', objD: '+0.2' }),
+      cs2: mkGame('CS2', this.colorJuego('CS2'),
+        ['Natus Vincere', 'Vitality', 'FaZe Clan', 'G2 Esports', 'MOUZ', 'Astralis', 'Team Liquid', 'Cloud9', 'The MongolZ', 'Complexity'],
+        'BLAST Premier Fall 2025', 1956,
+        { total: 134, precision: '66.9%', precisionDelta: '+2.0pp', partidos: '7.295', ultima: '14:32', ultimaCtx: 'Hoy, 29 de Mayo 2025' },
+        [6, 14, 30, 39, 26, 19],
+        { winrate: '51.1%', winrateD: '+1.4pp', duracion: '28:52', duracionD: '+1:05', kills: '18.7', killsD: '+1.4', obj: '12.1', objD: '+0.8' }),
+    };
+  }
+  LEADERS() {
+    const D = this.CLASIF_DATA();
+    return [
+      { juego: 'DOTA 2', color: D.dota2.color, equipo: 'Team Spirit', rating: 2156, winrate: '78.6%', racha: '+1', conf: '85%' },
+      { juego: 'LOL', color: D.lol.color, equipo: 'G2 Esports', rating: 2042, winrate: '71.3%', racha: '+1', conf: '84%' },
+      { juego: 'VALORANT', color: D.valorant.color, equipo: 'Sentinels', rating: 1985, winrate: '67.8%', racha: '+3', conf: '81%' },
+      { juego: 'CS2', color: D.cs2.color, equipo: 'Natus Vincere', rating: 1956, winrate: '63.4%', racha: '+2', conf: '79%' },
+    ];
+  }
+  COMPARATIVA() {
+    const D = this.CLASIF_DATA();
+    return [
+      { juego: 'VALORANT', color: D.valorant.color, paridad: 0.72, nivel: 1420, equipos: 128 },
+      { juego: 'LOL', color: D.lol.color, paridad: 0.64, nivel: 1560, equipos: 156 },
+      { juego: 'DOTA 2', color: D.dota2.color, paridad: 0.58, nivel: 1720, equipos: 142 },
+      { juego: 'CS2', color: D.cs2.color, paridad: 0.48, nivel: 1960, equipos: 134 },
+    ];
+  }
+  ringDashR(pct, r) { const len = 2 * Math.PI * r; return (Math.max(0, Math.min(100, pct)) / 100 * len).toFixed(2) + ' ' + len.toFixed(2); }
+  calSetTf = tf => this.setState({ calTf: tf });
+  CAL_HIST() {
+    return {
+      '7D': { labels: ['13 May', '14 May', '15 May', '16 May', '17 May', '18 May', '19 May'], values: [82, 85, 83, 87, 84, 86, 87] },
+      '30D': { labels: ['22 Abr', '25 Abr', '28 Abr', '1 May', '4 May', '7 May', '10 May', '13 May', '16 May', '19 May'], values: [78, 80, 79, 82, 80, 83, 85, 84, 86, 87] },
+      '90D': { labels: ['Feb', 'Mar', 'Abr', 'May'], values: [75, 79, 83, 87] },
+      '1A': { labels: ['2025 T1', 'T2', 'T3', 'T4'], values: [70, 76, 82, 87] },
+    };
+  }
+  CAL_GAMES() {
+    return [
+      { key: 'DOTA 2', label: 'DOTA 2', color: this.colorJuego('DOTA 2'), score: 89, estado: 'EXCELENTE', conf: 81, partidas: '6.842', variacion: '+4.1%' },
+      { key: 'VALORANT', label: 'VALORANT', color: this.colorJuego('VALORANT'), score: 84, estado: 'MUY BUENO', conf: 75, partidas: '7.125', variacion: '+2.7%' },
+      { key: 'CS2', label: 'CS2', color: this.colorJuego('CS2'), score: 86, estado: 'EXCELENTE', conf: 77, partidas: '6.912', variacion: '+1.8%' },
+      { key: 'LOL', label: 'LEAGUE OF LEGENDS', color: this.colorJuego('LOL'), score: 88, estado: 'EXCELENTE', conf: 79, partidas: '3.660', variacion: '+5.3%' },
+    ];
+  }
+  CAL_FACTORES() {
+    return [
+      { nombre: 'Volatilidad de partidas', estado: 'BAJA', color: '#19E68C', icon: 'activity' },
+      { nombre: 'Cantidad de datos', estado: 'ALTA', color: '#19E68C', icon: 'database' },
+      { nombre: 'Actualización del modelo', estado: 'RECIENTE', color: '#19E68C', icon: 'refresh' },
+      { nombre: 'Complejidad del meta', estado: 'MEDIA', color: '#FFB000', icon: 'hex' },
+    ];
+  }
+  calidadVals() {
+    const s = this.state, tf = s.calTf || '30D', hist = this.CAL_HIST()[tf];
+    const vMax = 100, vMin = 0, W = 700, H = 150;
+    const xToPx = i => (i / (hist.values.length - 1) * W).toFixed(1);
+    const yToPx = v => (H - (v - vMin) / (vMax - vMin) * H).toFixed(1);
+    const pts = hist.values.map((v, i) => ({ x: xToPx(i), y: yToPx(v), label: hist.labels[i], val: v }));
+    const spark = '0,11 6,8 12,9 18,5 24,6 30,2';
+    return {
+      calUltima: 'Hoy 14:30 (GMT-4)',
+      calGaugeDash: this.ringDashR(87, 42), calGaugeVal: '87%', calGaugeLabel: 'EXCELENTE',
+      calPrecision: '87%', calPartidas: '24.539', calCorrectas: '21.342', calVariacion: '+3.2% vs semana anterior',
+      calConfDash: this.ringDashR(78, 0), calConfVal: 78,
+      calConfBarStyle: { width: '78%', height: '100%', background: 'linear-gradient(90deg, #0B5F39, #19E68C)' },
+      calGames: this.CAL_GAMES().map(g => ({
+        ...g, ringDash: this.ringDashR(g.score, 27),
+        chip: this.chipJuego(g.key),
+      })),
+      calSpark: spark,
+      calTfs: ['7D', '30D', '90D', '1A'].map(t => ({
+        t, onClick: () => this.calSetTf(t),
+        style: { cursor: 'pointer', fontSize: '10.5px', fontWeight: 700, padding: '5px 11px', borderRadius: '6px', color: tf === t ? '#F2F4F7' : '#6F7784', background: tf === t ? '#1a1e26' : 'transparent', border: '1px solid ' + (tf === t ? '#343943' : 'transparent') },
+      })),
+      calHistPts: pts,
+      calHistPoints: pts.map(p => p.x + ',' + p.y).join(' '),
+      calHistAreaPoints: pts.map(p => p.x + ',' + p.y).join(' ') + ' ' + W + ',' + H + ' 0,' + H,
+      calFactores: this.CAL_FACTORES(),
+    };
+  }
+  clasifSetTab = t => this.setState({ clasifTab: t });
+  clasifSetRegion = ev => this.setState({ clasifRegion: ev.target.value });
+  clasifSort = campo => this.setState(s => ({ clasifOrdenCampo: campo, clasifOrdenDir: s.clasifOrdenCampo === campo && s.clasifOrdenDir === 'desc' ? 'asc' : 'desc' }));
+
+  clasifVals() {
+    const s = this.state, GAMES = this.CLASIF_DATA();
+    const tabKeys = ['dota2', 'lol', 'valorant', 'cs2'];
+    const game = GAMES[s.clasifTab] || GAMES.dota2;
+    const region = s.clasifRegion;
+    let filas = region === 'todas' ? game.ranking : game.ranking.filter(r => r.region === region);
+    const campo = s.clasifOrdenCampo, dir = s.clasifOrdenDir;
+    filas = filas.slice().sort((a, b) => {
+      const va = campo === 'confianza' ? a.conf : a.rating, vb = campo === 'confianza' ? b.conf : b.rating;
+      return dir === 'desc' ? vb - va : va - vb;
+    });
+    const posColor = i => i === 0 ? '#F5C518' : i === 1 ? '#C7CDD9' : i === 2 ? '#C97B3D' : '#5F6577';
+    const maxHist = Math.max(...game.hist);
+    const yMax = Math.ceil(maxHist / 10) * 10;
+    const histLabels = ['0-999', '1000-1299', '1300-1599', '1600-1899', '1900-2199', '2200+'];
+
+    const xToPx = t => (t * 105).toFixed(1);
+    const yToPx = v => (170 - (v - 1200) / 1200 * 170).toFixed(1);
+    const comp = this.COMPARATIVA();
+
+    return {
+      clasifTabs: tabKeys.map(k => ({
+        key: k, label: GAMES[k].label,
+        onClick: () => this.clasifSetTab(k),
+        style: { cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 16px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.04em', color: s.clasifTab === k ? '#F2F4F7' : '#8B95A5', borderBottom: '2px solid ' + (s.clasifTab === k ? GAMES[k].color : 'transparent'), whiteSpace: 'nowrap' },
+        dotStyle: { width: '7px', height: '7px', borderRadius: '999px', background: GAMES[k].color, display: 'inline-block', flex: 'none' },
+      })),
+      clasifRegionValue: region,
+      clasifRegionOptions: ['todas', 'Europa', 'Norteamérica', 'China', 'SEA', 'Sudamérica'].map(r => ({ v: r, t: r === 'todas' ? 'Todas las regiones' : r })),
+      clasifOnRegion: this.clasifSetRegion,
+
+      clasifKpis: [
+        { label: 'TOTAL DE EQUIPOS', value: game.kpis.total, ctx: 'Equipos clasificados', delta: '', iconBg: 'rgba(154,60,255,0.12)', iconColor: '#9A3CFF', isUsers: true },
+        { label: 'PRECISIÓN DEL MOTOR', value: game.kpis.precision, ctx: 'Últimos 30 días', delta: '↑ ' + game.kpis.precisionDelta, iconBg: 'rgba(25,230,140,0.12)', iconColor: '#19E68C', isTarget: true },
+        { label: 'PARTIDOS ANALIZADOS', value: game.kpis.partidos, ctx: 'Últimos 30 días', delta: '', iconBg: 'rgba(0,207,255,0.12)', iconColor: '#00CFFF', isTrend: true },
+        { label: 'ÚLTIMA ACTUALIZACIÓN', value: game.kpis.ultima, ctx: game.kpis.ultimaCtx, delta: '', iconBg: 'rgba(255,176,0,0.12)', iconColor: '#FFB000', isClock: true },
+      ],
+
+      clasifHistBars: game.hist.map((v, i) => ({ count: v, label: histLabels[i], barStyle: { height: (v / yMax * 100) + '%', width: '100%', background: game.color, borderRadius: '3px 3px 0 0' } })),
+      clasifHistTicks: [yMax, yMax * 0.75, yMax * 0.5, yMax * 0.25, 0].map(v => Math.round(v)),
+
+      clasifMetrics: [
+        { label: 'WIN RATE GLOBAL', value: game.metrics.winrate, delta: '↑ ' + game.metrics.winrateD, color: game.color },
+        { label: 'DURACIÓN PROMEDIO', value: game.metrics.duracion, delta: '↑ ' + game.metrics.duracionD, color: game.color },
+        { label: 'KILLS PROMEDIO', value: game.metrics.kills, delta: '↑ ' + game.metrics.killsD, color: game.color },
+        { label: 'OBJETIVOS POR PARTIDA', value: game.metrics.obj, delta: '↑ ' + game.metrics.objD, color: game.color },
+      ],
+
+      clasifRankingTitulo: 'RANKING ' + game.label,
+      clasifVacio: filas.length === 0,
+      clasifFilas: filas.map((r, i) => ({
+        pos: i + 1, posColor: posColor(i),
+        equipo: r.equipo, escudo: this.escudo(r.equipo, game.label, 24), inicial: this.inicial(r.equipo),
+        rating: r.rating.toLocaleString('es'),
+        tendArrow: r.tend >= 0 ? '▲' : '▼', tendVal: Math.abs(r.tend), tendColor: r.tend >= 0 ? '#19E68C' : '#FF2338',
+        confPct: r.conf + '%', ringDash: this.ringDash(r.conf), ringColor: game.color,
+        barStyle: { width: r.conf + '%', height: '100%', background: game.color },
+        rivalEscudo: this.escudo(r.rival, game.label, 20), rivalInicial: this.inicial(r.rival), rival: r.rival,
+        fecha: r.fecha, hora: r.hora, torneo: r.torneo,
+      })),
+      clasifOrdenCalifStyle: { cursor: 'pointer', color: s.clasifOrdenCampo === 'calificacion' ? '#F2F4F7' : '#8B95A5' },
+      clasifOrdenConfStyle: { cursor: 'pointer', color: s.clasifOrdenCampo === 'confianza' ? '#F2F4F7' : '#8B95A5' },
+      clasifOrdenCalifArrow: s.clasifOrdenCampo === 'calificacion' ? (s.clasifOrdenDir === 'desc' ? '↓' : '↑') : '',
+      clasifOrdenConfArrow: s.clasifOrdenCampo === 'confianza' ? (s.clasifOrdenDir === 'desc' ? '↓' : '↑') : '',
+      clasifOrdenCalif: () => this.clasifSort('calificacion'),
+      clasifOrdenConf: () => this.clasifSort('confianza'),
+
+      clasifEvoSeries: game.evo.map(sr => {
+        const pts = sr.vals.map((v, t) => ({ x: xToPx(t), y: yToPx(v) }));
+        return { name: sr.name, color: sr.color, points: pts.map(p => p.x + ',' + p.y).join(' '), pts };
+      }),
+      clasifEvoXLabels: ['29 Abr', '06 May', '13 May', '20 May', '27 May'],
+      clasifEvoYLabels: ['2400', '2000', '1600', '1200'],
+
+      clasifScatter: comp.map(c => {
+        const cx = (c.nivel - 1200) / 1000 * 280, cy = 170 - c.paridad * 170;
+        const cxPct = cx / 280 * 240;
+        return {
+          juego: c.juego, color: c.color, paridadTxt: c.paridad.toFixed(2),
+          cx: cx.toFixed(1), cy: cy.toFixed(1), r: (14 + c.equipos / 15).toFixed(1),
+          labelStyle: { position: 'absolute', left: cxPct + 'px', top: cy + 'px', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' },
+        };
+      }),
+
+      clasifLeaders: this.LEADERS().map(l => ({
+        ...l, escudo: this.escudo(l.equipo, l.juego, 60), inicial: this.inicial(l.equipo),
+        gradStyle: { background: 'linear-gradient(180deg, ' + l.color + '30 0%, transparent 100%)' },
+        rachaColor: l.racha.startsWith('+') ? '#19E68C' : '#FF2338',
+      })),
+    };
+  }
+  chipJuego(j) {
+    const c = this.colorJuego(j);
+    return { fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em', padding: '5px 9px', borderRadius: '7px', color: c, border: '1px solid ' + c + '66', background: 'rgba(5,7,10,0.80)', whiteSpace: 'nowrap', display: 'inline-block' };
+  }
+  // Placeholder de escudo. TODO(claude-code): sustituir por el crest real
+  // (bo3.gg para CS2/LoL/Valorant, logos-dota.json para Dota).
+  escudo(nombre, juego, size) {
+    const c = this.colorJuego(juego);
+    const s = size || 30;
+    return {
+      width: s + 'px', height: s + 'px', flex: 'none', borderRadius: '8px',
+      border: '1px solid ' + c + '55', background: 'rgba(5,7,10,0.9)', color: c,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: (s * 0.38) + 'px', fontWeight: 800, letterSpacing: '0.02em',
+    };
+  }
+  inicial(n) { return (n || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase(); }
+  dot(estado) {
+    const c = estado === 'ok' ? '#19E68C' : estado === 'respaldo' ? '#FFB000' : '#FF2638';
+    return { width: '7px', height: '7px', borderRadius: '999px', background: c, boxShadow: '0 0 7px ' + c + '88', display: 'inline-block', flex: 'none' };
+  }
+  navStyle(on) {
+    return { cursor: 'pointer', display: 'flex', alignItems: 'center', height: '100%', color: on ? '#FF2638' : '#A7ADB8', borderBottom: '2px solid ' + (on ? '#FF2638' : 'transparent'), textShadow: on ? '0 0 14px rgba(255,38,56,0.55)' : 'none', whiteSpace: 'nowrap' };
+  }
+  railStyle(on, bottom) {
+    return {
+      cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: '7px', padding: '13px 4px', margin: bottom ? 'auto 8px 0' : '0 8px', borderRadius: '10px',
+      color: on ? '#FF2638' : '#6F7784',
+      background: on ? 'rgba(255,38,56,0.08)' : 'transparent',
+      border: '1px solid ' + (on ? '#FF263866' : 'transparent'),
+      boxShadow: on ? 'inset 0 0 18px rgba(255,38,56,0.14)' : 'none',
+    };
+  }
+  pill(on) {
+    return { cursor: 'pointer', fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em', padding: '8px 12px', borderRadius: '8px', border: '1px solid ' + (on ? '#FF2638' : '#242933'), color: on ? '#FF2638' : '#6F7784', background: on ? 'rgba(255,38,56,0.08)' : 'transparent' };
+  }
+  tab(on) {
+    return { cursor: 'pointer', fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em', padding: '7px 11px', borderRadius: '7px', border: '1px solid ' + (on ? '#343943' : '#242933'), background: on ? '#1a1e26' : 'transparent', color: on ? '#F2F4F7' : '#6F7784' };
+  }
+
+  streamUrl(p) {
+    // TODO(claude-code): cablear canal_youtube / canal_twitch desde el feed.
+    const canales = { cs2: 'esl_csgo', dota2: 'dota2ti', lol: 'lck', valorant: 'valorant' };
+    const handles = { cs2: '@ESLCS', dota2: '@dota2', lol: '@LCK', valorant: '@valorantesports' };
+    const ch = canales[p.juegoId] || 'esports';
+    const handle = handles[p.juegoId] || '@esports';
+    const plat = this.state.platform || this.props.plataformaDirecto || 'youtube';
+    const host = typeof window !== 'undefined' ? window.location.hostname || 'localhost' : 'localhost';
+    const local = /^(localhost|127\.0\.0\.1|)$/.test(host);
+    if (plat === 'twitch') {
+      return {
+        plat, label: 'Twitch · ' + ch, page: 'https://www.twitch.tv/' + ch,
+        url: local ? null : 'https://player.twitch.tv/?channel=' + ch + '&muted=true&parent=' + host,
+        nota: local
+          ? 'Twitch solo incrusta desde un dominio autorizado. En local no hay reproductor: se abre el canal oficial.'
+          : 'Si Twitch bloquea el reproductor incrustado, abre el canal oficial.',
+      };
+    }
+    return {
+      plat, url: null, label: 'YouTube · ' + handle,
+      page: 'https://www.youtube.com/' + handle + '/live',
+      nota: 'Esqueleto: el ID del directo llega con el feed (columna canal_youtube). Hasta entonces no se incrusta un reproductor inventado.',
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // MÓDULO CLASIFICACIÓN
+  // ══════════════════════════════════════════════════════════
+  CLAVE = 'monitor-clasificacion';
+  CLAS_DEF = {
+    q: '', juego: 'todos', liga: 'todas',
+    estados: { Aprobado: true, Pendiente: true, Rechazado: true },
+    ratingMin: 1600, desde: '', hasta: '', usuario: 'todos',
+    vista: 'tabla', ordenCampo: 'rating', ordenDir: 'desc',
+    pagina: 1, porPagina: 10,
+    cols: { liga: true, rd: true, delta: true, ult: true, accion: true },
+  };
+
+  EQUIPOS_BASE() {
+    const R = (id, equipo, juego, liga, rating, rd, partidas, delta, estado, ult, actISO, usuario) =>
+      ({ id, equipo, juego, liga, rating, rd, partidas, delta, estado, ult, actISO, usuario });
+    return [
+      R('e01', 'Team Spirit', 'DOTA 2', 'Riyadh Masters 2026', 1958, null, 412, 34, 'Aprobado', 'Hoy, 14:32', '2026-08-20', 'JugadorPro'),
+      R('e02', 'Team Liquid', 'DOTA 2', 'Riyadh Masters 2026', 1911, null, 388, 12, 'Aprobado', 'Hoy, 13:18', '2026-08-20', 'JugadorPro'),
+      R('e03', 'PSG.LGD', 'DOTA 2', 'Riyadh Masters 2026', 1897, null, 361, -8, 'Pendiente', 'Ayer, 22:41', '2026-08-19', 'Motor'),
+      R('e04', 'Gaimin Gladiators', 'DOTA 2', 'DreamLeague S26', 1854, null, 298, 19, 'Aprobado', 'Ayer, 18:04', '2026-08-19', 'Motor'),
+      R('e05', 'Tundra Esports', 'DOTA 2', 'DreamLeague S26', 1802, null, 274, -11, 'Pendiente', '18 AGO, 11:20', '2026-08-18', 'Sin asignar'),
+      R('e06', 'Vitality', 'CS2', 'IEM Rio 2026', 1889, 58, 331, 27, 'Aprobado', 'Hoy, 12:47', '2026-08-20', 'JugadorPro'),
+      R('e07', 'NAVI', 'CS2', 'IEM Rio 2026', 1842, 71, 297, 21, 'Aprobado', 'Hoy, 12:09', '2026-08-20', 'JugadorPro'),
+      R('e08', 'FaZe', 'CS2', 'IEM Rio 2026', 1811, 64, 314, -5, 'Pendiente', 'Hoy, 11:55', '2026-08-20', 'Motor'),
+      R('e09', 'MOUZ', 'CS2', 'ESL Pro League', 1795, 79, 268, 8, 'Aprobado', 'Ayer, 20:33', '2026-08-19', 'Motor'),
+      R('e10', 'Cloud9', 'CS2', 'IEM Rio 2026', 1768, 88, 241, 16, 'Aprobado', 'Hoy, 10:43', '2026-08-20', 'JugadorPro'),
+      R('e11', 'MIBR', 'CS2', 'ESL Pro League', 1632, 121, 189, -22, 'Rechazado', 'Ayer, 17:33', '2026-08-19', 'Sin asignar'),
+      R('e12', 'Gen.G', 'LOL', 'LCK Summer 2026', 1826, 96, 205, 9, 'Aprobado', 'Ayer, 21:33', '2026-08-19', 'JugadorPro'),
+      R('e13', 'JD Gaming', 'LOL', 'LPL Summer 2026', 1801, 88, 214, 15, 'Aprobado', 'Ayer, 19:58', '2026-08-19', 'Motor'),
+      R('e14', 'T1', 'LOL', 'LCK Summer 2026', 1774, 132, 198, -14, 'Pendiente', 'Ayer, 20:11', '2026-08-19', 'Motor'),
+      R('e15', 'G2 Esports', 'LOL', 'LEC Summer 2026', 1749, 104, 187, 4, 'Aprobado', '18 AGO, 15:12', '2026-08-18', 'JugadorPro'),
+      R('e16', 'KT Rolster', 'LOL', 'LCK Summer 2026', 1710, 118, 176, -6, 'Pendiente', '18 AGO, 09:40', '2026-08-18', 'Sin asignar'),
+      R('e17', 'Fnatic', 'VALORANT', 'VCT EMEA 2026', 1698, 118, 176, 7, 'Aprobado', 'Hoy, 09:22', '2026-08-20', 'JugadorPro'),
+      R('e18', 'Paper Rex', 'VALORANT', 'VCT Pacific 2026', 1683, 109, 168, 11, 'Aprobado', 'Ayer, 16:44', '2026-08-19', 'Motor'),
+      R('e19', 'Sentinels', 'VALORANT', 'VCT Americas 2026', 1651, 144, 163, -3, 'Rechazado', 'Ayer, 19:05', '2026-08-19', 'Sin asignar'),
+      R('e20', 'LOUD', 'VALORANT', 'VCT Americas 2026', 1640, 137, 158, -9, 'Pendiente', '17 AGO, 22:15', '2026-08-17', 'Motor'),
+    ];
+  }
+
+  ACTIVIDAD_BASE() {
+    return [
+      { equipo: 'Team Spirit', accion: 'Aprobado por JugadorPro', estado: 'Aprobado', cuando: 'Hoy, 14:32' },
+      { equipo: 'PSG.LGD', accion: 'Marcado como pendiente', estado: 'Pendiente', cuando: 'Ayer, 22:41' },
+      { equipo: 'Sentinels', accion: 'Rechazado por JugadorPro', estado: 'Rechazado', cuando: 'Ayer, 19:05' },
+      { equipo: 'NAVI', accion: 'Aprobado por JugadorPro', estado: 'Aprobado', cuando: 'Ayer, 18:22' },
+      { equipo: 'FaZe', accion: 'Marcado como pendiente', estado: 'Pendiente', cuando: 'Ayer, 16:11' },
+    ];
+  }
+
+  cargarClas() {
+    let clas = { ...this.CLAS_DEF }, equipos = this.EQUIPOS_BASE();
+    try {
+      const raw = window.localStorage.getItem(this.CLAVE);
+      if (raw) {
+        const g = JSON.parse(raw);
+        if (g.clas) clas = { ...clas, ...g.clas, estados: { ...clas.estados, ...(g.clas.estados || {}) }, cols: { ...clas.cols, ...(g.clas.cols || {}) } };
+        if (g.estados) equipos = equipos.map(e => (g.estados[e.id] ? { ...e, estado: g.estados[e.id] } : e));
+      }
+    } catch (e) {}
+    this.setState({ clas, equipos, sel: {}, actividad: this.ACTIVIDAD_BASE() });
+  }
+
+  guardarClas(clas, equipos) {
+    try {
+      const estados = {};
+      (equipos || this.state.equipos || []).forEach(e => { estados[e.id] = e.estado; });
+      const { pagina, ...resto } = clas || this.state.clas;
+      window.localStorage.setItem(this.CLAVE, JSON.stringify({ clas: resto, estados }));
+    } catch (e) {}
+  }
+
+  setClas(parche, resetPagina) {
+    this.setState(s => {
+      const clas = { ...s.clas, ...parche };
+      if (resetPagina) clas.pagina = 1;
+      this.guardarClas(clas, s.equipos);
+      return { clas };
+    });
+  }
+
+  toast(msg, prev) {
+    if (this._t) clearTimeout(this._t);
+    this.setState({ toastMsg: msg, undo: prev || null });
+    this._t = setTimeout(() => this.setState({ toastMsg: null, undo: null }), 6000);
+  }
+  cerrarToast = () => { if (this._t) clearTimeout(this._t); this.setState({ toastMsg: null, undo: null }); };
+  deshacer = () => {
+    const prev = this.state.undo;
+    if (!prev) return;
+    this.setState(s => {
+      const equipos = s.equipos.map(e => (prev[e.id] ? { ...e, estado: prev[e.id] } : e));
+      this.guardarClas(s.clas, equipos);
+      return { equipos, toastMsg: 'Cambio deshecho', undo: null };
+    });
+    if (this._t) clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toastMsg: null }), 3000);
+  };
+
+  aplicarEstado(ids, estado) {
+    if (!ids.length) { this.toast('No hay equipos seleccionados'); return; }
+    this.setState(s => {
+      const prev = {};
+      ids.forEach(id => { const e = s.equipos.find(x => x.id === id); if (e) prev[id] = e.estado; });
+      const equipos = s.equipos.map(e => (ids.indexOf(e.id) >= 0 ? { ...e, estado } : e));
+      const nombres = ids.map(id => (s.equipos.find(x => x.id === id) || {}).equipo).filter(Boolean);
+      const actividad = [
+        { equipo: nombres.length === 1 ? nombres[0] : nombres.length + ' equipos', accion: this.verbo(estado) + ' por JugadorPro', estado, cuando: 'Ahora' },
+        ...(s.actividad || []),
+      ].slice(0, 8);
+      this.guardarClas(s.clas, equipos);
+      this._undoTmp = prev;
+      return { equipos, actividad, sel: {} };
+    });
+    const nombres = ids.map(id => (this.state.equipos.find(x => x.id === id) || {}).equipo).filter(Boolean);
+    const etiqueta = nombres.length === 1 ? nombres[0] + ' fue ' + this.verbo(estado).toLowerCase() + ' correctamente' : nombres.length + ' equipos actualizados';
+    setTimeout(() => this.toast(etiqueta, this._undoTmp), 0);
+  }
+  verbo(estado) { return estado === 'Aprobado' ? 'Aprobado' : estado === 'Rechazado' ? 'Rechazado' : 'Marcado como pendiente'; }
+
+  seleccionados() { return Object.keys(this.state.sel || {}).filter(k => this.state.sel[k]); }
+  aprobarSel = () => this.aplicarEstado(this.seleccionados(), 'Aprobado');
+  pendienteSel = () => this.aplicarEstado(this.seleccionados(), 'Pendiente');
+  rechazarSel = () => this.aplicarEstado(this.seleccionados(), 'Rechazado');
+
+  exportarCsv = () => {
+    const sel = this.seleccionados();
+    const filas = this.filtrarEquipos().filter(e => !sel.length || sel.indexOf(e.id) >= 0);
+    const cab = ['equipo', 'juego', 'liga', 'rating', 'rd', 'partidas', 'delta_30d', 'estado', 'ultima_actividad'];
+    const csv = [cab.join(',')].concat(filas.map(e =>
+      [e.equipo, e.juego, e.liga, e.rating, e.rd == null ? '' : e.rd, e.partidas, e.delta, e.estado, e.ult].map(x => '"' + String(x).replace(/"/g, '""') + '"').join(','))).join('\n');
+    try {
+      const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = 'clasificacion-monitor-esports.csv'; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      this.toast(filas.length + ' equipos exportados a CSV');
+    } catch (e) { this.toast('No se pudo exportar'); }
+  };
+
+  filtrarEquipos() {
+    const c = this.state.clas || this.CLAS_DEF;
+    const q = (c.q || '').trim().toLowerCase();
+    return (this.state.equipos || []).filter(e => {
+      if (q && (e.equipo + ' ' + e.liga + ' ' + e.juego).toLowerCase().indexOf(q) < 0) return false;
+      if (c.juego !== 'todos' && e.juego !== c.juego) return false;
+      if (c.liga !== 'todas' && e.liga !== c.liga) return false;
+      if (!c.estados[e.estado]) return false;
+      if (e.rating < c.ratingMin) return false;
+      if (c.desde && e.actISO < c.desde) return false;
+      if (c.hasta && e.actISO > c.hasta) return false;
+      if (c.usuario !== 'todos' && e.usuario !== c.usuario) return false;
+      return true;
+    });
+  }
+  ordenarEquipos(lista) {
+    const c = this.state.clas || this.CLAS_DEF, dir = c.ordenDir === 'asc' ? 1 : -1;
+    const val = e => ({ equipo: e.equipo, juego: e.juego, rating: e.rating, rd: e.rd == null ? -1 : e.rd, partidas: e.partidas, delta: e.delta, estado: e.estado, ult: e.actISO }[c.ordenCampo]);
+    return lista.slice().sort((a, b) => {
+      const x = val(a), y = val(b);
+      if (typeof x === 'string') return x.localeCompare(y) * dir;
+      return (x - y) * dir;
+    });
+  }
+  ordenarPor = campo => this.setClas({ ordenCampo: campo, ordenDir: this.state.clas.ordenCampo === campo && this.state.clas.ordenDir === 'desc' ? 'asc' : 'desc' });
+
+  limpiarFiltros = () => this.setClas({ ...this.CLAS_DEF, vista: this.state.clas.vista, cols: this.state.clas.cols }, true);
+  aplicarFiltros = () => {
+    this.setState({ cargando: true });
+    setTimeout(() => this.setState({ cargando: false }), 700);
+  };
+  guardarFiltro = () => { this.guardarClas(); this.toast('Filtro guardado en este navegador'); };
+
+  toggleSel = id => this.setState(s => ({ sel: { ...s.sel, [id]: !s.sel[id] } }));
+  toggleTodos = ids => this.setState(s => {
+    const todos = ids.every(i => s.sel[i]);
+    const sel = { ...s.sel };
+    ids.forEach(i => { sel[i] = !todos; });
+    return { sel };
+  });
+
+  dragInicio = id => () => { this._drag = id; };
+  dropEn = estado => e => {
+    e.preventDefault();
+    if (this._drag) { this.aplicarEstado([this._drag], estado); this._drag = null; }
+  };
+  permitirDrop = e => e.preventDefault();
+
+  chipEstado(estado) {
+    const c = estado === 'Aprobado' ? '#19E68C' : estado === 'Pendiente' ? '#FFB000' : '#FF2638';
+    return { display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', fontWeight: 700, padding: '4px 9px', borderRadius: '6px', color: c, border: '1px solid ' + c + '44', background: c + '1f', whiteSpace: 'nowrap' };
+  }
+  puntoEstado(estado) {
+    const c = estado === 'Aprobado' ? '#19E68C' : estado === 'Pendiente' ? '#FFB000' : '#FF2638';
+    return { width: '6px', height: '6px', borderRadius: '999px', background: c, flex: 'none', display: 'inline-block' };
+  }
+  btn(tipo) {
+    const base = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600, padding: '9px 14px', borderRadius: '6px', fontFamily: 'inherit', lineHeight: 1.2 };
+    if (tipo === 'rojo') return { ...base, background: '#FF2638', color: '#05070A', border: '1px solid #FF2638', fontWeight: 700 };
+    return { ...base, background: '#10141A', color: '#F2F4F7', border: '1px solid #242A33' };
+  }
+  segStyle(on) {
+    return { display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '11.5px', fontWeight: 700, padding: '8px 15px', borderRadius: '6px', fontFamily: 'inherit', border: '1px solid ' + (on ? '#FF2638' : '#242A33'), background: on ? 'rgba(255,38,56,0.12)' : 'transparent', color: on ? '#FF2638' : '#697281' };
+  }
+  campo() {
+    return { width: '100%', boxSizing: 'border-box', background: '#10141A', border: '1px solid #242A33', borderRadius: '6px', color: '#F2F4F7', fontSize: '12px', fontFamily: 'inherit', padding: '9px 11px', outline: 'none' };
+  }
+  pagStyle(on) {
+    return { cursor: 'pointer', minWidth: '26px', height: '26px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', fontSize: '11px', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", border: '1px solid ' + (on ? '#FF2638' : '#242A33'), background: on ? 'rgba(255,38,56,0.12)' : 'transparent', color: on ? '#FF2638' : '#697281' };
+  }
+
+  clasVals() {
+    const c = this.state.clas || this.CLAS_DEF;
+    const todos = this.state.equipos || [];
+    const filtrados = this.ordenarEquipos(this.filtrarEquipos());
+    const total = filtrados.length;
+    const paginas = Math.max(1, Math.ceil(total / c.porPagina));
+    const pagina = Math.min(c.pagina, paginas);
+    const desde = (pagina - 1) * c.porPagina;
+    const pagActual = filtrados.slice(desde, desde + c.porPagina);
+    const idsPag = pagActual.map(e => e.id);
+    const sel = this.state.sel || {};
+    const nSel = Object.keys(sel).filter(k => sel[k]).length;
+    const cuenta = est => todos.filter(e => e.estado === est).length;
+    const ligas = todos.map(e => e.liga).filter((l, i, a) => a.indexOf(l) === i).sort();
+    const cargando = !!this.state.cargando;
+    const vacio = !cargando && total === 0;
+    const sinResultados = vacio && !!(c.q || '').trim();
+
+    const cols = c.cols;
+    const gridCols = ['34px', '46px', 'minmax(0,1.5fr)', '96px']
+      .concat(cols.liga ? ['minmax(0,1.4fr)'] : [])
+      .concat(['86px'])
+      .concat(cols.rd ? ['76px'] : [])
+      .concat(cols.delta ? ['82px'] : [])
+      .concat(['118px'])
+      .concat(cols.ult ? ['118px'] : [])
+      .concat(cols.accion ? ['58px'] : []).join(' ');
+    const filaBase = { display: 'grid', gridTemplateColumns: gridCols, gap: '10px', alignItems: 'center' };
+
+    const sugerencias = (c.q || '').trim().length >= 2
+      ? todos.filter(e => e.equipo.toLowerCase().indexOf(c.q.trim().toLowerCase()) >= 0).slice(0, 5)
+        .map(e => ({ nombre: e.equipo, juego: e.juego, onClick: () => this.setClas({ q: e.equipo }, true) }))
+      : this.EMPTY;
+
+    const tarjeta = e => ({
+      id: e.id, equipo: e.equipo, juego: e.juego, chip: this.chipJuego(e.juego),
+      inicial: this.inicial(e.equipo), escudo: this.escudo(e.equipo, e.juego, 24),
+      linea: e.juego + ' · ' + e.rating, cuando: e.ult,
+      onDragStart: this.dragInicio(e.id),
+    });
+    const porEstado = est => filtrados.filter(e => e.estado === est);
+
+    return {
+      clasQ: c.q,
+      clasOnQ: ev => this.setClas({ q: ev.target.value }, true),
+      clasSugerencias: sugerencias,
+      clasJuego: c.juego,
+      clasOnJuego: ev => this.setClas({ juego: ev.target.value }, true),
+      clasLiga: c.liga,
+      clasOnLiga: ev => this.setClas({ liga: ev.target.value }, true),
+      clasLigas: ligas.map(l => ({ v: l })),
+      clasUsuario: c.usuario,
+      clasOnUsuario: ev => this.setClas({ usuario: ev.target.value }, true),
+      clasEstados: ['Aprobado', 'Pendiente', 'Rechazado'].map(est => ({
+        nombre: est, marcado: !!c.estados[est], n: cuenta(est),
+        punto: this.puntoEstado(est),
+        onChange: () => this.setClas({ estados: { ...c.estados, [est]: !c.estados[est] } }, true),
+      })),
+      clasRatingMin: c.ratingMin,
+      clasRatingTxt: c.ratingMin + ' +',
+      clasOnRating: ev => this.setClas({ ratingMin: Number(ev.target.value) }, true),
+      clasDesde: c.desde, clasHasta: c.hasta,
+      clasOnDesde: ev => this.setClas({ desde: ev.target.value }, true),
+      clasOnHasta: ev => this.setClas({ hasta: ev.target.value }, true),
+      clasLimpiar: this.limpiarFiltros,
+      clasAplicar: this.aplicarFiltros,
+      clasGuardarFiltro: this.guardarFiltro,
+      clasBtn: this.btn(), clasBtnRojo: this.btn('rojo'), clasCampo: this.campo(),
+
+      clasVistaTabla: c.vista === 'tabla' && !cargando && !vacio,
+      clasVistaKanban: c.vista === 'kanban' && !cargando && !vacio,
+      clasCargando: cargando,
+      clasVacio: vacio && !sinResultados,
+      clasSinResultados: sinResultados,
+      clasSegTabla: this.segStyle(c.vista === 'tabla'),
+      clasSegKanban: this.segStyle(c.vista === 'kanban'),
+      clasVerTabla: () => this.setClas({ vista: 'tabla' }),
+      clasVerKanban: () => this.setClas({ vista: 'kanban' }),
+      clasSkeleton: [1, 2, 3, 4, 5, 6, 7, 8].map(i => ({ i })),
+
+      clasExportar: this.exportarCsv,
+      clasColsOpen: !!this.state.colsOpen,
+      clasToggleCols: () => this.setState(s => ({ colsOpen: !s.colsOpen, reclasOpen: false })),
+      clasColumnas: [
+        { k: 'Liga / Torneo', on: cols.liga, onChange: () => this.setClas({ cols: { ...cols, liga: !cols.liga } }) },
+        { k: 'RD', on: cols.rd, onChange: () => this.setClas({ cols: { ...cols, rd: !cols.rd } }) },
+        { k: '30 días', on: cols.delta, onChange: () => this.setClas({ cols: { ...cols, delta: !cols.delta } }) },
+        { k: 'Última act.', on: cols.ult, onChange: () => this.setClas({ cols: { ...cols, ult: !cols.ult } }) },
+        { k: 'Acción', on: cols.accion, onChange: () => this.setClas({ cols: { ...cols, accion: !cols.accion } }) },
+      ],
+      clasReclasOpen: !!this.state.reclasOpen,
+      clasToggleReclas: () => this.setState(s => ({ reclasOpen: !s.reclasOpen, colsOpen: false })),
+      clasAprobar: this.aprobarSel, clasPendiente: this.pendienteSel, clasRechazar: this.rechazarSel,
+
+      clasMostrando: total === 0 ? 'Sin equipos' : 'Mostrando ' + (desde + 1) + '–' + Math.min(desde + c.porPagina, total) + ' de ' + total + ' equipos',
+      clasOrdenTxt: { rating: 'Rating', rd: 'RD', partidas: 'Partidas', delta: '30 días', ult: 'Última act.', estado: 'Estado', equipo: 'Equipo', juego: 'Juego' }[c.ordenCampo] + (c.ordenDir === 'desc' ? ' ↓' : ' ↑'),
+      clasOrdenCampo: c.ordenCampo,
+      clasOnOrden: ev => this.setClas({ ordenCampo: ev.target.value }),
+      clasInvertir: () => this.setClas({ ordenDir: c.ordenDir === 'desc' ? 'asc' : 'desc' }),
+
+      clasCabStyle: { ...filaBase, padding: '10px 16px', background: '#10141A', borderBottom: '1px solid #242A33' },
+      clasColLiga: cols.liga, clasColRd: cols.rd, clasColDelta: cols.delta, clasColUlt: cols.ult, clasColAccion: cols.accion,
+      clasTodosMarcados: idsPag.length > 0 && idsPag.every(i => sel[i]),
+      clasToggleTodos: () => this.toggleTodos(idsPag),
+      clasOrdenRating: () => this.ordenarPor('rating'),
+      clasOrdenRd: () => this.ordenarPor('rd'),
+      clasOrdenDelta: () => this.ordenarPor('delta'),
+      clasOrdenEquipo: () => this.ordenarPor('equipo'),
+      clasOrdenEstado: () => this.ordenarPor('estado'),
+      clasOrdenUlt: () => this.ordenarPor('ult'),
+
+      clasFilas: pagActual.map((e, i) => ({
+        id: e.id, pos: desde + i + 1, equipo: e.equipo, juego: e.juego, liga: e.liga,
+        chip: this.chipJuego(e.juego), inicial: this.inicial(e.equipo), escudo: this.escudo(e.equipo, e.juego, 26),
+        rating: e.rating, rd: e.rd == null ? '—' : e.rd, partidas: e.partidas,
+        delta: (e.delta >= 0 ? '+' : '−') + Math.abs(e.delta),
+        deltaStyle: { color: e.delta >= 0 ? '#19E68C' : '#FFB000', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", fontSize: '11.5px' },
+        estado: e.estado, estadoChip: this.chipEstado(e.estado), estadoPunto: this.puntoEstado(e.estado),
+        ult: e.ult, marcado: !!sel[e.id],
+        onToggle: () => this.toggleSel(e.id),
+        filaStyle: { ...filaBase, padding: '11px 16px', borderBottom: '1px solid #1A2028', borderLeft: '2px solid ' + (sel[e.id] ? '#FF2638' : 'transparent'), background: sel[e.id] ? 'rgba(255,38,56,0.05)' : 'transparent', cursor: 'default', transition: 'background 160ms ease-out' },
+      })),
+
+      clasHaySel: nSel > 0,
+      clasNSel: nSel + (nSel === 1 ? ' seleccionado' : ' seleccionados'),
+      clasLimpiarSel: () => this.setState({ sel: {} }),
+
+      clasPaginas: Array.from({ length: paginas }, (_, i) => i + 1).map(n => ({
+        n, style: this.pagStyle(n === pagina), onClick: () => this.setClas({ pagina: n }),
+      })),
+      clasPrev: () => this.setClas({ pagina: Math.max(1, pagina - 1) }),
+      clasNext: () => this.setClas({ pagina: Math.min(paginas, pagina + 1) }),
+      clasPorPagina: String(c.porPagina),
+      clasOnPorPagina: ev => this.setClas({ porPagina: Number(ev.target.value) }, true),
+
+      clasKanban: [
+        { estado: 'Aprobado', n: porEstado('Aprobado').length, color: '#19E68C', punto: this.puntoEstado('Aprobado'), onDrop: this.dropEn('Aprobado'), onDragOver: this.permitirDrop, tarjetas: porEstado('Aprobado').slice(0, 6).map(tarjeta), resto: Math.max(0, porEstado('Aprobado').length - 6) + ' más' },
+        { estado: 'Pendiente', n: porEstado('Pendiente').length, color: '#FFB000', punto: this.puntoEstado('Pendiente'), onDrop: this.dropEn('Pendiente'), onDragOver: this.permitirDrop, tarjetas: porEstado('Pendiente').slice(0, 6).map(tarjeta), resto: Math.max(0, porEstado('Pendiente').length - 6) + ' más' },
+        { estado: 'Rechazado', n: porEstado('Rechazado').length, color: '#FF2638', punto: this.puntoEstado('Rechazado'), onDrop: this.dropEn('Rechazado'), onDragOver: this.permitirDrop, tarjetas: porEstado('Rechazado').slice(0, 6).map(tarjeta), resto: Math.max(0, porEstado('Rechazado').length - 6) + ' más' },
+      ],
+
+      clasActividad: (this.state.actividad || []).map(a => ({ ...a, punto: this.puntoEstado(a.estado) })),
+
+      clasToast: !!this.state.toastMsg,
+      clasToastMsg: this.state.toastMsg || '',
+      clasHayUndo: !!this.state.undo,
+      clasDeshacer: this.deshacer,
+      clasCerrarToast: this.cerrarToast,
+    };
+  }
+
+  renderVals() {
+    const D = this.D(), s = this.state, v = s.view;
+    const juegos = ['todos', 'DOTA 2', 'CS2', 'LOL', 'VALORANT'];
+    const partidos = D.partidos || [];
+
+    const card = p => ({
+      juego: p.juego, torneo: p.torneo, formato: p.formato, cierra: p.cierra,
+      a: p.a, b: p.b, chip: this.chipJuego(p.juego),
+      inicialA: this.inicial(p.a), inicialB: this.inicial(p.b),
+      escudoA: this.escudo(p.a, p.juego), escudoB: this.escudo(p.b, p.juego),
+      arteStyle: this.arteStyle(p.arte || this.arteDe(p.juegoId)),
+      probA: this.pct(p.pa), mercadoA: this.pct(p.ma), cuotaA: p.cuotaA,
+      edge: this.edgeTxt(this.edgeOf(p)), edgeStyle: this.edgeStyle(this.edgeOf(p)),
+      barStyle: { width: p.pa + '%', height: '100%', background: '#FF2638', boxShadow: '0 0 9px rgba(255,38,56,0.7)' },
+      mejorMarcador: (() => { const b = (p.marcadores || []).slice().sort((x, y) => y.v - x.v)[0]; return b ? b.l + ' (' + b.v.toFixed(1) + ' %)' : '—'; })(),
+      motor: p.motor, coef: p.coef,
+      onClick: () => this.verFicha(p.id),
+    });
+
+    const filtrados = s.filtro === 'todos' ? partidos : partidos.filter(p => p.juego === s.filtro);
+    const ordenados = filtrados.slice().sort((a, b) =>
+      s.orden === 'edge' ? this.edgeOf(b) - this.edgeOf(a) : s.orden === 'motor' ? b.pa - a.pa : 0);
+
+    const m = v === 'match' && s.matchId ? partidos.find(p => p.id === s.matchId) : null;
+    const st = m && m.enVivo ? this.streamUrl(m) : null;
+    const maxSc = m ? Math.max.apply(null, (m.marcadores || [{ v: 1 }]).map(x => x.v)) : 1;
+    const ratingsFil = s.filtro === 'todos' ? (D.ratings || []) : (D.ratings || []).filter(r => r.juego === s.filtro);
+
+    return {
+      ...this.clasVals(),
+      ...this.clasifVals(),
+      ...this.calidadVals(),
+      navItems: [
+        { label: 'INICIO', onClick: this.goHome, style: this.navStyle(v === 'home') },
+        { label: 'PREDICCIONES', onClick: this.goPreds, style: this.navStyle(v === 'preds' || v === 'match') },
+        { label: 'CLASIFICACIÓN', onClick: this.goBoard, style: this.navStyle(v === 'board') },
+        { label: 'CALIDAD', onClick: this.goCalidad, style: this.navStyle(v === 'calidad') },
+        { label: 'CAMBIOS', onClick: this.goNews, style: this.navStyle(v === 'news') },
+      ],
+      railHome: this.railStyle(v === 'home'),
+      railPreds: this.railStyle(v === 'preds' || v === 'match'),
+      railBoard: this.railStyle(v === 'board'),
+      railCalidad: this.railStyle(v === 'calidad'),
+      railNews: this.railStyle(v === 'news'),
+      railAjustes: this.railStyle(v === 'contacto', true),
+      goHome: this.goHome, goPreds: this.goPreds, goBoard: this.goBoard, goCalidad: this.goCalidad, goNews: this.goNews,
+      goAbout: this.goAbout, goFaq: this.goFaq, goTerms: this.goTerms, goContacto: this.goContacto, goBack: this.goBack,
+      viewHome: v === 'home', viewPreds: v === 'preds', viewBoard: v === 'board', viewCalidad: v === 'calidad',
+      viewNews: v === 'news', viewMatch: v === 'match' && !!m, viewAbout: v === 'about', viewFaq: v === 'faq',
+      viewTerms: v === 'terms', viewContacto: v === 'contacto',
+
+      esMock: !!D.mock, hayError: !!s.error, errorMsg: s.error || '',
+      cicloTexto: D.ciclo || '',
+      fuentes: (D.fuentes || []).map(f => ({ ...f, dot: this.dot(f.estado) })),
+      mostrarSidebar: this.props.mostrarSidebar ?? true,
+      mostrarSalud: this.props.mostrarSalud ?? true,
+
+      partidos: partidos.map(card),
+      topEdge: partidos.slice().sort((a, b) => Math.abs(this.edgeOf(b)) - Math.abs(this.edgeOf(a))).slice(0, 3).map(p => ({
+        titulo: p.a + ' vs ' + p.b,
+        edge: this.edgeTxt(this.edgeOf(p)), edgeStyle: this.edgeStyle(this.edgeOf(p)),
+        detalle: p.juego + ' · Motor ' + this.pct(p.pa) + ' vs Mercado ' + this.pct(p.ma),
+        onClick: () => this.verFicha(p.id),
+      })),
+
+      filtros: juegos.map(j => ({ label: j === 'todos' ? 'TODOS' : j, onClick: () => this.setFiltro(j), style: this.pill(s.filtro === j) })),
+      predsUltima: 'Hace 1 min',
+      pTodos: { onClick: () => this.setFiltro('todos'), style: this.pillGame('#FF2338', s.filtro === 'todos') },
+      pCs2: { onClick: () => this.setFiltro('CS2'), style: this.pillGame(this.colorJuego('CS2'), s.filtro === 'CS2') },
+      pDota: { onClick: () => this.setFiltro('DOTA 2'), style: this.pillGame(this.colorJuego('DOTA 2'), s.filtro === 'DOTA 2') },
+      pLol: { onClick: () => this.setFiltro('LOL'), style: this.pillGame(this.colorJuego('LOL'), s.filtro === 'LOL') },
+      pVal: { onClick: () => this.setFiltro('VALORANT'), style: this.pillGame(this.colorJuego('VALORANT'), s.filtro === 'VALORANT') },
+      ordenEdge: this.ordenEdge, ordenMotor: this.ordenMotor, ordenCierre: this.ordenCierre,
+      tabla: ordenados.map(p => {
+        const color = this.colorJuego(p.juego);
+        const tend = ({ 'm-cs2-1': 2.1, 'm-dota-1': -1.3, 'm-lol-1': 0.7, 'm-val-1': 1.8 })[p.id] || 0;
+        return {
+          a: p.a, b: p.b, torneo: p.torneo, juego: p.juego, chip: this.chipJuego(p.juego), formato: p.formato,
+          inicialA: this.inicial(p.a), inicialB: this.inicial(p.b),
+          escudoA: this.escudo(p.a, p.juego, 26), escudoB: this.escudo(p.b, p.juego, 26),
+          gaugeColor: color, gaugeDash: this.gauge(p.pa, color).dash, probA: this.pct(p.pa),
+          probStyle: { fontFamily: "'JetBrains Mono', monospace", fontSize: '16px', fontWeight: 800, color, lineHeight: 1 },
+          tend: this.tendTxt(tend), tendStyle: this.tendStyle(tend),
+          mercadoA: this.pct(p.ma),
+          edge: this.edgeTxt(this.edgeOf(p)), edgeStyle: this.edgeStyle(this.edgeOf(p)),
+          cierra: p.cierra,
+          rowStyle: {
+            display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) 92px 60px 190px 96px 92px 96px', gap: '10px',
+            padding: '14px 18px 14px 15px', borderBottom: '1px solid #1a1e26', borderLeft: '3px solid ' + color + '99',
+            fontSize: '12px', alignItems: 'center', cursor: 'pointer',
+          },
+          onClick: () => this.verFicha(p.id),
+        };
+      }),
+
+      ratings: ratingsFil.map((r, i) => ({
+        ...r, pos: i + 1, chip: this.chipJuego(r.juego),
+        inicial: this.inicial(r.equipo), escudo: this.escudo(r.equipo, r.juego, 26),
+        deltaStyle: { color: String(r.delta).startsWith('−') ? '#FFB000' : '#19E68C', fontWeight: 700 },
+      })),
+
+      brier: (D.brier || []).map(b => ({
+        formato: b.formato, motor: b.motor.toFixed(4), ingenua: b.ingenua.toFixed(4),
+        barStyle: { width: Math.min(100, (1 - b.motor / b.ingenua) * 700) + '%', height: '100%', background: '#19E68C' },
+        mejora: '−' + ((1 - b.motor / b.ingenua) * 100).toFixed(1) + ' % · n=' + b.n.toLocaleString('es'),
+      })),
+      duelo: (D.duelo || []).map(d => ({ ...d, chip: this.chipJuego(d.motor === 'Elo' ? 'DOTA 2' : 'CS2') })),
+      metodo: [
+        'Pasada partida por partida en orden cronológico global: dos series en paralelo no se contaminan entre sí.',
+        'Separación entrenamiento/prueba por fecha, 80/20. Solo se reporta sobre el 20 % que el barrido nunca vio.',
+        'Duelo Elo vs Glicko-2 con test pareado e intervalo de confianza al 95 %, juego por juego.',
+        'Cero fuga temporal: si un cálculo puede ver el futuro, el número no se publica.',
+      ],
+      limites: [
+        'Glicko-2 nunca se probó contra el histórico de Dota 2. Un juego no hereda la conclusión de otro.',
+        'No se valida el esquema de las APIs: si bo3.gg renombra un campo, el dato sale en blanco.',
+        'Los reintentos cubren segundos, no caídas largas de fuente.',
+        'Las cuotas se guardan para medirse contra el mercado, nunca para recomendar una apuesta.',
+      ],
+
+      changelog: (D.changelog || []).map(c => {
+        const col = { CORRECCIÓN: '#FFB000', MOTOR: '#FF2638', DATOS: '#2FA8C7', INCIDENTE: '#6F7784' }[c.tipo] || '#6F7784';
+        return { ...c, chip: { fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em', padding: '5px 9px', borderRadius: '7px', color: col, border: '1px solid ' + col + '55', background: 'rgba(5,7,10,0.8)', whiteSpace: 'nowrap', display: 'inline-block' } };
+      }),
+
+      mJuego: m ? m.juego : '', mChip: m ? this.chipJuego(m.juego) : {},
+      mTorneo: m ? m.torneo : '', mFormato: m ? m.formato : '', mInicio: m ? m.inicio : '',
+      mCierra: m ? 'en ' + m.cierra : '',
+      mTeamA: m ? m.a : '', mTeamB: m ? m.b : '',
+      mInicialA: m ? this.inicial(m.a) : '', mInicialB: m ? this.inicial(m.b) : '',
+      mEscudoA: m ? this.escudo(m.a, m.juego, 44) : {}, mEscudoB: m ? this.escudo(m.b, m.juego, 44) : {},
+      mRatingA: m ? m.ratingA : '', mRdA: m ? (m.rdA == null ? 'n/a (Elo)' : m.rdA) : '',
+      mRatingB: m ? m.ratingB : '', mRdB: m ? (m.rdB == null ? 'n/a (Elo)' : m.rdB) : '',
+      mProbA: m ? this.pct(m.pa) : '', mProbB: m ? this.pct(m.pb) : '',
+      mMercadoA: m ? this.pct(m.ma) : '', mMercadoB: m ? this.pct(m.mb) : '',
+      mEdge: m ? this.edgeTxt(this.edgeOf(m)) : '', mEdgeStyle: m ? this.edgeStyle(this.edgeOf(m), true) : {},
+      mMarcadores: m ? (m.marcadores || []).map(x => ({
+        label: x.l, pct: x.v.toFixed(1) + ' %',
+        barStyle: { width: (x.v / maxSc) * 100 + '%', height: '100%', background: '#FF2638' },
+      })) : this.EMPTY,
+      mCongelado: m ? [
+        { k: 'Motor', v: m.motor },
+        { k: 'Coeficientes', v: m.coef },
+        { k: 'p de partida', v: (m.pPartida * 100).toFixed(1) + ' %' },
+        { k: 'Cuota casa', v: m.cuotaA + ' / ' + m.cuotaB },
+        { k: 'Publicada', v: m.predichoUtc },
+      ] : this.EMPTY,
+      mH2h: m ? (m.h2h || []) : this.EMPTY,
+      mEmbed: !!st,
+      mSinStream: !!m && !st,
+      mArteStyle: m ? this.arteStyle(m.arte || this.arteDe(m.juegoId), 'center 35%') : {},
+      mReproductor: !!(st && st.url),
+      mPoster: !!(st && !st.url),
+      mStreamUrl: st && st.url ? st.url : '',
+      mStreamLabel: st ? st.label : '',
+      mStreamPage: st ? st.page : '#',
+      mStreamNota: st ? st.nota : '',
+      mPlataforma: st && st.plat === 'twitch' ? 'TWITCH' : 'YOUTUBE',
+      useTwitch: this.useTwitch, useYoutube: this.useYoutube,
+      ytTab: this.tab((st ? st.plat : 'youtube') === 'youtube'),
+      twTab: this.tab((st ? st.plat : 'youtube') === 'twitch'),
+
+      cifras: [
+        { n: '4', t: 'juegos cubiertos' },
+        { n: '2', t: 'motores calibrados por separado' },
+        { n: '10 min', t: 'cadencia del ciclo en vivo' },
+      ],
+      faq: [
+        { q: '¿Esto es una casa de apuestas?', a: 'No. No se aceptan apuestas y no se recomienda apostar. La cuota aparece únicamente como marca contra la que medir el motor.' },
+        { q: '¿De dónde sale el porcentaje?', a: 'Del cálculo: Elo o Glicko-2 según el juego, convertido a probabilidad de serie por el formato. Ningún modelo de lenguaje produce un número que llegue a esta pantalla.' },
+        { q: '¿Qué significa la ventaja?', a: 'La diferencia en puntos porcentuales entre la probabilidad del motor y la del mercado una vez quitado el vig. Positiva significa que el motor ve al equipo mejor que la casa.' },
+        { q: '¿Por qué Dota 2 usa Elo y el resto Glicko-2?', a: 'Porque Glicko-2 no se ha probado contra el histórico de Dota. Cada juego se gana su motor con su propio backtest; ninguno hereda la conclusión de otro.' },
+        { q: '¿Cada cuánto se actualiza?', a: 'Cada diez minutos: primero se sincronizan los ratings con lo ya jugado, después se predice lo que viene. Nunca al revés.' },
+        { q: '¿Qué pasa si una fuente se cae?', a: 'El calendario de Dota tiene respaldo automático. Las series de una ventana sin datos no se predicen: recuperarlas después sería mentir sobre el momento del cálculo.' },
+      ],
+      terms: [
+        { h: '1. NATURALEZA DEL SERVICIO', p: 'Monitor eSports publica la salida de un modelo estadístico con fines informativos. No es un servicio de apuestas ni de asesoramiento financiero.' },
+        { h: '2. SIN GARANTÍA DE RESULTADO', p: 'Una probabilidad no es una predicción cerrada. El rendimiento histórico publicado en la sección Calidad no garantiza el rendimiento futuro.' },
+        { h: '3. DATOS DE TERCEROS', p: 'Calendarios, resultados y cuotas provienen de proveedores externos. Se escapan todos los datos de terceros antes de mostrarlos, pero no se valida su esquema.' },
+        { h: '4. DISPONIBILIDAD', p: 'El ciclo corre en la nube cada diez minutos. Una caída de fuente puede dejar series sin predicción, y no se rellenan retroactivamente.' },
+        { h: '5. USO PERMITIDO', p: 'Puedes consultar y citar los números indicando la fuente. La extracción automatizada masiva del sitio no está permitida.' },
+      ],
+      contacto: [
+        { canal: 'Errores de datos', para: 'Equipos mal emparejados, torneos que faltan, marcadores erróneos', destino: 'datos@monitoresports.gg' },
+        { canal: 'Método y matemática', para: 'Dudas sobre el backtest, los coeficientes o la corrección de Bo2', destino: 'motor@monitoresports.gg' },
+        { canal: 'Avisos del ciclo', para: 'Notificación por Discord de cada predicción publicada', destino: 'discord.gg/monitoresports' },
+      ],
+    };
+  }
+}
+
+</script>
+</body>
+</html>

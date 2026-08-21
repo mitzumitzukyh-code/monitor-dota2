@@ -2,7 +2,9 @@ datos/cache/
 node_modules/
 .env
 scripts/log-*.txt
+
+# Salida generada: se rehace con `node salida/web/generar.mjs` y la publica
+# el workflow. Lo que SÍ se versiona es disenio.dc.html, que es la fuente.
 salida/web/index.html
-salida/web/dota.html
 salida/web/serie-*.html
 salida/web/assets/

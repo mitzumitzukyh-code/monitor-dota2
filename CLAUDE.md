@@ -89,19 +89,40 @@ assets/         marca: favicon, iconos PWA, manifest, tarjetas sociales
 pruebas/        una prueba por cada función del motor
 ```
 
-### Sin interfaz web (2026-08-21)
+### La interfaz web: un solo diseño, y es este
 
-El proyecto **no tiene panel web**. `salida/web/` se retiró entero: los
-generadores, el CSS compartido, las páginas por juego y sus fichas, los pasos
-del workflow que las generaban y el job que las publicaba en GitHub Pages.
+**EL DISEÑO VÁLIDO, ÚNICO Y VIGENTE ES ESTE:**
 
-La salida hoy es **Discord** (`salida/discord.mjs`, `salida/discord-esports.mjs`,
-`salida/resumen-global.mjs`) y los avisos de error (`salida/errores.mjs`).
+> https://claude.ai/code/artifact/23c31d3d-125b-4cb4-ad43-bba777f2c5a3
 
-`assets/` se queda: es el paquete de marca, no dependía de la web.
+Es el render fiel de `Monitor eSports.dc.html` del proyecto de Claude Design
+`122c2ecb-e67f-4a2b-adfd-ae0071c3eb38`. Verificado el 2026-08-21: 157.195
+bytes, mismo SHA que el archivo remoto.
 
-Si algún día vuelve una interfaz, arranca de cero y con una decisión tomada
-antes de escribir la primera línea — no rescatando lo que había.
+**Cualquier otro diseño anterior está muerto y no se rescata.** Antes de tocar
+la web, abre ese enlace y compara. Si lo que sale del generador no se ve como
+ahí, lo que está mal es el generador.
+
+Lo que define ese diseño, y no se negocia:
+
+| | |
+|---|---|
+| Fondo | `#05070A` · panel `#080A0E` · tarjeta `#0D1015` · interior `#11141A` |
+| Bordes | `#1a1e26` · medio `#242933` · fuerte `#343943` |
+| Tinta | `#F2F4F7` · media `#A7ADB8` · suave `#8B95A5` · apagada `#6F7784` |
+| Acento | `#FF2638`, hover `#FF3347` |
+| Positivo / aviso | `#19E68C` / `#FFB000` |
+| Colores por juego | Dota `#9A3CFF` · CS2 `#F5C400` · LoL `#00CFFF` · Valorant `#23F28A` |
+| Tipografía | Manrope 400-800 · **JetBrains Mono para toda cifra del cálculo** |
+| Estructura | rail de 80px + cabecera de 80px + pie de 56px, ancho mínimo 1440px |
+| Pantallas | Inicio · Predicciones · Clasificación · Calidad · Cambios · Ficha |
+
+Y tres cosas que el diseño dice de sí mismo y hay que respetar:
+
+1. **El rojo es la marca, no el error.** Una ventaja negativa va en ámbar.
+2. Ninguna cifra se redondea hacia un titular más vendedor. **Sin rachas.**
+3. La sección Calidad publica los fallos con el mismo tamaño de letra que los
+   aciertos.
 
 ## Fuentes de datos
 
