@@ -18,6 +18,7 @@
 import { readFile, writeFile, readdir, unlink, mkdir, copyFile } from 'node:fs/promises';
 import { resumen } from './datos.mjs';
 import { valores, C } from './valores.mjs';
+import { proximasSeries, hayCredenciales } from './vivo.mjs';
 import { renderizar, partesDelDisenio, envolverVista, esc } from './plantilla.mjs';
 
 const AQUI = new URL('./', import.meta.url);
@@ -193,7 +194,7 @@ async function main() {
   const { cuerpo: plantilla, estiloHelmet } = partesDelDisenio(archivo);
 
   const r = await resumen();
-  const [logo, arte] = await Promise.all([logoIncrustado(), arteIncrustado()]);
+  const [logo, arte, proximas] = await Promise.all([logoIncrustado(), arteIncrustado(), proximasSeries()]);
 
   // El diseño enlaza ./logo-monitor.png, que no existe en este repo.
   const conLogo = marcarVistas(
@@ -205,7 +206,7 @@ async function main() {
   await limpiarFichasViejas();
 
   // --- panel ---
-  const v = valores(r, { vista: 'home', arte });
+  const v = valores(r, { vista: 'home', arte, proximas });
   let cuerpo = anotarFilas(renderizar(conLogo, v), v.tabla);
   await writeFile(new URL('index.html', AQUI), documento({
     cuerpo, estiloDisenio: estiloHelmet, titulo: 'Monitor eSports', conCliente: true,
@@ -214,7 +215,7 @@ async function main() {
   // --- fichas, una por serie reciente ---
   const recientes = r.series.slice(-FICHAS);
   for (const s of recientes) {
-    const vf = valores(r, { vista: 'match', serie: s, arte });
+    const vf = valores(r, { vista: 'match', serie: s, arte, proximas });
     const cf = renderizar(conLogo, vf);
     await writeFile(new URL(`serie-${s.seriesId}.html`, AQUI), documento({
       cuerpo: cf, estiloDisenio: estiloHelmet, titulo: `${s.nombreA} vs ${s.nombreB} · Monitor eSports`, conCliente: true,
@@ -227,6 +228,9 @@ async function main() {
   console.log(`index.html + ${recientes.length} fichas · ${iconos} iconos`);
   console.log(`${g.cantidad} series · brier ${g.brier.toFixed(4)} vs base ${g.base.toFixed(4)} · acierto ${(g.acierto * 100).toFixed(2)} %`);
   console.log(`logotipo: ${logo ? 'assets/logo-mark.svg' : 'no encontrado'} · arte: ${arte ? 'assets/arte-dota.jpg' : 'degradado por juego'}`);
+  if (!hayCredenciales()) console.log('próximas series: sin credenciales (corre con --env-file=.env si tienes uno)');
+  else if (proximas && proximas.error) console.log(`próximas series: Supabase no respondió (${proximas.error})`);
+  else console.log(`próximas series: ${proximas.length}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) await main();

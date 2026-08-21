@@ -166,9 +166,33 @@ function arteStyle(uri, juego, pos) {
   return { position: 'absolute', inset: 0, backgroundImage: `url("${uri}")`, backgroundSize: 'cover', backgroundPosition: pos || 'center', backgroundRepeat: 'no-repeat' };
 }
 
-export function valores(r, { vista = 'home', serie = null, cuantasFilas = 150, arte = null } = {}) {
+// Una serie PRÓXIMA (de Supabase) en la forma de tarjeta. Sin resultado
+// todavía, así que no hay Brier: la ventaja sale «—», no un cero.
+function proximaComoPartido(s, arte) {
+  const tiene = s.prediccion != null;
+  const pa = tiene ? s.prediccion.ganaA * 100 : 0;
+  return {
+    id: String(s.seriesId), juego: JUEGO, torneo: s.torneo,
+    formato: (s.formato || '').toUpperCase() || VACIO,
+    cierra: new Date(s.inicio).toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
+    a: s.nombreA, b: s.nombreB, chip: chipJuego(JUEGO),
+    inicialA: inicial(s.nombreA), inicialB: inicial(s.nombreB),
+    escudoA: escudo(s.nombreA, JUEGO), escudoB: escudo(s.nombreB, JUEGO),
+    probA: tiene ? pct(s.prediccion.ganaA) : VACIO,
+    mercadoA: VACIO, cuotaA: VACIO,
+    edge: VACIO, edgeStyle: { fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: C.tintaApagada },
+    barStyle: { width: `${pa}%`, height: '100%', background: C.acento, boxShadow: '0 0 9px rgba(255,38,56,0.7)' },
+    arteStyle: arteStyle(arte, JUEGO),
+    mejorMarcador: VACIO,
+    motor: 'Elo', coef: `K=${K_FACTOR} · escala=${ESCALA}`,
+    onClick: '',
+  };
+}
+
+export function valores(r, { vista = 'home', serie = null, cuantasFilas = 150, arte = null, proximas = null } = {}) {
   const g = r.calidad.global;
   const recientes = r.series.slice(-24).reverse();
+  const hayProximas = Array.isArray(proximas) && proximas.length > 0;
   const cal = r.calidad;
 
   const nav = [
@@ -201,16 +225,29 @@ export function valores(r, { vista = 'home', serie = null, cuantasFilas = 150, a
     viewMatch: false,
 
     esMock: false, hayError: false, errorMsg: '',
-    cicloTexto: `Histórico versionado · ${miles(r.partidas.length)} partidas · ${miles(g.cantidad)} series juzgadas`,
+    cicloTexto: hayProximas
+      ? `${proximas.length} series próximas · ${miles(g.cantidad)} juzgadas · ${miles(r.partidas.length)} partidas aplicadas`
+      : `Histórico versionado · ${miles(r.partidas.length)} partidas · ${miles(g.cantidad)} series juzgadas`,
     mostrarSidebar: true, mostrarSalud: true,
     fuentes: [
       { nombre: 'OpenDota', estado: 'ok', detalle: `${miles(r.partidas.length)} partidas`, dot: dot('ok') },
-      { nombre: 'Supabase', estado: 'caido', detalle: 'sin credenciales', dot: dot('caido') },
-      { nombre: 'Cuotas', estado: 'caido', detalle: 'requiere Supabase', dot: dot('caido') },
+      {
+        nombre: 'Supabase',
+        estado: hayProximas ? 'ok' : 'caido',
+        detalle: hayProximas ? `${proximas.length} series próximas` : (proximas && proximas.error ? 'no respondió' : 'sin credenciales'),
+        dot: dot(hayProximas ? 'ok' : 'caido'),
+      },
+      // Dota no tiene tabla de cuotas: eslo_cuotas es de los juegos de
+      // bo3.gg. No es un cable suelto, es que el dato no existe.
+      { nombre: 'Cuotas', estado: 'respaldo', detalle: 'Dota no tiene cuotas', dot: dot('respaldo') },
     ],
 
     // --- Inicio ---
-    partidos: recientes.slice(0, 4).map((s) => serieComoPartido(s, arte)),
+    // Si Supabase respondió, la rejilla muestra lo que VIENE. Si no, las
+    // últimas juzgadas, que es lo que el histórico sí sabe.
+    partidos: hayProximas
+      ? proximas.map((s) => proximaComoPartido(s, arte))
+      : recientes.slice(0, 4).map((s) => serieComoPartido(s, arte)),
     topEdge: peores.map((s) => ({
       titulo: `${s.nombreA} vs ${s.nombreB}`,
       edge: textoBrier(s.brier, s.base),
