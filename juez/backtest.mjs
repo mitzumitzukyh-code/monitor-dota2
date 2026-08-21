@@ -125,6 +125,16 @@ export function ejecutarBacktest(partidas, opcionesElo = {}) {
         prediccion,
         real: info.real,
         brier,
+        // Estado CONGELADO al predecir: los dos ratings con los que se
+        // calculó la probabilidad de arriba, y cuándo. No es cálculo nuevo,
+        // es reportar lo que esta misma función ya usó — sin esto la ficha
+        // tendría que replayear el histórico por su cuenta y arriesgarse a
+        // divergir del número que se publicó (regla 6).
+        ratingA,
+        ratingB,
+        startTime: partida.start_time,
+        leagueid: partida.leagueid,
+        leagueName: partida.league_name ?? null,
       });
     }
 

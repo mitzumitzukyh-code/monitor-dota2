@@ -62,8 +62,8 @@ Tareas creadas y verificadas corriendo (resultado 0, con rastro en los logs):
 | `MonitorDota2-Avisar` | `scripts\avisar.cmd` | cada hora, :55 |
 
 Están desfasadas a propósito: primero se predice, media hora después se
-califica lo que ya terminó, después se regenera el panel web
-(`salida/web/index.html`), y al final sale el aviso por Discord.
+califica lo que ya terminó, y al final sale el aviso por Discord.
+(El paso del panel web se retiró: el proyecto ya no tiene interfaz web.)
 
 ## ⚠️ Esto ya NO es lo que corre en producción
 
@@ -157,11 +157,9 @@ schtasks /change /tn "MonitorDota2-Predecir" /tr "D:\monitor-dota2\scripts\prede
 
 ## Cómo te enterás de las predicciones
 
-Tres formas, de menos a más automática:
+Dos formas, de menos a más automática:
 
-1. **El panel web**: abrir `salida/web/index.html` (doble click, no necesita
-   servidor). Se regenera solo cada hora.
-2. **Discord**: `MonitorDota2-Avisar` manda un mensaje cuando hay
+1. **Discord**: `MonitorDota2-Avisar` manda un mensaje cuando hay
    predicciones nuevas y otro cuando se califican series. **Requiere poner
    `DISCORD_WEBHOOK` en `.env`** — sin eso la tarea corre, no revienta, y
    deja en `scripts/log-avisar.txt` que falta el webhook.

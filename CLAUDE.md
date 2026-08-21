@@ -84,74 +84,45 @@ datos/          lo que entra
   cache/        archivos descargados (en .gitignore)
 motor/          elo.mjs, series.mjs — AGNÓSTICOS del juego
 juez/           backtest.mjs, notas.mjs, tabla.mjs, calibrar.mjs
-salida/         discord.mjs, formato.mjs, web/
-  web/estilo.mjs  CSS, barra lateral y envoltorio COMPARTIDOS por todas las páginas
+salida/         discord.mjs, formato.mjs
 assets/         marca: favicon, iconos PWA, manifest, tarjetas sociales
 pruebas/        una prueba por cada función del motor
 ```
 
-### La web: varias páginas, un solo diseño
+### La interfaz web: un solo diseño, y es este
 
-`salida/web/` produce los paneles, y todos salen de `estilo.mjs`:
+**EL DISEÑO VÁLIDO, ÚNICO Y VIGENTE ES ESTE:**
 
-| Archivo | Lo genera | Qué es |
-|---|---|---|
-| `index.html` | `dashboard.mjs` | panel general, los cuatro juegos |
-| `dota.html` | `generar.mjs` | detalle de Dota: llave de TI, fuerza Elo |
-| `serie-*.html` | `generar.mjs` | una ficha por serie predicha de Dota |
-| `cs2.html` / `lol.html` / `valorant.html` | `juego.mjs` | detalle por juego: desglose por torneo, ranking de fuerza, partidas |
-| `partida-*.html` | `juego.mjs` | una ficha por partida predicha de CS2/LoL/Valorant |
+> https://claude.ai/code/artifact/23c31d3d-125b-4cb4-ad43-bba777f2c5a3
 
-**El CSS vive en un solo archivo a propósito.** Hasta el 2026-08-19 había dos
-diseños conviviendo y abrir un panel después del otro se sentía como entrar a
-dos sitios distintos. Si vas a tocar colores o cajas, tócalos en
-`estilo.mjs`; si escribes CSS suelto en un generador, el problema vuelve.
+Es el render fiel de `Monitor eSports.dc.html` del proyecto de Claude Design
+`122c2ecb-e67f-4a2b-adfd-ae0071c3eb38`. Verificado el 2026-08-21: 157.195
+bytes, mismo SHA que el archivo remoto.
 
-**Por qué las páginas de los juegos de bo3.gg salen de un generador aparte
-(`juego.mjs`) y no de `generar.mjs`:** Dota llegó primero, con su Elo
-calibrado sobre OpenDota, y su panel reconstruye los ratings replayeando el
-histórico. CS2/LoL/Valorant no necesitan eso: el rating, la RD, la cuota y el
-torneo con los que se predijo ya están GUARDADOS en las tablas `eslo_*`
-(regla 5), así que `juego.mjs` solo los pinta, y la ficha **reproduce** la
-probabilidad con `probabilidadGanar()` sobre el estado congelado en la fila —
-ninguna ficha ve información que no existía al predecir (regla 6). Ojo con la
-diferencia de unidades: en esports `prob_a` es de UNA partida y el Brier es
-de una sola clase contra 0.25; en Dota la predicción es de la serie y la base
-se pondera por formato. Un solo generador para los tres juegos:
-`node salida/web/juego.mjs cs2 lol valorant` (comparte las lecturas de
-Supabase entre los tres, no pide tres veces lo mismo).
+**Cualquier otro diseño anterior está muerto y no se rescata.** Antes de tocar
+la web, abre ese enlace y compara. Si lo que sale del generador no se ve como
+ahí, lo que está mal es el generador.
 
-**Escudos de equipo.** CS2, LoL y Valorant los sacan de bo3.gg (`/teams` →
-`image_url`). Dota los saca de `datos/logos-dota.json`, poblado desde OpenDota
-(`/teams/{id}` → `logo_url`) por `scripts/logos-dota.mjs`. Se guardan en un
-archivo y no en Supabase porque Dota se muda a bo3.gg después de TI y ahí los
-escudos van a venir de la misma fuente que los demás: una columna nueva
-nacería obsoleta en días. El archivo se lee del disco, no cuesta ninguna
-petición por corrida (regla 5). Para refrescarlo cuando aparezcan equipos
-nuevos:
+Lo que define ese diseño, y no se negocia:
 
-```
-node --env-file=.env scripts/logos-dota.mjs
-```
+| | |
+|---|---|
+| Fondo | `#05070A` · panel `#080A0E` · tarjeta `#0D1015` · interior `#11141A` |
+| Bordes | `#1a1e26` · medio `#242933` · fuerte `#343943` |
+| Tinta | `#F2F4F7` · media `#A7ADB8` · suave `#8B95A5` · apagada `#6F7784` |
+| Acento | `#FF2638`, hover `#FF3347` |
+| Positivo / aviso | `#19E68C` / `#FFB000` |
+| Colores por juego | Dota `#9A3CFF` · CS2 `#F5C400` · LoL `#00CFFF` · Valorant `#23F28A` |
+| Tipografía | Manrope 400-800 · **JetBrains Mono para toda cifra del cálculo** |
+| Estructura | rail de 80px + cabecera de 80px + pie de 56px, ancho mínimo 1440px |
+| Pantallas | Inicio · Predicciones · Clasificación · Calidad · Cambios · Ficha |
 
-Sólo pregunta por los que faltan; correrlo dos veces no gasta ni una petición.
+Y tres cosas que el diseño dice de sí mismo y hay que respetar:
 
-**Assets de marca.** El paquete vive en `assets/` (raíz) y `estilo.mjs` lo
-copia a `salida/web/assets/` al generar, porque el artefacto de Pages es sólo
-`salida/web`. Dos correcciones obligadas respecto a lo que traía el paquete,
-y hay que respetarlas:
-
-- **Rutas relativas.** El sitio se publica en un SUBDIRECTORIO
-  (`.../monitor-esports/`), así que `/assets/favicon.svg` se iría a la raíz
-  del dominio y daría 404. Por lo mismo se reescribe `site.webmanifest` al
-  copiarlo.
-- **`og:image` y `twitter:image` absolutas**, con `SITIO` delante. Con ruta
-  relativa, ninguna red social muestra la tarjeta. `SITIO` se puede cambiar
-  con la variable de entorno `SITIO_URL`.
-
-`motor/` no sabe de qué juego se trata y así debe quedarse: si una función
-del motor necesita preguntar "¿esto es CS2 o Dota?", el juego está mal
-modelado y lo que falta es un campo en los datos, no un `if` en el motor.
+1. **El rojo es la marca, no el error.** Una ventaja negativa va en ámbar.
+2. Ninguna cifra se redondea hacia un titular más vendedor. **Sin rachas.**
+3. La sección Calidad publica los fallos con el mismo tamaño de letra que los
+   aciertos.
 
 ## Fuentes de datos
 
