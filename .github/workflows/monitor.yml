@@ -205,17 +205,31 @@ jobs:
   # está mal configurado, el panel se queda como estaba y el ciclo NO se marca
   # como fallido por eso. Un panel desactualizado es un problema menor; perder
   # una tanda de cuotas o de predicciones no se arregla después.
+  #
+  # `enablement: true` es la lección del 2026-08-13..22: al renombrar el repo
+  # se perdió la config de Pages (GET /repos/.../pages -> 404) y este job
+  # fallaba en silencio NUEVE DÍAS -- el sitio publicado seguía mostrando el
+  # 13 de agosto mientras el ciclo recogía datos sin parar. `enablement`
+  # repara o crea la config solo, sin depender de que alguien abra
+  # Settings > Pages a mano. Necesita `administration: write` en permisos.
   publicar:
     needs: ciclo
     if: always()
     continue-on-error: true
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      administration: write
     environment:
       name: github-pages
       url: ${{ steps.despliegue.outputs.page_url }}
     steps:
       - name: Preparar Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Publicar en Pages
         id: despliegue
